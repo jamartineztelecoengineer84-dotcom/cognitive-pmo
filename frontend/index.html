@@ -961,6 +961,38 @@ footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;disp
 .run-modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.2s ease}
 .run-modal-content{background:#22262e;border:1px solid #333840;border-radius:12px;width:90%;max-width:720px;max-height:85vh;overflow-y:auto;animation:slideDown 0.3s ease;box-shadow:0 20px 60px rgba(0,0,0,0.5)}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.run-sidebar-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.run-inc-card{background:#22262e;border-left:3px solid #8b8f98;border-radius:6px;padding:8px 10px;margin-bottom:6px;cursor:pointer;transition:all .2s}
+.run-inc-card:hover{background:#2a2e38;transform:translateX(2px)}
+.run-inc-card.active{border-color:#3b82f6;background:#2a2e38}
+.run-inc-title{font-size:11px;font-weight:600;color:#e8e9ed;margin-bottom:2px}
+.run-inc-ticket{font-size:9px;color:#8b8f98;font-family:monospace}
+.run-inc-sla{font-size:16px;font-weight:700;font-family:monospace;letter-spacing:.5px}
+.run-inc-pct{font-size:14px;font-weight:700;font-family:monospace}
+.run-inc-bar{height:3px;background:#181b20;border-radius:2px;margin-top:3px;overflow:hidden}
+.run-inc-bar-fill{height:100%;border-radius:2px;transition:width 1s}
+.inc-modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;animation:fadeIn .2s}
+.inc-modal{background:#1e2128;border:1px solid #333840;border-radius:14px;width:92%;max-width:780px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.5);animation:slideDown .3s}
+.inc-modal-header{padding:14px 18px;border-bottom:1px solid #333840;display:flex;justify-content:space-between;align-items:center}
+.inc-modal-sla{display:flex;align-items:center;gap:20px;padding:14px 18px;background:rgba(239,68,68,.04);border-bottom:1px solid #333840}
+.inc-modal-sla-time{font-size:32px;font-weight:700;font-family:monospace;letter-spacing:1px}
+.inc-modal-sla-label{font-size:10px;color:#8b8f98}
+.inc-modal-fields{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:#333840;border-bottom:1px solid #333840}
+.inc-modal-field{background:#22262e;padding:8px 10px}
+.inc-modal-field-label{font-size:8px;color:#8b8f98;text-transform:uppercase}
+.inc-modal-field-value{font-size:12px;font-weight:600}
+.inc-modal-tasks{padding:14px 18px;max-height:400px;overflow-y:auto}
+.inc-modal-task{background:#22262e;border:1px solid #3a3f4a;border-left:3px solid #8b8f98;border-radius:8px;padding:10px 12px;margin-bottom:6px}
+.inc-modal-task-header{display:flex;justify-content:space-between;align-items:flex-start}
+.inc-modal-task-title{font-size:12px;font-weight:600;color:#e8e9ed}
+.inc-modal-task-tech{display:flex;align-items:center;gap:6px;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.2);border-radius:6px;padding:4px 8px;margin-top:4px}
+.inc-modal-task-pct{font-size:20px;font-weight:700;font-family:monospace}
+.inc-modal-task-sla{font-size:9px;font-family:monospace;color:#ef4444}
+.inc-modal-footer{padding:12px 18px;border-top:1px solid #333840;display:flex;gap:8px;justify-content:flex-end}
+.inc-modal-btn{padding:8px 16px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid #333840;background:none;color:#8b8f98}
+.inc-modal-btn-danger{border-color:rgba(239,68,68,.3);color:#ef4444}
+.inc-modal-btn-primary{background:#22c55e;border:none;color:#fff;font-weight:600}
+.inc-modal-change-panel{background:#181b20;border:1px solid rgba(234,179,8,.3);border-top:none;border-radius:0 0 8px 8px;padding:8px 10px;display:none}
 .run-modal-sla-box{display:flex;align-items:center;gap:16px;padding:12px 16px;background:rgba(239,68,68,0.06);border-bottom:1px solid #333840}
 .run-modal-sla-countdown{font-size:28px;font-weight:700;font-family:monospace;color:#ef4444;letter-spacing:1px}
 .run-modal-sla-meta{font-size:11px;color:#8b8f98}
@@ -1395,44 +1427,44 @@ footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;disp
       </div>
     </div>
     <div class="pipeline-sidebar">
-      <div class="side-panel">
-        <div class="side-title" style="display:flex;align-items:center;gap:7px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/><circle cx="12" cy="12" r="10" fill="#fbbf24" fill-opacity=".08"/></svg>Task Monitoring</div>
-        <div class="no-data" id="run-tasks"><div class="no-data-icon">🕐</div>No hay tareas activas</div>
-      </div>
-      <div class="side-panel">
-        <div class="side-title" style="display:flex;align-items:center;gap:7px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Historial Buffer</div>
-        <div class="no-data" id="run-hist"><div class="no-data-icon">🕐</div>Sin ejecuciones previas</div>
-      </div>
-      <div class="side-panel">
-        <div class="side-title" style="display:flex;align-items:center;gap:7px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a3e635" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Estado del Sistema</div>
-        <div class="sys-row"><span>Agentes Activos</span><span class="sys-val val-blue">4/4</span></div>
-        <div class="sys-row"><span>Pipeline Status</span><span class="sys-val val-idle" id="run-status-val">Idle</span></div>
-        <div class="sys-row"><span>Técnicos Staff</span><span class="sys-val">150</span></div>
-      </div>
-      <div class="side-panel">
-        <div class="side-title" style="display:flex;align-items:center;gap:7px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.663 17h4.673M12 3a6 6 0 0 1 6 6v1a2 2 0 0 0 2 2H4a2 2 0 0 0 2-2V9a6 6 0 0 1 6-6z" fill="#8b5cf6" fill-opacity=".1"/><path d="M12 17v4M8 21h8"/></svg>AI Insight Explorer</div>
-        <div class="sys-row"><span>Insights Generados</span><span class="sys-val" style="color:#8b5cf6" id="run-ai-insights">—</span></div>
-        <div class="sys-row"><span>Confianza NLP</span><span class="sys-val" style="color:#8b5cf6" id="run-ai-conf">—</span></div>
-      </div>
-      <div class="side-panel">
-        <div class="side-title" style="display:flex;align-items:center;gap:7px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.52 0 10-4.48 10-10S17.52 2 12 2 2 6.48 2 12s4.48 10 10 10z" fill="#f97316" fill-opacity=".1"/><path d="M12 6v6l4 2"/></svg>SLA Risk Forecaster</div>
-        <div class="sys-row"><span>SLAs en Riesgo</span><span class="sys-val" style="color:#f97316" id="run-sla-risk">—</span></div>
-        <div class="sys-row"><span>Nivel de Alerta</span><span class="sys-val" style="color:#f97316" id="run-sla-alert">—</span></div>
-      </div>
-      <div class="side-panel">
-        <div class="side-title" style="display:flex;align-items:center;gap:7px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>KEDB Conflict Resolver</div>
-        <div class="sys-row"><span>Conflictos Activos</span><span class="sys-val" style="color:#06b6d4" id="run-kedb-conf">—</span></div>
-        <div class="sys-row"><span>Resoluciones Prop.</span><span class="sys-val" style="color:#06b6d4" id="run-kedb-res">—</span></div>
-      </div>
-      <div class="side-panel">
-        <div class="side-title" style="display:flex;align-items:center;gap:7px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill="#fbbf24" fill-opacity=".1"/></svg>Resource Efficiency</div>
-        <div class="sys-row"><span>Utilización Media</span><span class="sys-val" style="color:#fbbf24" id="run-res-util">—</span></div>
-        <div class="sys-row"><span>Carga Óptima</span><span class="sys-val" style="color:#fbbf24" id="run-res-opt">—</span></div>
-      </div>
-      <div class="side-panel">
-        <div class="side-title" style="display:flex;align-items:center;gap:7px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" fill="#10b981" fill-opacity=".1"/><rect x="9" y="3" width="6" height="4" rx="2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>Buffer Audit Log</div>
-        <div class="sys-row"><span>Entradas Hoy</span><span class="sys-val" style="color:#10b981" id="run-audit-count">—</span></div>
-        <div class="sys-row"><span>Último Evento</span><span class="sys-val" style="color:#10b981;font-size:9px;" id="run-audit-last">—</span></div>
+      <div class="side-panel" id="run-incidents-sidebar">
+        <div class="run-sidebar-header">
+          <div class="side-title" style="display:flex;align-items:center;gap:7px;margin:0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Incidencias Activas</div>
+          <span id="run-inc-count" style="background:rgba(239,68,68,0.15);color:#ef4444;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;">0</span>
+        </div>
+        <div id="run-semaforo" style="margin-bottom:10px;">
+          <div id="run-semaforo-bar" style="background:#22262e;border-radius:8px;padding:10px 12px;border-left:4px solid #22c55e;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <div style="display:flex;align-items:center;gap:6px;">
+                <div id="run-semaforo-dot" style="width:12px;height:12px;border-radius:50%;background:#22c55e;"></div>
+                <span id="run-semaforo-label" style="font-size:12px;font-weight:600;color:#22c55e;">OPERATIVA NORMAL</span>
+              </div>
+              <span id="run-semaforo-score" style="font-size:16px;font-weight:700;font-family:monospace;color:#22c55e;">0</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;">
+              <div style="background:#181b20;border-radius:4px;padding:4px 6px;text-align:center;">
+                <div id="run-sem-total" style="font-size:14px;font-weight:700;font-family:monospace;color:#e8e9ed;">0</div>
+                <div style="font-size:7px;color:#8b8f98;text-transform:uppercase;">Abiertas</div>
+              </div>
+              <div style="background:#181b20;border-radius:4px;padding:4px 6px;text-align:center;">
+                <div id="run-sem-criticas" style="font-size:14px;font-weight:700;font-family:monospace;color:#ef4444;">0</div>
+                <div style="font-size:7px;color:#ef4444;text-transform:uppercase;">P1/P2</div>
+              </div>
+              <div style="background:#181b20;border-radius:4px;padding:4px 6px;text-align:center;">
+                <div id="run-sem-sla" style="font-size:14px;font-weight:700;font-family:monospace;color:#eab308;">0</div>
+                <div style="font-size:7px;color:#eab308;text-transform:uppercase;">SLA &lt;1h</div>
+              </div>
+              <div style="background:#181b20;border-radius:4px;padding:4px 6px;text-align:center;">
+                <div id="run-sem-techs" style="font-size:14px;font-weight:700;font-family:monospace;color:#3b82f6;">0%</div>
+                <div style="font-size:7px;color:#3b82f6;text-transform:uppercase;">Tec. Ocup.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="run-inc-list" style="max-height:280px;overflow-y:auto;"></div>
+        <div style="border-top:1px solid #333840;margin-top:6px;padding-top:6px;">
+          <button onclick="loadActiveIncidents()" style="width:100%;padding:5px;background:none;border:1px solid #333840;border-radius:6px;color:#8b8f98;font-size:10px;cursor:pointer;">Actualizar</button>
+        </div>
       </div>
     </div>
   </div>
@@ -5614,6 +5646,7 @@ setTimeout(() => {
   loadRunPlansFromDB();
   loadCmdbSelect('itsm-ci');
   loadCmdbSelect('bf-cmdb-activos', true);
+  loadActiveIncidents();
   // Inject agent SVG icons into idle flow diagrams
   const runIconMap = {1:'AG1',2:'AG2',3:'AG3',4:'AG4'};
   const buildIconMap = {1:'AG5',2:'AG6',3:'AG7'};
@@ -5631,6 +5664,7 @@ setTimeout(() => {
 var _runSlaTimer = null;
 
 async function executeRunPipeline(text) {
+  window._currentLiveTicketId = null;
   var execBtn = document.getElementById('run-exec-btn');
   var statusEl = document.getElementById('run-status-val');
   if (execBtn) execBtn.disabled = true;
@@ -6120,6 +6154,36 @@ async function executeRunPipeline(text) {
       addPreview('AG-004 Buffer \u2014 Decisi\u00f3n', '#06b6d4', finalResult);
     }
 
+    // Register live incident in sidebar (after AG-004, before AG-012)
+    try {
+      var totalTareasLive = 0;
+      try {
+        var ltResp2 = await authFetch(API_BASE + '/kanban/tareas');
+        var ltAll2 = await ltResp2.json();
+        totalTareasLive = ltAll2.filter(function(t) { return t.fecha_creacion && new Date(t.fecha_creacion) > new Date(Date.now() - 600000); }).length;
+      } catch(e2) {}
+      var liveResp = await authFetch(API_BASE + '/incidencias/live', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          ticket_id: ticketId || '',
+          incidencia_detectada: text.substring(0, 200),
+          prioridad: globalPrio,
+          sla_horas: globalSlaHours,
+          canal_entrada: document.getElementById('run-canal') ? document.getElementById('run-canal').value : '',
+          reportado_por: document.getElementById('run-reportado') ? document.getElementById('run-reportado').value : '',
+          servicio_afectado: document.getElementById('run-servicio') ? document.getElementById('run-servicio').value : '',
+          impacto_negocio: document.getElementById('run-impacto') ? document.getElementById('run-impacto').value : ''
+        })
+      });
+      if (liveResp.ok) {
+        addLog('LIVE', 'dispatcher', 'Incidencia registrada en panel de control.', false);
+        window._currentLiveTicketId = ticketId;
+      }
+      await authFetch(API_BASE + '/incidencias/live/' + ticketId + '/progreso?progreso=0&tareas_completadas=0&total_tareas=' + totalTareasLive, {method: 'PUT'}).catch(function(){});
+    } catch(ex) { console.error('Live register error:', ex); }
+    if (typeof loadActiveIncidents === 'function') loadActiveIncidents();
+
     // ═══ AG-012 TASK ADVISOR ═══
     setAgentState('AG-012', 'active');
     addLog('AG-012', 'advisor', 'Enriqueciendo tarjetas con instrucciones t\u00e9cnicas...', false);
@@ -6145,6 +6209,7 @@ async function executeRunPipeline(text) {
 
     setPipelineComplete(true);
     addLog('CHAIN', 'dispatcher', 'Pipeline RUN completado en ' + elapsed(), false);
+    loadActiveIncidents();
 
     try {
       // Re-read tasks fresh to get assigned technicians
@@ -6219,6 +6284,23 @@ async function executeRunPipeline(text) {
   if (statusEl) { statusEl.textContent = 'Idle'; statusEl.style.color = 'var(--yellow)'; }
 }
 
+function ensureLiveTicketId() {
+  return new Promise(function(resolve) {
+    if (window._currentLiveTicketId) {
+      resolve(window._currentLiveTicketId);
+      return;
+    }
+    fetch(API_BASE + '/incidencias/live')
+      .then(function(r) { return r.json(); })
+      .then(function(lives) {
+        if (lives.length > 0) {
+          window._currentLiveTicketId = lives[lives.length - 1].ticket_id;
+        }
+        resolve(window._currentLiveTicketId);
+      }).catch(function() { resolve(null); });
+  });
+}
+
 function updateGlobalIncidentProgress() {
   var kanbanCards = document.querySelectorAll('.build-kanban-card');
   if (kanbanCards.length === 0) return;
@@ -6242,8 +6324,291 @@ function updateGlobalIncidentProgress() {
     globalEl.textContent = globalPct + '%';
     globalEl.style.color = globalPct <= 25 ? '#ef4444' : globalPct <= 50 ? '#f97316' : globalPct <= 75 ? '#eab308' : '#22c55e';
   }
+  // Sync to live sidebar
+  ensureLiveTicketId().then(function(tid) {
+    if (tid) {
+      fetch(API_BASE + '/incidencias/live/' + tid + '/progreso?progreso=' + globalPct + '&tareas_completadas=0&total_tareas=' + kanbanCards.length, {method:'PUT'})
+        .then(function() { if (typeof loadActiveIncidents === 'function') loadActiveIncidents(); });
+    }
+  });
 }
 
+async function loadActiveIncidents() {
+  var sidebar = document.getElementById('run-incidents-sidebar');
+  if (!sidebar) return;
+
+  try {
+    var resp = await authFetch(API_BASE + '/incidencias/live');
+    var active = await resp.json();
+
+    // Update header counter
+    var counter = document.getElementById('run-inc-count');
+    if (counter) counter.textContent = active.length;
+
+    // === SEMAFORO DE CARGA OPERATIVA ===
+    var totalInc = active.length;
+    var criticas = active.filter(function(i) { return i.prioridad === 'P1' || i.prioridad === 'P2'; }).length;
+    var slaUrgentes = 0;
+    active.forEach(function(i) {
+      var dl = i.fecha_limite ? new Date(i.fecha_limite) : null;
+      if (dl && (dl - Date.now()) < 3600000 && (dl - Date.now()) > 0) slaUrgentes++;
+    });
+
+    // Get tech occupancy
+    var techPct = 0;
+    try {
+      var techResp = await authFetch(API_BASE + '/team/tecnicos');
+      var techs = await techResp.json();
+      var totalTechs = techs.length || 1;
+      var ocupados = techs.filter(function(t) { return t.estado_run === 'OCUPADO' || (t.carga_actual && t.carga_actual > 0); }).length;
+      techPct = Math.round((ocupados / totalTechs) * 100);
+    } catch(e) {}
+
+    // Calculate risk score (0-100)
+    var score = 0;
+    score += Math.min(30, totalInc * 5);
+    score += Math.min(30, criticas * 15);
+    score += Math.min(20, slaUrgentes * 10);
+    score += Math.min(20, techPct * 0.25);
+    score = Math.min(100, Math.round(score));
+
+    var semaforoColor, semaforoLabel;
+    if (score <= 25) {
+      semaforoColor = '#22c55e';
+      semaforoLabel = 'OPERATIVA NORMAL';
+    } else if (score <= 50) {
+      semaforoColor = '#eab308';
+      semaforoLabel = 'CARGA ELEVADA';
+    } else if (score <= 75) {
+      semaforoColor = '#f97316';
+      semaforoLabel = 'EN RIESGO';
+    } else {
+      semaforoColor = '#ef4444';
+      semaforoLabel = 'SITUACION CRITICA';
+    }
+
+    var semBar = document.getElementById('run-semaforo-bar');
+    var semDot = document.getElementById('run-semaforo-dot');
+    var semLabel = document.getElementById('run-semaforo-label');
+    var semScore = document.getElementById('run-semaforo-score');
+    var semTotal = document.getElementById('run-sem-total');
+    var semCriticas = document.getElementById('run-sem-criticas');
+    var semSla = document.getElementById('run-sem-sla');
+    var semTechs = document.getElementById('run-sem-techs');
+
+    if (semBar) semBar.style.borderLeftColor = semaforoColor;
+    if (semDot) semDot.style.background = semaforoColor;
+    if (semLabel) { semLabel.textContent = semaforoLabel; semLabel.style.color = semaforoColor; }
+    if (semScore) { semScore.textContent = score; semScore.style.color = semaforoColor; }
+    if (semTotal) semTotal.textContent = totalInc;
+    if (semCriticas) semCriticas.textContent = criticas;
+    if (semSla) semSla.textContent = slaUrgentes;
+    if (semTechs) semTechs.textContent = techPct + '%';
+
+    // === LISTA DE INCIDENCIAS ===
+    var list = document.getElementById('run-inc-list');
+    if (!list) return;
+    list.innerHTML = '';
+
+    if (active.length === 0) {
+      list.innerHTML = '<div style="text-align:center;padding:20px;color:#8b8f98;font-size:11px;font-style:italic;">No hay incidencias activas</div>';
+      return;
+    }
+
+    active.forEach(function(inc) {
+      var card = document.createElement('div');
+      card.className = 'run-inc-card';
+      card.dataset.ticketId = inc.ticket_id || '';
+
+      var prio = inc.prioridad || 'P4';
+      var prioColor = prio === 'P1' ? '#ef4444' : prio === 'P2' ? '#eab308' : prio === 'P3' ? '#3b82f6' : '#8b8f98';
+      card.style.borderLeftColor = prioColor;
+
+      var header = document.createElement('div');
+      header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;';
+      var title = document.createElement('div');
+      title.className = 'run-inc-title';
+      title.textContent = (inc.incidencia_detectada || '').substring(0, 30);
+      var prioBadge = document.createElement('span');
+      prioBadge.style.cssText = 'font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;background:' + prioColor + '20;color:' + prioColor + ';';
+      prioBadge.textContent = prio;
+      header.appendChild(title);
+      header.appendChild(prioBadge);
+      card.appendChild(header);
+
+      var ticket = document.createElement('div');
+      ticket.className = 'run-inc-ticket';
+      ticket.textContent = inc.ticket_id || '';
+      card.appendChild(ticket);
+
+      var slaRow = document.createElement('div');
+      slaRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-top:4px;';
+      var slaHours = parseFloat(inc.sla_horas) || 48;
+      var created = new Date(inc.fecha_creacion);
+      var deadline = inc.fecha_limite ? new Date(inc.fecha_limite) : new Date(created.getTime() + slaHours * 3600000);
+      var remaining = deadline - Date.now();
+      var slaSpan = document.createElement('div');
+      slaSpan.className = 'run-inc-sla';
+      slaSpan.dataset.deadline = deadline.getTime();
+      if (remaining <= 0) {
+        slaSpan.textContent = 'VENCIDO';
+        slaSpan.style.color = '#ef4444';
+      } else {
+        var h = Math.floor(remaining / 3600000);
+        var m = Math.floor((remaining % 3600000) / 60000);
+        var s = Math.floor((remaining % 60000) / 1000);
+        slaSpan.textContent = (h<10?'0'+h:h) + ':' + (m<10?'0'+m:m) + ':' + (s<10?'0'+s:s);
+        slaSpan.style.color = remaining < 3600000 ? '#ef4444' : remaining < 7200000 ? '#eab308' : '#22c55e';
+      }
+      var pctVal = inc.progreso_pct || 0;
+      var pctSpan = document.createElement('div');
+      pctSpan.className = 'run-inc-pct';
+      pctSpan.style.cssText = 'font-size:11px;font-weight:700;font-family:monospace;';
+      pctSpan.style.color = pctVal <= 25 ? '#ef4444' : pctVal <= 50 ? '#f97316' : pctVal <= 75 ? '#eab308' : '#22c55e';
+      pctSpan.textContent = pctVal + '%';
+      slaRow.appendChild(slaSpan);
+      slaRow.appendChild(pctSpan);
+      card.appendChild(slaRow);
+
+      var bar = document.createElement('div');
+      bar.className = 'run-inc-bar';
+      var barColor = pctVal <= 25 ? '#ef4444' : pctVal <= 50 ? '#f97316' : pctVal <= 75 ? '#eab308' : '#22c55e';
+      bar.innerHTML = '<div class="run-inc-bar-fill" style="width:' + pctVal + '%;background:' + barColor + ';"></div>';
+      card.appendChild(bar);
+
+      // Tasks info
+      if (inc.total_tareas > 0) {
+        var tasksInfo = document.createElement('div');
+        tasksInfo.style.cssText = 'font-size:9px;color:#8b8f98;margin-top:3px;';
+        tasksInfo.textContent = (inc.tareas_completadas || 0) + '/' + inc.total_tareas + ' tareas';
+        card.appendChild(tasksInfo);
+      }
+
+      card.onclick = function() {
+        document.querySelectorAll('.run-inc-card').forEach(function(c) { c.classList.remove('active'); });
+        card.classList.add('active');
+        openIncidentModal(inc.ticket_id);
+      };
+
+      list.appendChild(card);
+    });
+
+  } catch(ex) {
+    console.error('Error loading incidents:', ex);
+  }
+}
+setInterval(function() {
+  document.querySelectorAll('.run-inc-sla[data-deadline]').forEach(function(el) {
+    var deadline = parseInt(el.dataset.deadline); var remaining = deadline - Date.now();
+    if (remaining <= 0) { el.textContent = 'VENCIDO'; el.style.color = '#ef4444'; return; }
+    var h=Math.floor(remaining/3600000),m2=Math.floor((remaining%3600000)/60000),s2=Math.floor((remaining%60000)/1000);
+    el.textContent=(h<10?'0'+h:h)+':'+(m2<10?'0'+m2:m2)+':'+(s2<10?'0'+s2:s2);
+    el.style.color=remaining<3600000?'#ef4444':remaining<7200000?'#eab308':'#22c55e';
+  });
+}, 1000);
+
+
+async function openIncidentModal(ticketId) {
+  var existing = document.getElementById('inc-modal-overlay');
+  if (existing) existing.remove();
+  try {
+    var incResp = await authFetch(API_BASE + '/incidencias/live');
+    var incidents = await incResp.json();
+    var inc = incidents.find(function(i) { return i.ticket_id === ticketId; });
+    if (!inc) return;
+    var tasksResp = await authFetch(API_BASE + '/kanban/tareas');
+    var allTasks = await tasksResp.json();
+    var tasks = allTasks.filter(function(t) { return t.id_incidencia === ticketId; });
+    var prio = inc.prioridad || 'P4';
+    var prioColor = prio === 'P1' ? '#ef4444' : prio === 'P2' ? '#eab308' : prio === 'P3' ? '#3b82f6' : '#8b8f98';
+    var slaHours = parseFloat(inc.sla_horas) || 48;
+    var created = new Date(inc.fecha_creacion);
+    var deadline = new Date(created.getTime() + slaHours * 3600000);
+    var overlay = document.createElement('div'); overlay.className = 'inc-modal-overlay'; overlay.id = 'inc-modal-overlay';
+    overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+    var modal = document.createElement('div'); modal.className = 'inc-modal';
+    // Header
+    var header = document.createElement('div'); header.className = 'inc-modal-header';
+    var headerLeft = document.createElement('div'); headerLeft.style.cssText = 'display:flex;align-items:center;gap:10px;';
+    var prioBadge = document.createElement('span'); prioBadge.style.cssText = 'font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px;background:' + prioColor + '20;color:' + prioColor + ';'; prioBadge.textContent = prio;
+    var titleSpan = document.createElement('span'); titleSpan.style.cssText = 'font-weight:600;font-size:15px;color:#e8e9ed;'; titleSpan.textContent = (inc.incidencia_detectada || '').substring(0, 50);
+    headerLeft.appendChild(prioBadge); headerLeft.appendChild(titleSpan);
+    var headerRight = document.createElement('div'); headerRight.style.cssText = 'display:flex;align-items:center;gap:10px;';
+    var ticketSpan = document.createElement('span'); ticketSpan.style.cssText = 'font-size:10px;color:#8b8f98;font-family:monospace;'; ticketSpan.textContent = ticketId;
+    var closeBtn = document.createElement('button'); closeBtn.className = 'inc-modal-btn'; closeBtn.textContent = 'Cerrar'; closeBtn.onclick = function() { overlay.remove(); };
+    headerRight.appendChild(ticketSpan); headerRight.appendChild(closeBtn);
+    header.appendChild(headerLeft); header.appendChild(headerRight); modal.appendChild(header);
+    // SLA bar
+    var slaBar = document.createElement('div'); slaBar.className = 'inc-modal-sla';
+    var slaTime = document.createElement('div');
+    var slaCd = document.createElement('div'); slaCd.className = 'inc-modal-sla-time'; slaCd.id = 'inc-modal-sla-cd'; slaCd.dataset.deadline = deadline.getTime(); slaCd.style.color = prioColor; slaCd.textContent = '--:--:--';
+    var slaLbl = document.createElement('div'); slaLbl.className = 'inc-modal-sla-label'; slaLbl.textContent = 'Tiempo restante SLA';
+    slaTime.appendChild(slaCd); slaTime.appendChild(slaLbl);
+    var slaPctDiv = document.createElement('div');
+    var slaPctVal = document.createElement('div'); slaPctVal.className = 'inc-modal-sla-time'; slaPctVal.id = 'inc-modal-global-pct'; slaPctVal.style.color = '#ef4444'; slaPctVal.textContent = '0%';
+    var slaPctLbl = document.createElement('div'); slaPctLbl.className = 'inc-modal-sla-label'; slaPctLbl.textContent = 'Progreso incidencia';
+    slaPctDiv.appendChild(slaPctVal); slaPctDiv.appendChild(slaPctLbl);
+    var slaInfo = document.createElement('div'); slaInfo.style.flex = '1';
+    var elapsed2 = Date.now() - created.getTime(); var total2 = slaHours * 3600000; var pctC = Math.min(100, Math.round((elapsed2/total2)*100));
+    slaInfo.innerHTML = '<div style="display:flex;justify-content:space-between;font-size:10px;color:#8b8f98;"><span>Inicio: ' + created.toLocaleString('es-ES') + '</span><span>L\u00edmite: ' + deadline.toLocaleString('es-ES') + '</span></div><div style="height:6px;background:#181b20;border-radius:3px;margin-top:4px;overflow:hidden;"><div style="height:100%;width:' + pctC + '%;background:' + prioColor + ';border-radius:3px;"></div></div><div style="font-size:10px;color:#8b8f98;margin-top:2px;">' + pctC + '% consumido \u2014 SLA: ' + slaHours + 'h</div>';
+    slaBar.appendChild(slaTime); slaBar.appendChild(slaPctDiv); slaBar.appendChild(slaInfo); modal.appendChild(slaBar);
+    // Fields
+    var fields = document.createElement('div'); fields.className = 'inc-modal-fields';
+    [{l:'Ticket',v:ticketId.substring(0,15),c:'#3b82f6'},{l:'Prioridad',v:prio,c:prioColor},{l:'SLA',v:slaHours+'h',c:'#ef4444'},{l:'Estado',v:inc.estado||'QUEUED',c:'#8b8f98'},{l:'\u00c1rea',v:(inc.area_afectada||'').substring(0,12)},{l:'Tareas',v:tasks.length+' tareas'}].forEach(function(f) {
+      var fd = document.createElement('div'); fd.className = 'inc-modal-field';
+      fd.innerHTML = '<div class="inc-modal-field-label">' + f.l + '</div><div class="inc-modal-field-value"' + (f.c ? ' style="color:' + f.c + '"' : '') + '>' + escHtml(f.v || '\u2014') + '</div>';
+      fields.appendChild(fd);
+    });
+    modal.appendChild(fields);
+    // Tasks
+    var tasksSection = document.createElement('div'); tasksSection.className = 'inc-modal-tasks';
+    var tasksTitle = document.createElement('div'); tasksTitle.style.cssText = 'font-size:10px;font-weight:600;color:#8b8f98;text-transform:uppercase;margin-bottom:8px;'; tasksTitle.textContent = 'Tareas de resoluci\u00f3n (' + tasks.length + ')';
+    tasksSection.appendChild(tasksTitle);
+    tasks.forEach(function(t) {
+      var desc = {}; try { desc = JSON.parse(t.descripcion || '{}'); } catch(e) {}
+      var silo2 = (desc.silo || 'Soporte').toLowerCase();
+      var siloColor = silo2==='redes'?'#06b6d4':silo2==='bbdd'?'#a855f7':(silo2==='unix'||silo2==='linux')?'#22c55e':silo2==='windows'?'#3b82f6':silo2==='seguridad'?'#ef4444':silo2==='backend'?'#f97316':silo2==='devops'?'#10b981':'#8b8f98';
+      var taskSlaMins = desc.sla_tarea_minutos || 0;
+      var taskCard = document.createElement('div'); taskCard.className = 'inc-modal-task'; taskCard.style.borderLeftColor = siloColor; taskCard.style.cursor = 'pointer';
+      var col = t.columna || 'Backlog'; var colColor = col==='Done'?'#22c55e':col==='En Progreso'?'#3b82f6':col==='En Revisi\u00f3n'?'#eab308':'#8b8f98';
+      var html2 = '<div class="inc-modal-task-header"><div style="flex:1"><div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">';
+      html2 += '<span class="inc-modal-task-title">' + escHtml((t.titulo||'').substring(0,45)) + '</span>';
+      html2 += '<span style="font-size:8px;padding:1px 5px;border-radius:3px;background:' + siloColor + '20;color:' + siloColor + ';font-weight:600;">' + escHtml(desc.silo||'Soporte') + '</span>';
+      html2 += '<span style="font-size:8px;padding:2px 6px;border-radius:3px;background:' + colColor + '20;color:' + colColor + ';font-weight:600;">' + escHtml(col) + '</span>';
+      if (desc.requiere_negocio) html2 += '<span style="font-size:8px;padding:1px 5px;border-radius:3px;background:rgba(234,179,8,.2);color:#eab308;font-weight:600;">Negocio</span>';
+      html2 += '</div>';
+      if (t.id_tecnico) html2 += '<div class="inc-modal-task-tech"><div style="width:22px;height:22px;border-radius:50%;background:' + siloColor + '30;color:' + siloColor + ';display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;">' + (t.id_tecnico||'').substring(0,3) + '</div><span style="font-size:10px;font-weight:600;color:#22c55e;">' + escHtml(t.id_tecnico) + '</span></div>';
+      html2 += '</div><div style="text-align:right"><div class="inc-modal-task-pct" style="color:#ef4444;">0%</div>';
+      if (taskSlaMins > 0) html2 += '<div class="inc-modal-task-sla">SLA: ' + Math.floor(taskSlaMins/60) + 'h ' + (taskSlaMins%60) + 'min</div>';
+      html2 += '</div></div>';
+      taskCard.innerHTML = html2;
+      taskCard.onclick = function() { toggleRunTaskDetail(t.id, tasksSection); };
+      tasksSection.appendChild(taskCard);
+    });
+    modal.appendChild(tasksSection);
+    // Footer
+    var footer = document.createElement('div'); footer.className = 'inc-modal-footer';
+    var btnFinish = document.createElement('button'); btnFinish.className = 'inc-modal-btn inc-modal-btn-primary'; btnFinish.textContent = 'Finalizar incidencia';
+    btnFinish.onclick = function() {
+      if (confirm('Finalizar incidencia ' + ticketId + '?')) {
+        authFetch(API_BASE + '/incidencias/live/' + ticketId, {method:'DELETE'}).then(function() { overlay.remove(); loadActiveIncidents(); }).catch(function(){});
+      }
+    };
+    var btnClose = document.createElement('button'); btnClose.className = 'inc-modal-btn'; btnClose.textContent = 'Cerrar'; btnClose.onclick = function() { overlay.remove(); };
+    footer.appendChild(btnClose); footer.appendChild(btnFinish);
+    modal.appendChild(footer);
+    // SLA timer
+    var modalTimer = setInterval(function() {
+      var cdEl = document.getElementById('inc-modal-sla-cd'); if (!cdEl) { clearInterval(modalTimer); return; }
+      var dl = parseInt(cdEl.dataset.deadline); var rem = dl - Date.now();
+      if (rem <= 0) { cdEl.textContent = 'VENCIDO'; cdEl.style.color = '#ef4444'; clearInterval(modalTimer); return; }
+      var hh=Math.floor(rem/3600000),mm=Math.floor((rem%3600000)/60000),ss=Math.floor((rem%60000)/1000);
+      cdEl.textContent=(hh<10?'0'+hh:hh)+':'+(mm<10?'0'+mm:mm)+':'+(ss<10?'0'+ss:ss);
+      cdEl.style.color=rem<3600000?'#ef4444':rem<7200000?'#eab308':'#22c55e';
+    }, 1000);
+    overlay.appendChild(modal); document.body.appendChild(overlay);
+  } catch(ex) { console.error('Error opening incident modal:', ex); }
+}
 function toggleRunTaskDetail(taskId, container) {
   var existing = document.getElementById('run-task-modal-overlay');
   if (existing) { if (existing.dataset.taskId === taskId) { existing.remove(); return; } existing.remove(); }
@@ -6400,6 +6765,20 @@ function toggleRunTaskDetail(taskId, container) {
                 kanbanPct.style.color = p <= 25 ? '#ef4444' : p <= 50 ? '#f97316' : p <= 75 ? '#eab308' : '#22c55e';
               }
               updateGlobalIncidentProgress();
+              // Update live incident progress
+              ensureLiveTicketId().then(function(tid) {
+                if (!tid) return;
+                var allC4 = document.querySelectorAll('.build-kanban-card');
+                var tT4 = allC4.length; var dT4 = 0; var tP4 = 0;
+                allC4.forEach(function(c4) {
+                  var p4 = document.getElementById('kanban-pct-' + c4.dataset.taskId);
+                  var v4 = p4 ? parseInt(p4.textContent) || 0 : 0;
+                  tP4 += v4; if (v4 >= 100) dT4++;
+                });
+                var g4 = tT4 > 0 ? Math.round(tP4 / tT4) : 0;
+                fetch(API_BASE + '/incidencias/live/' + tid + '/progreso?progreso=' + g4 + '&tareas_completadas=' + dT4 + '&total_tareas=' + tT4, {method:'PUT'})
+                  .then(function() { if (typeof loadActiveIncidents === 'function') loadActiveIncidents(); });
+              });
         };
         var txt = document.createElement('span'); txt.className = 'run-chk-text'; txt.textContent = chkText;
         chkDiv.appendChild(box); chkDiv.appendChild(txt); body.appendChild(chkDiv);
@@ -6432,6 +6811,20 @@ function toggleRunTaskDetail(taskId, container) {
             if (pctEl2) { pctEl2.textContent = '100%'; pctEl2.style.color = '#22c55e'; }
             updateGlobalIncidentProgress();
           }
+          // Update live progress when task status changes
+          ensureLiveTicketId().then(function(tid) {
+            if (!tid) return;
+            var allC5 = document.querySelectorAll('.build-kanban-card');
+            var tT5 = allC5.length; var dT5 = 0; var tP5 = 0;
+            allC5.forEach(function(c5) {
+              var p5 = document.getElementById('kanban-pct-' + c5.dataset.taskId);
+              var v5 = p5 ? parseInt(p5.textContent) || 0 : 0;
+              tP5 += v5; if (v5 >= 100) dT5++;
+            });
+            var g5 = tT5 > 0 ? Math.round(tP5 / tT5) : 0;
+            fetch(API_BASE + '/incidencias/live/' + tid + '/progreso?progreso=' + g5 + '&tareas_completadas=' + dT5 + '&total_tareas=' + tT5, {method:'PUT'})
+              .then(function() { if (typeof loadActiveIncidents === 'function') loadActiveIncidents(); });
+          });
         }, 100);
       };
       statusBar.appendChild(btn);

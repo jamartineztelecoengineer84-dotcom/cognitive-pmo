@@ -767,6 +767,88 @@ async def update_task_meta(req: UpdateTaskMeta):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class IncidenciaLive(BaseModel):
+    ticket_id: str
+    incidencia_detectada: str
+    prioridad: str = "P4"
+    sla_horas: float = 48
+    canal_entrada: str = ""
+    reportado_por: str = ""
+    servicio_afectado: str = ""
+    impacto_negocio: str = ""
+
+
+@app.post("/incidencias/live")
+async def crear_incidencia_live(req: IncidenciaLive):
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    try:
+        async with pool.acquire() as conn:
+            sla_int = int(req.sla_horas)
+            await conn.execute("""
+                INSERT INTO incidencias_live
+                (ticket_id, incidencia_detectada, prioridad, sla_horas, estado,
+                 fecha_limite, canal_entrada, reportado_por, servicio_afectado, impacto_negocio)
+                VALUES ($1, $2, $3, $4, 'IN_PROGRESS',
+                 now() + make_interval(hours => $5), $6, $7, $8, $9)
+                ON CONFLICT (ticket_id) DO NOTHING
+            """, req.ticket_id, req.incidencia_detectada, req.prioridad,
+                req.sla_horas, sla_int, req.canal_entrada, req.reportado_por,
+                req.servicio_afectado, req.impacto_negocio)
+            return {"ok": True, "ticket_id": req.ticket_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/incidencias/live")
+async def listar_incidencias_live():
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    try:
+        async with pool.acquire() as conn:
+            rows = await conn.fetch("""
+                SELECT * FROM incidencias_live
+                ORDER BY
+                  CASE prioridad WHEN 'P1' THEN 1 WHEN 'P2' THEN 2 WHEN 'P3' THEN 3 ELSE 4 END,
+                  fecha_creacion DESC
+            """)
+            return [dict(r) for r in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/incidencias/live/{ticket_id}")
+async def cerrar_incidencia_live(ticket_id: str):
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute("DELETE FROM incidencias_live WHERE ticket_id = $1", ticket_id)
+            return {"ok": True, "deleted": ticket_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/incidencias/live/{ticket_id}/progreso")
+async def actualizar_progreso_live(ticket_id: str, progreso: int = 0, tareas_completadas: int = 0, total_tareas: int = 0):
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute("""
+                UPDATE incidencias_live
+                SET progreso_pct = $2, tareas_completadas = $3, total_tareas = $4
+                WHERE ticket_id = $1
+            """, ticket_id, progreso, tareas_completadas, total_tareas)
+            return {"ok": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/directorio/buscar")
 async def buscar_directorio(area: str):
     pool = get_pool()
