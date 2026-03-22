@@ -112,7 +112,7 @@ async def enrich_kanban_card(db, task_id: str, instructions_json: dict):
     """Actualiza la tarjeta Kanban con instrucciones enriquecidas de AG-012"""
     instructions_json["enriched"] = True
     await db.execute("""
-        UPDATE kanban_tareas SET descripcion = $1
+        UPDATE kanban_tareas SET descripcion = (COALESCE(descripcion::jsonb, '{}'::jsonb) || $1::jsonb)::text
         WHERE id = $2
     """, json.dumps(instructions_json, ensure_ascii=False, default=str), task_id)
     return {"status": "enriched", "task_id": task_id}

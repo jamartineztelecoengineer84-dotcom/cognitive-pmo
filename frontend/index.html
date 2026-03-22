@@ -5918,6 +5918,29 @@ async function executeRunPipeline(text) {
         taskHead.appendChild(siloTag);
         taskHead.appendChild(miniSla);
         taskCard.appendChild(taskHead);
+        // Business contact card if requiere_negocio
+        if (task.requiere_negocio && task.contacto_negocio) {
+          var bizCard = document.createElement('div');
+          bizCard.style.cssText = 'background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.3);border-left:3px solid #eab308;border-radius:8px;padding:10px 12px;margin-bottom:8px;';
+          var bizHeader = document.createElement('div');
+          bizHeader.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:6px;';
+          var bizIcon = document.createElement('span'); bizIcon.style.fontSize = '18px'; bizIcon.textContent = '\uD83C\uDFE2';
+          var bizLabel = document.createElement('span'); bizLabel.style.cssText = 'font-size:11px;font-weight:600;color:#eab308;text-transform:uppercase;'; bizLabel.textContent = 'Contacto de negocio requerido';
+          bizHeader.appendChild(bizIcon); bizHeader.appendChild(bizLabel); bizCard.appendChild(bizHeader);
+          var cn = task.contacto_negocio;
+          var bizName = document.createElement('div'); bizName.style.cssText = 'font-weight:600;font-size:14px;color:#e8e9ed;'; bizName.textContent = cn.nombre || '';
+          bizCard.appendChild(bizName);
+          var bizRole = document.createElement('div'); bizRole.style.cssText = 'font-size:12px;color:#8b8f98;margin:2px 0;'; bizRole.textContent = (cn.cargo || '') + ' \u2014 ' + (cn.area || '');
+          bizCard.appendChild(bizRole);
+          var bizContact = document.createElement('div'); bizContact.style.cssText = 'display:flex;gap:12px;margin-top:6px;';
+          var bizEmail = document.createElement('a'); bizEmail.style.cssText = 'font-size:11px;color:#3b82f6;text-decoration:none;'; bizEmail.textContent = '\u2709 ' + (cn.email || ''); bizEmail.href = 'mailto:' + (cn.email || '');
+          var bizPhone = document.createElement('span'); bizPhone.style.cssText = 'font-size:11px;color:#22c55e;'; bizPhone.textContent = '\u260E ' + (cn.telefono || '');
+          bizContact.appendChild(bizEmail); bizContact.appendChild(bizPhone); bizCard.appendChild(bizContact);
+          if (cn.nota) { var bizNota = document.createElement('div'); bizNota.style.cssText = 'font-size:10px;color:#8b8f98;font-style:italic;margin-top:4px;'; bizNota.textContent = cn.nota; bizCard.appendChild(bizNota); }
+          var bizSep = document.createElement('div'); bizSep.style.cssText = 'font-size:10px;color:#8b8f98;margin-top:8px;padding-top:6px;border-top:1px solid rgba(234,179,8,0.2);'; bizSep.textContent = 'Apoyo t\u00e9cnico IT (selecciona uno):';
+          bizCard.appendChild(bizSep);
+          taskCard.appendChild(bizCard);
+        }
         var candList = document.createElement('div');
         candList.style.cssText = 'display:flex;flex-direction:column;gap:4px;';
         (task.candidatos || []).forEach(function(cand) {
@@ -5972,6 +5995,48 @@ async function executeRunPipeline(text) {
       addPreview('AG-002 Resource Manager \u2014 Candidatos', '#a855f7', result2);
     }
     progressArea.appendChild(candidatesDiv);
+
+    // Save business contacts to ALL tasks with requiere_negocio
+    var bizContact = null;
+    candidatesTasks.forEach(function(ct) {
+      if (ct.contacto_negocio) bizContact = ct.contacto_negocio;
+    });
+    var bizSavePromises = [];
+    if (bizContact) {
+      candidatesTasks.forEach(function(ct) {
+        if (ct.requiere_negocio && ct.task_id) {
+          var p = authFetch(API_BASE + '/kanban/tareas/meta', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              task_id: ct.task_id,
+              meta: { requiere_negocio: true, contacto_negocio: bizContact }
+            })
+          }).catch(function(e) { console.error('Biz save error:', e); });
+          bizSavePromises.push(p);
+        }
+      });
+      if (recentT) {
+        recentT.forEach(function(rt) {
+          var rtDesc = {}; try { rtDesc = JSON.parse(rt.descripcion || '{}'); } catch(e) {}
+          if (rtDesc.requiere_negocio && !rtDesc.contacto_negocio) {
+            var p2 = authFetch(API_BASE + '/kanban/tareas/meta', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({
+                task_id: rt.id,
+                meta: { requiere_negocio: true, contacto_negocio: bizContact }
+              })
+            }).catch(function(e) {});
+            bizSavePromises.push(p2);
+          }
+        });
+      }
+    }
+    if (bizSavePromises.length > 0) {
+      await Promise.all(bizSavePromises);
+      await new Promise(function(r) { setTimeout(r, 500); });
+    }
 
     // PAUSE: Wait for governance to select technicians
     var totalCandTasks = document.querySelectorAll('.run-cand-task').length;
@@ -6113,6 +6178,12 @@ async function executeRunPipeline(text) {
             var siloSpan = document.createElement('span'); siloSpan.className = 'bkc-silo';
             siloSpan.style.cssText = 'background:' + siloColor + '20;color:' + siloColor + ';'; siloSpan.textContent = tDesc.silo || 'Soporte';
             mDiv.appendChild(siloSpan);
+            if (tDesc.requiere_negocio) {
+              var bizBadge = document.createElement('span');
+              bizBadge.style.cssText = 'font-size:8px;font-weight:600;padding:1px 5px;border-radius:3px;background:rgba(234,179,8,0.2);color:#eab308;';
+              bizBadge.textContent = '\uD83C\uDFE2 Negocio';
+              mDiv.appendChild(bizBadge);
+            }
             if (t.id_tecnico) { var ts2 = document.createElement('span'); ts2.style.cssText = 'font-size:9px;color:#22c55e;'; ts2.textContent = '\u2713 ' + t.id_tecnico + (t.nombre_tecnico ? ' ' + t.nombre_tecnico : ''); mDiv.appendChild(ts2); }
             card.appendChild(mDiv);
             var taskSlaMins2 = tDesc.sla_tarea_minutos || 0;
@@ -6240,6 +6311,41 @@ function toggleRunTaskDetail(taskId, container) {
       var ti2 = document.createElement('span'); ti2.style.fontSize = '12px';
       ti2.textContent = task.id_tecnico + (task.nombre_tecnico ? ' \u2014 ' + task.nombre_tecnico : '') + ' \u2014 Silo: ' + silo;
       td.appendChild(av); td.appendChild(ti2); body.appendChild(td);
+    }
+    // Business contact if task requires coordination
+    if (desc.requiere_negocio) {
+      var bizSection = document.createElement('div');
+      bizSection.style.cssText = 'background:rgba(234,179,8,0.06);border:1px solid rgba(234,179,8,0.25);border-left:3px solid #eab308;border-radius:8px;padding:10px 12px;margin-bottom:12px;';
+      var bizWarn = document.createElement('div'); bizWarn.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:6px;';
+      var bizWarnIcon = document.createElement('span'); bizWarnIcon.textContent = '\u26a0'; bizWarnIcon.style.fontSize = '14px';
+      var bizWarnText = document.createElement('span'); bizWarnText.style.cssText = 'font-size:10px;font-weight:600;color:#eab308;text-transform:uppercase;'; bizWarnText.textContent = 'Coordinaci\u00f3n con \u00e1rea de negocio en curso';
+      bizWarn.appendChild(bizWarnIcon); bizWarn.appendChild(bizWarnText); bizSection.appendChild(bizWarn);
+      var bizNotice = document.createElement('div'); bizNotice.style.cssText = 'font-size:11px;color:#8b8f98;margin-bottom:8px;line-height:1.4;';
+      bizNotice.textContent = 'Gobernanza ya ha contactado con el \u00e1rea de negocio responsable. Este contacto es solo de referencia.';
+      bizSection.appendChild(bizNotice);
+      var renderContact = function(cn2) {
+        var bizInfo = document.createElement('div'); bizInfo.style.cssText = 'background:#181b20;border-radius:6px;padding:8px 10px;';
+        var bizName2 = document.createElement('div'); bizName2.style.cssText = 'font-weight:600;font-size:13px;color:#e8e9ed;'; bizName2.textContent = cn2.nombre_completo || cn2.nombre || '';
+        var bizRole2 = document.createElement('div'); bizRole2.style.cssText = 'font-size:11px;color:#8b8f98;margin:2px 0;'; bizRole2.textContent = (cn2.cargo || '') + ' \u2014 ' + (cn2.area || '');
+        var bizContactRow = document.createElement('div'); bizContactRow.style.cssText = 'display:flex;gap:12px;margin-top:4px;';
+        var bizEmail2 = document.createElement('span'); bizEmail2.style.cssText = 'font-size:10px;color:#3b82f6;'; bizEmail2.textContent = '\u2709 ' + (cn2.email || '');
+        var bizPhone2 = document.createElement('span'); bizPhone2.style.cssText = 'font-size:10px;color:#22c55e;'; bizPhone2.textContent = '\u260e ' + (cn2.telefono || '');
+        bizContactRow.appendChild(bizEmail2); bizContactRow.appendChild(bizPhone2);
+        bizInfo.appendChild(bizName2); bizInfo.appendChild(bizRole2); bizInfo.appendChild(bizContactRow);
+        bizSection.appendChild(bizInfo);
+      };
+      if (desc.contacto_negocio) {
+        renderContact(desc.contacto_negocio);
+      } else {
+        var areaBuscar = desc.area_negocio || silo || 'Soporte';
+        authFetch(API_BASE + '/directorio/buscar?area=' + encodeURIComponent(areaBuscar))
+          .then(function(r) { return r.json(); })
+          .then(function(contacts) {
+            if (contacts && contacts.length > 0) { renderContact(contacts[0]); }
+            else { var nc = document.createElement('div'); nc.style.cssText = 'font-size:11px;color:#8b8f98;font-style:italic;'; nc.textContent = 'Contacto pendiente. \u00c1rea: ' + areaBuscar; bizSection.appendChild(nc); }
+          }).catch(function() {});
+      }
+      body.appendChild(bizSection);
     }
     if (cmdbItems.length > 0) {
       var ct = document.createElement('div'); ct.style.cssText = 'font-size:10px;font-weight:600;color:#8b8f98;text-transform:uppercase;margin:10px 0 6px;'; ct.textContent = 'Contexto infraestructura (CMDB + IA)';

@@ -743,6 +743,52 @@ async def asignar_tecnico_tarea(req: AsignarTecnicoTarea):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class UpdateTaskMeta(BaseModel):
+    task_id: str
+    meta: dict
+
+
+@app.post("/kanban/tareas/meta")
+async def update_task_meta(req: UpdateTaskMeta):
+    """Merge metadata into task description JSON"""
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    try:
+        async with pool.acquire() as conn:
+            meta_json = json.dumps(req.meta, ensure_ascii=False)
+            await conn.execute("""
+                UPDATE kanban_tareas
+                SET descripcion = (COALESCE(descripcion::jsonb, '{}'::jsonb) || $1::jsonb)::text
+                WHERE id = $2
+            """, meta_json, req.task_id)
+            return {"ok": True, "task_id": req.task_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/directorio/buscar")
+async def buscar_directorio(area: str):
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    try:
+        async with pool.acquire() as conn:
+            rows = await conn.fetch("""
+                SELECT id_directivo, nombre_completo, cargo, area, email, telefono
+                FROM directorio_corporativo
+                WHERE activo = true AND (
+                    area ILIKE '%' || $1 || '%'
+                    OR cargo ILIKE '%' || $1 || '%'
+                    OR bio ILIKE '%' || $1 || '%'
+                )
+                ORDER BY nivel_organizativo ASC LIMIT 3
+            """, area)
+            return [dict(r) for r in rows]
+    except Exception:
+        return []
+
+
 @app.post("/buffer/actualizar")
 async def buffer_actualizar(body: BufferUpdate):
     pool = get_pool()
