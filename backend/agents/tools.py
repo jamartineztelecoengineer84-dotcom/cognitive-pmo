@@ -1177,3 +1177,560 @@ async def query_directorio(db, area: str, cargo: str = None):
     query += " ORDER BY nivel_organizativo ASC LIMIT 5"
     rows = await db.fetch(query, *params)
     return [dict(r) for r in rows] if rows else [{"message": "No se encontraron contactos en área: " + area}]
+
+
+# =============================================
+# BUILD PIPELINE v2.0 — Tools para agentes IA
+# =============================================
+
+# --- TOOL: decompose_subtasks (AG-013 Task Decomposer) ---
+
+DECOMPOSE_SUBTASKS_SCHEMA = {
+    "name": "decompose_subtasks",
+    "description": "Graba subtareas técnicas en build_subtasks. Cada tarea del EDT se descompone en subtareas concretas con tecnología, componente, skill y story points.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "id_proyecto": {"type": "string", "description": "ID del proyecto"},
+            "edt_tasks": {
+                "type": "array",
+                "description": "Lista de tareas EDT con subtareas",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id_tarea": {"type": "string"},
+                        "subtareas": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "titulo": {"type": "string"},
+                                    "descripcion_tecnica": {"type": "string"},
+                                    "tecnologia": {"type": "string"},
+                                    "componente": {"type": "string"},
+                                    "integracion_con": {"type": "string"},
+                                    "horas_estimadas": {"type": "number"},
+                                    "skill_requerido": {"type": "string"},
+                                    "criterio_exito": {"type": "string"},
+                                    "story_points": {"type": "integer"}
+                                },
+                                "required": ["titulo"]
+                            }
+                        }
+                    },
+                    "required": ["id_tarea", "subtareas"]
+                }
+            }
+        },
+        "required": ["id_proyecto", "edt_tasks"]
+    }
+}
+
+
+@register_tool("decompose_subtasks")
+async def decompose_subtasks(db, id_proyecto: str, edt_tasks: list):
+    """Graba subtareas técnicas en build_subtasks"""
+    total = 0
+    result = {}
+    for task in edt_tasks:
+        task_id = task.get("id_tarea")
+        subtasks = task.get("subtareas", [])
+        saved = []
+        for i, st in enumerate(subtasks):
+            row = await db.fetchrow("""
+                INSERT INTO build_subtasks
+                    (id_proyecto, id_tarea_padre, titulo, descripcion_tecnica,
+                     tecnologia, componente, integracion_con, horas_estimadas,
+                     skill_requerido, criterio_exito, orden, story_points)
+                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+                RETURNING id, titulo
+            """, id_proyecto, task_id, st.get("titulo"),
+                st.get("descripcion_tecnica"), st.get("tecnologia"),
+                st.get("componente"), st.get("integracion_con"),
+                st.get("horas_estimadas", 0), st.get("skill_requerido"),
+                st.get("criterio_exito"), i + 1,
+                st.get("story_points", 0))
+            saved.append(dict(row))
+            total += 1
+        result[task_id] = saved
+    return {"ok": True, "count": total, "subtasks_by_task": result}
+
+
+# --- TOOL: analyze_risks (AG-014 Risk Analyzer) ---
+
+ANALYZE_RISKS_SCHEMA = {
+    "name": "analyze_risks",
+    "description": "Genera y graba riesgos del proyecto en build_risks. Calcula score global y contingencia recomendada.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "id_proyecto": {"type": "string", "description": "ID del proyecto"},
+            "risks": {
+                "type": "array",
+                "description": "Lista de riesgos identificados",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "descripcion": {"type": "string"},
+                        "categoria": {"type": "string", "description": "Técnico, Organizativo, Externo, Financiero"},
+                        "probabilidad": {"type": "integer", "description": "1-5"},
+                        "impacto": {"type": "integer", "description": "1-5"},
+                        "plan_mitigacion": {"type": "string"},
+                        "plan_contingencia": {"type": "string"},
+                        "responsable": {"type": "string"},
+                        "trigger_evento": {"type": "string"}
+                    },
+                    "required": ["descripcion"]
+                }
+            }
+        },
+        "required": ["id_proyecto", "risks"]
+    }
+}
+
+
+@register_tool("analyze_risks")
+async def analyze_risks(db, id_proyecto: str, risks: list):
+    """Genera y graba riesgos en build_risks"""
+    total_score = 0
+    created = []
+    for rk in risks:
+        prob = rk.get("probabilidad", 3)
+        imp = rk.get("impacto", 3)
+        row = await db.fetchrow("""
+            INSERT INTO build_risks
+                (id_proyecto, descripcion, categoria, probabilidad, impacto,
+                 plan_mitigacion, plan_contingencia, responsable,
+                 trigger_evento, estado)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'ABIERTO')
+            RETURNING id, score
+        """, id_proyecto, rk.get("descripcion"),
+            rk.get("categoria", "Técnico"), prob, imp,
+            rk.get("plan_mitigacion"), rk.get("plan_contingencia"),
+            rk.get("responsable"), rk.get("trigger_evento"))
+        created.append(dict(row))
+        total_score += float(row["score"])
+    n = len(created) if created else 1
+    risk_score_global = min(100, (total_score / (n * 25)) * 100)
+    if risk_score_global > 75:
+        contingencia = 20
+    elif risk_score_global > 50:
+        contingencia = 15
+    elif risk_score_global > 25:
+        contingencia = 10
+    else:
+        contingencia = 5
+    return {
+        "ok": True, "count": len(created),
+        "risk_score_global": round(risk_score_global, 1),
+        "contingencia_pct_recomendada": contingencia,
+        "risks": created
+    }
+
+
+# --- TOOL: query_postmortem_patterns (AG-014 Risk Analyzer) ---
+
+QUERY_POSTMORTEM_PATTERNS_SCHEMA = {
+    "name": "query_postmortem_patterns",
+    "description": "Busca patrones en postmortem_reports para identificar riesgos reales basados en incidentes pasados.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "keywords": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Palabras clave para buscar en postmortems (ej: Oracle, firewall, migración)"
+            }
+        },
+        "required": ["keywords"]
+    }
+}
+
+
+@register_tool("query_postmortem_patterns")
+async def query_postmortem_patterns(db, keywords: list):
+    """Busca patrones en postmortem_reports para riesgos reales"""
+    results = []
+    for kw in keywords:
+        rows = await db.fetch("""
+            SELECT id, incident_id, title, root_cause, root_cause_category,
+                   lessons_learned, mttr_minutes, sla_breached
+            FROM postmortem_reports
+            WHERE title ILIKE '%' || $1 || '%'
+               OR root_cause ILIKE '%' || $1 || '%'
+            LIMIT 3
+        """, kw)
+        for r in rows:
+            d = dict(r)
+            if d not in results:
+                results.append(d)
+    return results
+
+
+# --- TOOL: map_stakeholders (AG-015 Stakeholder Map) ---
+
+MAP_STAKEHOLDERS_SCHEMA = {
+    "name": "map_stakeholders",
+    "description": "Mapea stakeholders desde directorio corporativo y los graba en build_stakeholders con poder/interés/estrategia.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "id_proyecto": {"type": "string", "description": "ID del proyecto"},
+            "areas_afectadas": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Áreas de negocio afectadas (ej: Trading, Compliance, Operaciones)"
+            }
+        },
+        "required": ["id_proyecto", "areas_afectadas"]
+    }
+}
+
+
+@register_tool("map_stakeholders")
+async def map_stakeholders(db, id_proyecto: str, areas_afectadas: list):
+    """Mapea stakeholders del directorio corporativo"""
+    stakeholders = []
+    for area in areas_afectadas:
+        rows = await db.fetch("""
+            SELECT id_directivo, nombre_completo, cargo, area,
+                   nivel_organizativo, email, telefono
+            FROM directorio_corporativo
+            WHERE activo = true AND (
+                area ILIKE '%' || $1 || '%'
+                OR cargo ILIKE '%' || $1 || '%'
+            )
+            ORDER BY
+                CASE nivel_organizativo
+                    WHEN 'Dirección' THEN 1
+                    WHEN 'Jefe de Equipo' THEN 2
+                    ELSE 3
+                END
+            LIMIT 3
+        """, area)
+        for r in rows:
+            d = dict(r)
+            if d.get("nivel_organizativo") == "Dirección":
+                poder, interes = 4, 3
+            else:
+                poder, interes = 2, 4
+            if poder >= 4 and interes >= 3:
+                estrategia = "Gestionar de cerca"
+            elif poder >= 4:
+                estrategia = "Mantener satisfecho"
+            elif interes >= 3:
+                estrategia = "Mantener informado"
+            else:
+                estrategia = "Monitorizar"
+            sh_row = await db.fetchrow("""
+                INSERT INTO build_stakeholders
+                    (id_proyecto, nombre, cargo, area, nivel_poder, nivel_interes,
+                     estrategia, rol_raci, frecuencia_comunicacion, canal, id_directivo)
+                VALUES ($1,$2,$3,$4,$5,$6,$7,'C','Quincenal','Email',$8)
+                RETURNING *
+            """, id_proyecto, d["nombre_completo"], d["cargo"], d["area"],
+                poder, interes, estrategia, d["id_directivo"])
+            stakeholders.append(dict(sh_row))
+    return {"ok": True, "count": len(stakeholders), "stakeholders": stakeholders}
+
+
+# --- TOOL: query_pm_candidates (AG-006 Resource Manager) ---
+
+QUERY_PM_CANDIDATES_SCHEMA = {
+    "name": "query_pm_candidates",
+    "description": "Busca PMs candidatos con scoring desglosado (especialidad, carga, éxito, certificaciones, experiencia).",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "skills_requeridos": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Skills que necesita el proyecto"
+            },
+            "prioridad": {"type": "string", "description": "Prioridad del proyecto: Crítica, Alta, Media, Baja"}
+        },
+        "required": ["skills_requeridos"]
+    }
+}
+
+
+@register_tool("query_pm_candidates")
+async def query_pm_candidates(db, skills_requeridos: list, prioridad: str = "Media"):
+    """Busca PMs candidatos con scoring"""
+    pms = await db.fetch("""
+        SELECT id_pm, nombre, nivel, especialidad, skills_json,
+               estado, max_proyectos, certificaciones,
+               scoring_promedio, proyectos_completados, proyectos_activos,
+               tasa_exito, carga_actual
+        FROM pmo_project_managers
+        WHERE estado IN ('DISPONIBLE', 'ASIGNADO')
+        AND proyectos_activos < max_proyectos
+    """)
+    scored = []
+    for pm in pms:
+        pm_dict = dict(pm)
+        pm_skills = pm_dict.get("skills_json", [])
+        if isinstance(pm_skills, str):
+            pm_skills = json.loads(pm_skills)
+        skill_names = [s.get("nombre", s) if isinstance(s, dict) else s for s in pm_skills]
+        match_count = sum(1 for s in skills_requeridos if s in skill_names)
+        match_pct = match_count / max(len(skills_requeridos), 1)
+        score_especialidad = match_pct * 40
+        score_carga = max(0, (1 - pm_dict["carga_actual"] / 40)) * 20
+        score_exito = (float(pm_dict["tasa_exito"]) / 100) * 20
+        score_certs = min(len(pm_dict.get("certificaciones", []) or []) / 3, 1) * 10
+        score_completados = min(pm_dict["proyectos_completados"] / 15, 1) * 10
+        total = round(score_especialidad + score_carga + score_exito +
+                      score_certs + score_completados)
+        pm_dict["score"] = total
+        pm_dict["score_breakdown"] = {
+            "especialidad": round(score_especialidad),
+            "carga": round(score_carga),
+            "exito": round(score_exito),
+            "certificaciones": round(score_certs),
+            "completados": round(score_completados)
+        }
+        pm_dict["skills_match"] = {
+            "total": len(skills_requeridos),
+            "match": match_count,
+            "matched": [s for s in skills_requeridos if s in skill_names],
+            "missing": [s for s in skills_requeridos if s not in skill_names]
+        }
+        scored.append(pm_dict)
+    scored.sort(key=lambda x: x["score"], reverse=True)
+    return scored[:3]
+
+
+# --- TOOL: calc_roi (AG-016 Cost Analyzer) ---
+
+CALC_ROI_SCHEMA = {
+    "name": "calc_roi",
+    "description": "Calcula ROI, TIR, VAN y payback del proyecto. No accede a BD, solo cálculo financiero.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "bac": {"type": "number", "description": "Budget At Completion (coste total del proyecto en EUR)"},
+            "beneficio_anual": {"type": "number", "description": "Beneficio anual esperado en EUR"},
+            "años": {"type": "integer", "description": "Horizonte de evaluación (default 5)"},
+            "tasa_descuento": {"type": "number", "description": "Tasa de descuento (default 0.08 = 8%)"}
+        },
+        "required": ["bac", "beneficio_anual"]
+    }
+}
+
+
+@register_tool("calc_roi")
+async def calc_roi(db, bac: float, beneficio_anual: float, años: int = 5,
+                   tasa_descuento: float = 0.08):
+    """Calcula métricas financieras ROI, TIR, VAN, payback"""
+    beneficio_total = beneficio_anual * años
+    roi = ((beneficio_total - bac) / bac) * 100 if bac > 0 else 0
+    payback_meses = round((bac / beneficio_anual) * 12) if beneficio_anual > 0 else 0
+    van = -bac
+    for year in range(1, años + 1):
+        van += beneficio_anual / ((1 + tasa_descuento) ** year)
+    tir = 0
+    low, high = -0.5, 2.0
+    for _ in range(50):
+        mid = (low + high) / 2
+        npv = -bac
+        for year in range(1, años + 1):
+            npv += beneficio_anual / ((1 + mid) ** year)
+        if npv > 0:
+            low = mid
+        else:
+            high = mid
+        tir = mid
+    return {
+        "roi_pct": round(roi, 1),
+        "payback_meses": payback_meses,
+        "tir_pct": round(tir * 100, 1),
+        "van": round(van, 2),
+        "bac": bac,
+        "beneficio_anual": beneficio_anual,
+        "beneficio_total": beneficio_total
+    }
+
+
+# --- TOOL: calc_evm_baseline (AG-016 Cost Analyzer) ---
+
+CALC_EVM_BASELINE_SCHEMA = {
+    "name": "calc_evm_baseline",
+    "description": "Establece la baseline EVM (Earned Value Management) con PV por semana para seguimiento de costes y plazos.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "bac": {"type": "number", "description": "Budget At Completion en EUR"},
+            "duracion_semanas": {"type": "integer", "description": "Duración total del proyecto en semanas"},
+            "tareas_por_fase": {
+                "type": "array",
+                "description": "Lista de fases con horas y semanas",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "fase": {"type": "string"},
+                        "horas": {"type": "number"},
+                        "semanas": {"type": "integer"}
+                    }
+                }
+            }
+        },
+        "required": ["bac", "duracion_semanas", "tareas_por_fase"]
+    }
+}
+
+
+@register_tool("calc_evm_baseline")
+async def calc_evm_baseline(db, bac: float, duracion_semanas: int,
+                             tareas_por_fase: list):
+    """Establece baseline EVM con PV por semana"""
+    pv_por_semana = []
+    acumulado = 0
+    total_horas = sum(f.get("horas", 0) for f in tareas_por_fase)
+    if total_horas == 0:
+        total_horas = 1
+    for fase in tareas_por_fase:
+        fase_semanas = fase.get("semanas", 4)
+        fase_horas = fase.get("horas", 0)
+        pv_fase = (fase_horas / total_horas) * bac
+        pv_semanal = pv_fase / max(fase_semanas, 1)
+        for w in range(fase_semanas):
+            acumulado += pv_semanal
+            pv_por_semana.append(round(acumulado, 2))
+    while len(pv_por_semana) < duracion_semanas:
+        pv_por_semana.append(pv_por_semana[-1] if pv_por_semana else 0)
+    return {
+        "bac": bac,
+        "duracion_semanas": duracion_semanas,
+        "pv_por_semana": pv_por_semana[:duracion_semanas],
+        "cpi_baseline": 1.0,
+        "spi_baseline": 1.0
+    }
+
+
+# --- TOOL: define_quality_gates (AG-017 Quality Gate) ---
+
+DEFINE_QUALITY_GATES_SCHEMA = {
+    "name": "define_quality_gates",
+    "description": "Define gates de calidad G0-G5 para el proyecto con criterios y checklist estándar PMBOK.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "id_proyecto": {"type": "string", "description": "ID del proyecto"},
+            "fases_proyecto": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Lista de fases del proyecto (opcional, se usan gates estándar)"
+            }
+        },
+        "required": ["id_proyecto"]
+    }
+}
+
+
+@register_tool("define_quality_gates")
+async def define_quality_gates(db, id_proyecto: str, fases_proyecto: list = None):
+    """Define gates de calidad G0-G5 para el proyecto"""
+    gates_template = [
+        {"fase": "G0", "gate_name": "Gate Idea",
+         "criterios": ["Business Case aprobado", "Presupuesto orientativo", "Sponsor identificado"],
+         "checklist": ["Formulario Business Case completo", "Prioridad asignada"]},
+        {"fase": "G1", "gate_name": "Gate Inicio",
+         "criterios": ["Acta Constitución firmada", "EDT/WBS aprobado", "Equipo formado"],
+         "checklist": ["Objetivos SMART definidos", "Alcance documentado", "PM asignado"]},
+        {"fase": "G2", "gate_name": "Gate Planificación",
+         "criterios": ["Presupuesto aprobado", "Gantt baseline", "Riesgos aceptados", "Kickoff realizado"],
+         "checklist": ["BAC definitivo", "Sprints planificados", "DoD por tarea", "Stakeholders notificados"]},
+        {"fase": "G3", "gate_name": "Gate Ejecución",
+         "criterios": ["Sprint Review OK", "CPI > 0.9", "SPI > 0.85", "Sin P1 abiertos"],
+         "checklist": ["Demo a stakeholders", "Retrospectiva completada", "Riesgos actualizados"]},
+        {"fase": "G4", "gate_name": "Gate Cierre",
+         "criterios": ["Todos los entregables aceptados", "Decommission completado", "Lecciones aprendidas"],
+         "checklist": ["Acta de cierre firmada", "Postmortem escrito", "Recursos liberados"]},
+        {"fase": "G5", "gate_name": "Gate Beneficios",
+         "criterios": ["ROI verificado a 6 meses", "KPIs objetivo cumplidos"],
+         "checklist": ["Informe de beneficios", "Comparación BAC vs AC final"]}
+    ]
+    created = []
+    for gt in gates_template:
+        row = await db.fetchrow("""
+            INSERT INTO build_quality_gates
+                (id_proyecto, fase, gate_name, criterios_json, checklist_json, estado)
+            VALUES ($1,$2,$3,$4,$5,'PENDING')
+            RETURNING *
+        """, id_proyecto, gt["fase"], gt["gate_name"],
+            json.dumps(gt["criterios"]), json.dumps(gt["checklist"]))
+        created.append(dict(row))
+    return {"ok": True, "count": len(created), "gates": created}
+
+
+# --- TOOL: query_similar_projects (AG-018 Governance Advisor) ---
+
+QUERY_SIMILAR_PROJECTS_SCHEMA = {
+    "name": "query_similar_projects",
+    "description": "Busca proyectos similares en cartera_build, postmortem_reports y governance scoring para comparación.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "keywords": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Palabras clave del proyecto actual (ej: OpenShift, migración, SIEM)"
+            },
+            "skills": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Skills requeridos (opcional)"
+            }
+        },
+        "required": ["keywords"]
+    }
+}
+
+
+@register_tool("query_similar_projects")
+async def query_similar_projects(db, keywords: list, skills: list = None):
+    """Busca proyectos similares en cartera, postmortem y governance"""
+    results = []
+    for kw in keywords:
+        rows = await db.fetch("""
+            SELECT id_proyecto, nombre_proyecto, prioridad_estrategica,
+                   horas_estimadas, estado, skills_requeridas
+            FROM cartera_build
+            WHERE nombre_proyecto ILIKE '%' || $1 || '%'
+               OR skills_requeridas ILIKE '%' || $1 || '%'
+            LIMIT 3
+        """, kw)
+        for r in rows:
+            d = dict(r)
+            d["source"] = "cartera_build"
+            if d not in results:
+                results.append(d)
+    for kw in keywords:
+        rows = await db.fetch("""
+            SELECT id, incident_id, title, root_cause,
+                   root_cause_category, lessons_learned, mttr_minutes
+            FROM postmortem_reports
+            WHERE title ILIKE '%' || $1 || '%'
+               OR root_cause ILIKE '%' || $1 || '%'
+            LIMIT 2
+        """, kw)
+        for r in rows:
+            d = dict(r)
+            d["source"] = "postmortem"
+            results.append(d)
+    for kw in keywords:
+        rows = await db.fetch("""
+            SELECT g.id_proyecto, g.total_score, g.gate_status,
+                   g.roi_esperado, g.payback_meses,
+                   c.nombre_proyecto, c.horas_estimadas
+            FROM pmo_governance_scoring g
+            LEFT JOIN cartera_build c ON g.id_proyecto = c.id_proyecto
+            WHERE c.nombre_proyecto ILIKE '%' || $1 || '%'
+            LIMIT 2
+        """, kw)
+        for r in rows:
+            d = dict(r)
+            d["source"] = "governance"
+            results.append(d)
+    return results[:10]

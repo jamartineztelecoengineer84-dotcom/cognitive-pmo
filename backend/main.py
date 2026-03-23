@@ -1190,6 +1190,549 @@ async def delete_build_plan(plan_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# =============================================
+# BUILD PIPELINE v2.0 — Endpoints
+# =============================================
+
+# --- BUILD SUBTASKS (AG-013 Task Decomposer) ---
+
+@app.get("/build/subtasks/{id_proyecto}")
+async def get_build_subtasks(id_proyecto: str):
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            "SELECT * FROM build_subtasks WHERE id_proyecto = $1 ORDER BY id_tarea_padre, orden",
+            id_proyecto)
+        return [dict(r) for r in rows]
+
+
+@app.post("/build/subtasks")
+async def create_build_subtasks(data: dict):
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    async with pool.acquire() as conn:
+        subtasks = data.get("subtasks", [])
+        created = []
+        for st in subtasks:
+            row = await conn.fetchrow("""
+                INSERT INTO build_subtasks (id_proyecto, id_tarea_padre, titulo,
+                    descripcion_tecnica, tecnologia, componente, integracion_con,
+                    horas_estimadas, skill_requerido, criterio_exito, orden, story_points)
+                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+                RETURNING *
+            """, data.get("id_proyecto"), st.get("id_tarea_padre"), st.get("titulo"),
+                st.get("descripcion_tecnica"), st.get("tecnologia"), st.get("componente"),
+                st.get("integracion_con"), st.get("horas_estimadas", 0),
+                st.get("skill_requerido"), st.get("criterio_exito"),
+                st.get("orden", 0), st.get("story_points", 0))
+            created.append(dict(row))
+        return {"ok": True, "count": len(created), "subtasks": created}
+
+
+@app.delete("/build/subtasks/{subtask_id}")
+async def delete_build_subtask(subtask_id: str):
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    async with pool.acquire() as conn:
+        await conn.execute("DELETE FROM build_subtasks WHERE id = $1", subtask_id)
+        return {"deleted": True}
+
+
+# --- BUILD RISKS (AG-014 Risk Analyzer) ---
+
+@app.get("/build/risks/{id_proyecto}")
+async def get_build_risks(id_proyecto: str):
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            "SELECT * FROM build_risks WHERE id_proyecto = $1 ORDER BY score DESC",
+            id_proyecto)
+        return [dict(r) for r in rows]
+
+
+@app.post("/build/risks")
+async def create_build_risks(data: dict):
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    async with pool.acquire() as conn:
+        risks = data.get("risks", [])
+        created = []
+        for rk in risks:
+            row = await conn.fetchrow("""
+                INSERT INTO build_risks (id_proyecto, descripcion, categoria,
+                    probabilidad, impacto, plan_mitigacion, plan_contingencia,
+                    responsable, trigger_evento, estado)
+                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+                RETURNING *
+            """, data.get("id_proyecto"), rk.get("descripcion"), rk.get("categoria", "Técnico"),
+                rk.get("probabilidad", 3), rk.get("impacto", 3),
+                rk.get("plan_mitigacion"), rk.get("plan_contingencia"),
+                rk.get("responsable"), rk.get("trigger_evento"),
+                rk.get("estado", "ABIERTO"))
+            created.append(dict(row))
+        return {"ok": True, "count": len(created), "risks": created}
+
+
+@app.put("/build/risks/{risk_id}")
+async def update_build_risk(risk_id: str, data: dict):
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    async with pool.acquire() as conn:
+        sets = []
+        vals = [risk_id]
+        idx = 2
+        for field in ["descripcion", "categoria", "probabilidad", "impacto",
+                       "plan_mitigacion", "plan_contingencia", "responsable",
+                       "trigger_evento", "estado"]:
+            if field in data:
+                sets.append(f"{field} = ${idx}")
+                vals.append(data[field])
+                idx += 1
+        if sets:
+            await conn.execute(
+                f"UPDATE build_risks SET {', '.join(sets)} WHERE id = $1", *vals)
+        row = await conn.fetchrow("SELECT * FROM build_risks WHERE id = $1", risk_id)
+        return dict(row) if row else {"error": "not found"}
+
+
+@app.delete("/build/risks/{risk_id}")
+async def delete_build_risk(risk_id: str):
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    async with pool.acquire() as conn:
+        await conn.execute("DELETE FROM build_risks WHERE id = $1", risk_id)
+        return {"deleted": True}
+
+
+# --- BUILD STAKEHOLDERS (AG-015 Stakeholder Map) ---
+
+@app.get("/build/stakeholders/{id_proyecto}")
+async def get_build_stakeholders(id_proyecto: str):
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            """SELECT * FROM build_stakeholders WHERE id_proyecto = $1
+               ORDER BY nivel_poder DESC, nivel_interes DESC""",
+            id_proyecto)
+        return [dict(r) for r in rows]
+
+
+@app.post("/build/stakeholders")
+async def create_build_stakeholders(data: dict):
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    async with pool.acquire() as conn:
+        stakeholders = data.get("stakeholders", [])
+        created = []
+        for sh in stakeholders:
+            row = await conn.fetchrow("""
+                INSERT INTO build_stakeholders (id_proyecto, nombre, cargo, area,
+                    nivel_poder, nivel_interes, estrategia, rol_raci,
+                    frecuencia_comunicacion, canal, id_directivo)
+                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+                RETURNING *
+            """, data.get("id_proyecto"), sh.get("nombre"), sh.get("cargo"),
+                sh.get("area"), sh.get("nivel_poder", 3), sh.get("nivel_interes", 3),
+                sh.get("estrategia", "Monitorizar"), sh.get("rol_raci", "I"),
+                sh.get("frecuencia_comunicacion", "Mensual"),
+                sh.get("canal", "Email"), sh.get("id_directivo"))
+            created.append(dict(row))
+        return {"ok": True, "count": len(created), "stakeholders": created}
+
+
+@app.delete("/build/stakeholders/{stakeholder_id}")
+async def delete_build_stakeholder(stakeholder_id: str):
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    async with pool.acquire() as conn:
+        await conn.execute("DELETE FROM build_stakeholders WHERE id = $1", stakeholder_id)
+        return {"deleted": True}
+
+
+# --- BUILD QUALITY GATES (AG-017 Quality Gate) ---
+
+@app.get("/build/quality-gates/{id_proyecto}")
+async def get_build_quality_gates(id_proyecto: str):
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            "SELECT * FROM build_quality_gates WHERE id_proyecto = $1 ORDER BY fase",
+            id_proyecto)
+        return [dict(r) for r in rows]
+
+
+@app.post("/build/quality-gates")
+async def create_build_quality_gates(data: dict):
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    async with pool.acquire() as conn:
+        gates = data.get("gates", [])
+        created = []
+        for gt in gates:
+            row = await conn.fetchrow("""
+                INSERT INTO build_quality_gates (id_proyecto, fase, gate_name,
+                    criterios_json, checklist_json, dod_json, responsable_qa, estado)
+                VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+                RETURNING *
+            """, data.get("id_proyecto"), gt.get("fase"), gt.get("gate_name"),
+                json.dumps(gt.get("criterios", [])),
+                json.dumps(gt.get("checklist", [])),
+                json.dumps(gt.get("dod", [])),
+                gt.get("responsable_qa"), gt.get("estado", "PENDING"))
+            created.append(dict(row))
+        return {"ok": True, "count": len(created), "gates": created}
+
+
+@app.put("/build/quality-gates/{gate_id}")
+async def update_build_quality_gate(gate_id: str, data: dict):
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    async with pool.acquire() as conn:
+        sets = []
+        vals = [gate_id]
+        idx = 2
+        for field in ["estado", "responsable_qa", "fecha_revision", "notas"]:
+            if field in data:
+                sets.append(f"{field} = ${idx}")
+                vals.append(data[field])
+                idx += 1
+        for jfield in ["criterios_json", "checklist_json", "dod_json"]:
+            if jfield in data:
+                sets.append(f"{jfield} = ${idx}")
+                vals.append(json.dumps(data[jfield]))
+                idx += 1
+        if sets:
+            await conn.execute(
+                f"UPDATE build_quality_gates SET {', '.join(sets)} WHERE id = $1", *vals)
+        row = await conn.fetchrow("SELECT * FROM build_quality_gates WHERE id = $1", gate_id)
+        return dict(row) if row else {"error": "not found"}
+
+
+# --- BUILD LIVE (Sidebar proyectos vivos) ---
+
+@app.get("/build/live")
+async def get_build_live():
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("SELECT * FROM build_live ORDER BY fecha_inicio DESC")
+        return [dict(r) for r in rows]
+
+
+@app.post("/build/live")
+async def create_build_live(data: dict):
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow("""
+            INSERT INTO build_live (id_proyecto, nombre, pm_asignado, prioridad,
+                estado, fecha_fin_prevista, total_tareas, total_sprints,
+                presupuesto_bac, risk_score, gate_actual, story_points_total)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+            ON CONFLICT (id_proyecto) DO NOTHING
+            RETURNING *
+        """, data.get("id_proyecto"), data.get("nombre"), data.get("pm_asignado"),
+            data.get("prioridad", "Media"), data.get("estado", "PLANIFICACION"),
+            data.get("fecha_fin_prevista"), data.get("total_tareas", 0),
+            data.get("total_sprints", 16), data.get("presupuesto_bac", 0),
+            data.get("risk_score", 0), data.get("gate_actual", "G2-PLANIFICACION"),
+            data.get("story_points_total", 0))
+        return dict(row) if row else {"ok": True, "exists": True}
+
+
+@app.put("/build/live/{id_proyecto}/progreso")
+async def update_build_live_progress(id_proyecto: str, data: dict):
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    async with pool.acquire() as conn:
+        sets = []
+        vals = [id_proyecto]
+        idx = 2
+        for field in ["progreso_pct", "tareas_completadas", "sprint_actual",
+                       "presupuesto_consumido", "gate_actual", "estado",
+                       "story_points_completados", "velocity_media"]:
+            if field in data:
+                sets.append(f"{field} = ${idx}")
+                vals.append(data[field])
+                idx += 1
+        if sets:
+            await conn.execute(
+                f"UPDATE build_live SET {', '.join(sets)} WHERE id_proyecto = $1", *vals)
+        row = await conn.fetchrow("SELECT * FROM build_live WHERE id_proyecto = $1", id_proyecto)
+        return dict(row) if row else {"error": "not found"}
+
+
+@app.delete("/build/live/{id_proyecto}")
+async def delete_build_live(id_proyecto: str):
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    async with pool.acquire() as conn:
+        await conn.execute("DELETE FROM build_live WHERE id_proyecto = $1", id_proyecto)
+        return {"deleted": True}
+
+
+# --- BUILD SPRINTS (Scrum framework) ---
+
+@app.get("/build/sprints/{id_proyecto}")
+async def get_build_sprints(id_proyecto: str):
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            "SELECT * FROM build_sprints WHERE id_proyecto = $1 ORDER BY sprint_number",
+            id_proyecto)
+        return [dict(r) for r in rows]
+
+
+@app.post("/build/sprints")
+async def create_build_sprints(data: dict):
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    async with pool.acquire() as conn:
+        sprints = data.get("sprints", [])
+        created = []
+        for sp in sprints:
+            row = await conn.fetchrow("""
+                INSERT INTO build_sprints (id_proyecto, sprint_number, nombre,
+                    sprint_goal, fecha_inicio, fecha_fin,
+                    story_points_planificados, estado)
+                VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+                RETURNING *
+            """, data.get("id_proyecto"), sp.get("sprint_number"),
+                sp.get("nombre"), sp.get("sprint_goal"),
+                sp.get("fecha_inicio"), sp.get("fecha_fin"),
+                sp.get("story_points_planificados", 0),
+                sp.get("estado", "PLANIFICADO"))
+            created.append(dict(row))
+        return {"ok": True, "count": len(created), "sprints": created}
+
+
+@app.put("/build/sprints/{sprint_id}")
+async def update_build_sprint(sprint_id: str, data: dict):
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    async with pool.acquire() as conn:
+        sets = []
+        vals = [sprint_id]
+        idx = 2
+        for field in ["estado", "story_points_completados", "velocity", "notas_retro"]:
+            if field in data:
+                sets.append(f"{field} = ${idx}")
+                vals.append(data[field])
+                idx += 1
+        if "burndown_data" in data:
+            sets.append(f"burndown_data = ${idx}")
+            vals.append(json.dumps(data["burndown_data"]))
+            idx += 1
+        if sets:
+            await conn.execute(
+                f"UPDATE build_sprints SET {', '.join(sets)} WHERE id = $1", *vals)
+        row = await conn.fetchrow("SELECT * FROM build_sprints WHERE id = $1", sprint_id)
+        return dict(row) if row else {"error": "not found"}
+
+
+# --- BUILD SPRINT ITEMS (Scrum board items) ---
+
+@app.get("/build/sprint-items/{id_proyecto}")
+async def get_build_sprint_items(id_proyecto: str, sprint_number: int = None):
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    async with pool.acquire() as conn:
+        if sprint_number:
+            rows = await conn.fetch(
+                """SELECT * FROM build_sprint_items
+                   WHERE id_proyecto = $1 AND sprint_number = $2
+                   ORDER BY orden_backlog""",
+                id_proyecto, sprint_number)
+        else:
+            rows = await conn.fetch(
+                "SELECT * FROM build_sprint_items WHERE id_proyecto = $1 ORDER BY orden_backlog",
+                id_proyecto)
+        return [dict(r) for r in rows]
+
+
+@app.post("/build/sprint-items")
+async def create_build_sprint_items(data: dict):
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    async with pool.acquire() as conn:
+        items = data.get("items", [])
+        created = []
+        for it in items:
+            row = await conn.fetchrow("""
+                INSERT INTO build_sprint_items (id_proyecto, id_sprint, sprint_number,
+                    item_key, tipo, titulo, descripcion, silo, prioridad,
+                    story_points, estado, id_tecnico, nombre_tecnico,
+                    subtareas_total, id_tarea_padre, horas_estimadas,
+                    criterios_aceptacion, dod_checklist, orden_backlog)
+                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
+                RETURNING *
+            """, data.get("id_proyecto"), it.get("id_sprint"), it.get("sprint_number"),
+                it.get("item_key"), it.get("tipo", "TASK"), it.get("titulo"),
+                it.get("descripcion"), it.get("silo"), it.get("prioridad", "Media"),
+                it.get("story_points", 0), it.get("estado", "TODO"),
+                it.get("id_tecnico"), it.get("nombre_tecnico"),
+                it.get("subtareas_total", 0), it.get("id_tarea_padre"),
+                it.get("horas_estimadas", 0),
+                json.dumps(it.get("criterios_aceptacion", [])),
+                json.dumps(it.get("dod_checklist", [])),
+                it.get("orden_backlog", 0))
+            created.append(dict(row))
+        return {"ok": True, "count": len(created), "items": created}
+
+
+@app.put("/build/sprint-items/{item_id}")
+async def update_build_sprint_item(item_id: str, data: dict):
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    async with pool.acquire() as conn:
+        sets = []
+        vals = [item_id]
+        idx = 2
+        for field in ["estado", "id_tecnico", "nombre_tecnico", "sprint_number",
+                       "subtareas_completadas", "horas_reales", "bloqueador",
+                       "prioridad", "story_points"]:
+            if field in data:
+                sets.append(f"{field} = ${idx}")
+                vals.append(data[field])
+                idx += 1
+        for jfield in ["criterios_aceptacion", "dod_checklist"]:
+            if jfield in data:
+                sets.append(f"{jfield} = ${idx}")
+                vals.append(json.dumps(data[jfield]))
+                idx += 1
+        if sets:
+            await conn.execute(
+                f"UPDATE build_sprint_items SET {', '.join(sets)} WHERE id = $1", *vals)
+        row = await conn.fetchrow("SELECT * FROM build_sprint_items WHERE id = $1", item_id)
+        return dict(row) if row else {"error": "not found"}
+
+
+@app.delete("/build/sprint-items/{item_id}")
+async def delete_build_sprint_item(item_id: str):
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    async with pool.acquire() as conn:
+        await conn.execute("DELETE FROM build_sprint_items WHERE id = $1", item_id)
+        return {"deleted": True}
+
+
+# --- PM CANDIDATES (AG-006 mejorado) ---
+
+@app.get("/pmo/managers/candidates")
+async def get_pm_candidates(skills: str = "", prioridad: str = "Media"):
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT id_pm, nombre, nivel, especialidad, skills_json,
+                   estado, max_proyectos, certificaciones,
+                   scoring_promedio, proyectos_completados, proyectos_activos,
+                   tasa_exito, carga_actual, email, telefono
+            FROM pmo_project_managers
+            WHERE estado IN ('DISPONIBLE', 'ASIGNADO')
+            AND proyectos_activos < max_proyectos
+            ORDER BY tasa_exito DESC, carga_actual ASC
+            LIMIT 5
+        """)
+        return [dict(r) for r in rows]
+
+
+# --- ADVISOR CHAT (AG-018 Governance Advisor) ---
+
+@app.post("/build/advisor/chat")
+async def build_advisor_chat(data: dict):
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    session_id = data.get("session_id", "")
+    message = data.get("message", "")
+    context = data.get("context", {})
+    async with pool.acquire() as conn:
+        await conn.execute("""
+            INSERT INTO agent_conversations (session_id, agent_id, agent_name,
+                role, content, metadata)
+            VALUES ($1, 'AG-018', 'Governance Advisor', 'user', $2, $3)
+        """, session_id, message, json.dumps(context))
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    system_prompt = "Eres AG-018 Governance Advisor de Cognitive PMO.\n" \
+        "Tu rol es asistir al gobernador durante las pausas de gobernanza del pipeline BUILD.\n\n" \
+        "CONTEXTO ACTUAL DEL PROYECTO:\n" + json.dumps(context, indent=2, ensure_ascii=False) + "\n\n" \
+        "REGLAS:\n- Responde en español profesional pero cercano\n" \
+        "- Usa datos reales del contexto (no inventes)\n" \
+        "- Sé conciso pero completo (máx 200 palabras)\n" \
+        "- Si no sabes algo, dilo claramente"
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.post(
+                "https://api.anthropic.com/v1/messages",
+                headers={
+                    "x-api-key": api_key,
+                    "anthropic-version": "2023-06-01",
+                    "content-type": "application/json"
+                },
+                json={
+                    "model": "claude-sonnet-4-20250514",
+                    "max_tokens": 1000,
+                    "system": system_prompt,
+                    "messages": [{"role": "user", "content": message}]
+                })
+            result = resp.json()
+            reply = result.get("content", [{}])[0].get("text", "Error al procesar")
+    except Exception as e:
+        reply = f"Error de conexión con AG-018: {str(e)}"
+    async with pool.acquire() as conn:
+        await conn.execute("""
+            INSERT INTO agent_conversations (session_id, agent_id, agent_name,
+                role, content)
+            VALUES ($1, 'AG-018', 'Governance Advisor', 'assistant', $2)
+        """, session_id, reply)
+    return {"reply": reply, "agent": "AG-018", "session_id": session_id}
+
+
+@app.get("/build/advisor/history/{session_id}")
+async def get_advisor_history(session_id: str):
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT role, content, created_at FROM agent_conversations
+            WHERE session_id = $1 AND agent_id = 'AG-018'
+            ORDER BY created_at ASC
+        """, session_id)
+        return [dict(r) for r in rows]
+
+
 # ── Presupuestos ─────────────────────────────────────────────────────────────
 
 class PresupuestoCreate(BaseModel):

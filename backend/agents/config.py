@@ -40,6 +40,12 @@ from agents.tools import (
     RUN_PROPHET_SCHEMA, QUERY_CAPACITY_SCHEMA, STORE_FORECAST_SCHEMA,
     CREATE_BUDGET_SCHEMA,
     QUERY_DIRECTORIO_SCHEMA,
+    # BUILD v2.0 tools
+    DECOMPOSE_SUBTASKS_SCHEMA, ANALYZE_RISKS_SCHEMA,
+    QUERY_POSTMORTEM_PATTERNS_SCHEMA, MAP_STAKEHOLDERS_SCHEMA,
+    QUERY_PM_CANDIDATES_SCHEMA, CALC_ROI_SCHEMA,
+    CALC_EVM_BASELINE_SCHEMA, DEFINE_QUALITY_GATES_SCHEMA,
+    QUERY_SIMILAR_PROJECTS_SCHEMA,
 )
 
 AGENT_CONFIGS["AG-001"] = AgentConfig(
@@ -72,11 +78,42 @@ AGENT_CONFIGS["AG-004"] = AgentConfig(
 
 AGENT_CONFIGS["AG-005"] = AgentConfig(
     agent_id="AG-005",
-    agent_name="Estratega",
+    agent_name="Estratega EDT/WBS",
     system_prompt=load_prompt("ag005_estratega.txt"),
     tools=[
         DECOMPOSE_PMBOK_SCHEMA, ASSIGN_SKILLS_TO_TASKS_SCHEMA,
         CREATE_BUILD_PROJECT_SCHEMA,
+    ],
+    max_tokens=2048,
+)
+
+AGENT_CONFIGS["AG-013"] = AgentConfig(
+    agent_id="AG-013",
+    agent_name="Task Decomposer",
+    system_prompt=load_prompt("ag013_task_decomposer.txt"),
+    tools=[
+        DECOMPOSE_SUBTASKS_SCHEMA, QUERY_CMDB_ACTIVO_SCHEMA,
+        QUERY_CMDB_SOFTWARE_SCHEMA, QUERY_CMDB_RELACIONES_SCHEMA,
+    ],
+    max_tokens=2048,
+)
+
+AGENT_CONFIGS["AG-014"] = AgentConfig(
+    agent_id="AG-014",
+    agent_name="Risk Analyzer",
+    system_prompt=load_prompt("ag014_risk_analyzer.txt"),
+    tools=[
+        ANALYZE_RISKS_SCHEMA, QUERY_POSTMORTEM_PATTERNS_SCHEMA,
+    ],
+    max_tokens=2048,
+)
+
+AGENT_CONFIGS["AG-015"] = AgentConfig(
+    agent_id="AG-015",
+    agent_name="Stakeholder Map",
+    system_prompt=load_prompt("ag015_stakeholder_map.txt"),
+    tools=[
+        MAP_STAKEHOLDERS_SCHEMA, QUERY_DIRECTORIO_SCHEMA,
     ],
     max_tokens=2048,
 )
@@ -86,8 +123,18 @@ AGENT_CONFIGS["AG-006"] = AgentConfig(
     agent_name="Resource Manager PMO",
     system_prompt=load_prompt("ag006_resource_mgr_pmo.txt"),
     tools=[
-        QUERY_STAFF_BY_SKILL_SCHEMA, FORM_TEAM_SCHEMA,
-        NOTIFY_GOVERNANCE_SCHEMA,
+        QUERY_PM_CANDIDATES_SCHEMA, QUERY_STAFF_BY_SKILL_SCHEMA,
+        FORM_TEAM_SCHEMA, NOTIFY_GOVERNANCE_SCHEMA,
+    ],
+    max_tokens=2048,
+)
+
+AGENT_CONFIGS["AG-016"] = AgentConfig(
+    agent_id="AG-016",
+    agent_name="Cost Analyzer",
+    system_prompt=load_prompt("ag016_cost_analyzer.txt"),
+    tools=[
+        CALC_ROI_SCHEMA, CALC_EVM_BASELINE_SCHEMA, CREATE_BUDGET_SCHEMA,
     ],
     max_tokens=2048,
 )
@@ -102,6 +149,28 @@ AGENT_CONFIGS["AG-007"] = AgentConfig(
         CREATE_BUDGET_SCHEMA,
     ],
     max_tokens=2048,
+)
+
+AGENT_CONFIGS["AG-017"] = AgentConfig(
+    agent_id="AG-017",
+    agent_name="Quality Gate",
+    system_prompt=load_prompt("ag017_quality_gate.txt"),
+    tools=[
+        DEFINE_QUALITY_GATES_SCHEMA, ENRICH_KANBAN_CARD_SCHEMA,
+    ],
+    max_tokens=2048,
+)
+
+AGENT_CONFIGS["AG-018"] = AgentConfig(
+    agent_id="AG-018",
+    agent_name="Governance Advisor",
+    system_prompt=load_prompt("ag018_governance_advisor.txt"),
+    tools=[
+        QUERY_SIMILAR_PROJECTS_SCHEMA, QUERY_DIRECTORIO_SCHEMA,
+        QUERY_CMDB_ACTIVO_SCHEMA, QUERY_POSTMORTEM_PATTERNS_SCHEMA,
+        QUERY_STAFF_BY_SKILL_SCHEMA,
+    ],
+    max_tokens=1000,
 )
 
 AGENT_CONFIGS["AG-012"] = AgentConfig(
@@ -124,3 +193,25 @@ AGENT_CONFIGS["AG-003"] = AgentConfig(
     max_tokens=2048,
     temperature=0.2,
 )
+
+# =============================================
+# BUILD PIPELINE v2.0 — Orden de ejecución
+# =============================================
+
+BUILD_PIPELINE_ORDER = [
+    "AG-005",   # 1. Genera EDT/WBS
+    # PAUSA 1: Gobernador revisa EDT + Acta + Alcance
+    "AG-013",   # 2. Descompone en subtareas técnicas
+    # PAUSA 2: Gobernador revisa subtareas
+    "AG-014",   # 3a. Analiza riesgos (paralelo con AG-015)
+    "AG-015",   # 3b. Mapea stakeholders (paralelo con AG-014)
+    # PAUSA 3: Gobernador revisa riesgos + stakeholders
+    "AG-006",   # 4. Propone PMs + forma equipo
+    # PAUSA 4: Gobernador selecciona PM + revisa equipo
+    "AG-016",   # 5a. Calcula presupuesto + ROI + EVM
+    "AG-007",   # 5b. Genera Gantt + sprints + backlog
+    "AG-017",   # 6. Define quality gates + DoD
+    # RESULTADO: Proyecto listo para lanzar
+]
+
+BUILD_ADVISOR = "AG-018"  # Disponible durante las 4 pausas
