@@ -1680,16 +1680,6 @@ footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;disp
       </div>
     </div>
     <div class="pipeline-sidebar">
-      <div style="background:#1a1d24;border:1px solid #333840;border-radius:10px;padding:12px;margin-bottom:12px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-          <div style="font-size:11px;font-weight:600;color:#e8e9ed;">BUILD LIVE</div>
-          <span id="build-live-count" style="font-size:9px;background:rgba(16,185,129,0.15);color:#10b981;padding:1px 6px;border-radius:3px;font-weight:600;">0</span>
-        </div>
-        <div id="build-live-list">
-          <div style="font-size:10px;color:#8b8f98;text-align:center;padding:16px;">Cargando...</div>
-        </div>
-        <button onclick="loadBuildLive()" style="width:100%;margin-top:8px;padding:6px;border-radius:6px;font-size:9px;font-weight:600;cursor:pointer;border:1px solid #333840;background:transparent;color:#8b8f98;">Actualizar</button>
-      </div>
       <div class="side-panel">
         <div class="side-title" style="display:flex;align-items:center;gap:7px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/><circle cx="12" cy="12" r="10" fill="#fbbf24" fill-opacity=".08"/></svg>Task Monitoring</div>
         <div class="no-data" id="build-tasks"><div class="no-data-icon">🕐</div>No hay tareas activas</div>
@@ -3811,40 +3801,6 @@ function setLang(lang) {
 
 const API_BASE = '';  // relative — proxied through Nginx on same host:port
 
-// =============================================
-// BUILD PIPELINE v2.0 — Constantes globales
-// =============================================
-
-var buildAgentIcons = {
-  'AG-005': '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="currentColor" stroke-width="5"/><path d="M30 75 H70 L50 30 Z" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/><circle cx="50" cy="20" r="5" fill="currentColor"/><path d="M40 55 H60 M45 45 H55" stroke="currentColor" stroke-width="3"/></svg>',
-  'AG-013': '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="currentColor" stroke-width="5"/><rect x="25" y="30" width="15" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="5"/><path d="M40 37 H50" stroke="currentColor" stroke-width="5" stroke-linecap="round"/><rect x="50" y="25" width="20" height="20" rx="3" fill="none" stroke="currentColor" stroke-width="5"/><rect x="75" y="45" width="10" height="10" rx="1" fill="none" stroke="currentColor" stroke-width="3"/><rect x="75" y="60" width="10" height="10" rx="1" fill="none" stroke="currentColor" stroke-width="3"/></svg>',
-  'AG-014': '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="currentColor" stroke-width="5"/><rect x="30" y="55" width="8" height="20" rx="1" fill="currentColor"/><rect x="42" y="45" width="8" height="30" rx="1" fill="currentColor"/><rect x="54" y="35" width="8" height="40" rx="1" fill="currentColor"/></svg>',
-  'AG-015': '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="currentColor" stroke-width="5"/><circle cx="35" cy="50" r="8" fill="none" stroke="currentColor" stroke-width="5"/><circle cx="65" cy="50" r="8" fill="none" stroke="currentColor" stroke-width="5"/><path d="M45 50 H55" stroke="currentColor" stroke-width="5"/></svg>',
-  'AG-006': '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="currentColor" stroke-width="5"/><rect x="30" y="30" width="15" height="15" rx="1" fill="currentColor"/><rect x="30" y="50" width="15" height="15" rx="1" fill="currentColor" opacity="0.4"/><rect x="55" y="30" width="15" height="15" rx="1" fill="currentColor" opacity="0.4"/><rect x="55" y="50" width="15" height="15" rx="1" fill="currentColor" opacity="0.4"/></svg>',
-  'AG-016': '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="currentColor" stroke-width="5"/><ellipse cx="50" cy="35" rx="20" ry="10" fill="none" stroke="currentColor" stroke-width="5"/><path d="M30 35 V65 A20 10 0 0 0 70 65 V35" fill="none" stroke="currentColor" stroke-width="5"/></svg>',
-  'AG-007': '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="currentColor" stroke-width="5"/><rect x="30" y="35" width="40" height="8" rx="2" fill="currentColor"/><rect x="30" y="50" width="25" height="8" rx="2" fill="currentColor"/><rect x="30" y="65" width="55" height="8" rx="2" fill="currentColor"/></svg>',
-  'AG-017': '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="currentColor" stroke-width="5"/><rect x="35" y="45" width="30" height="25" rx="2" fill="currentColor"/><path d="M40 45 V35 A10 10 0 0 1 60 35 V45" fill="none" stroke="currentColor" stroke-width="5"/></svg>',
-  'AG-018': '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="currentColor" stroke-width="5"/><circle cx="50" cy="40" r="10" fill="none" stroke="currentColor" stroke-width="5"/><path d="M30 65 C30 55 40 50 50 50 C60 50 70 55 70 65 V70 H30 V65 Z" fill="none" stroke="currentColor" stroke-width="5"/></svg>'
-};
-
-var buildAgentColors = {
-  'AG-005': '#10b981', 'AG-013': '#d946ef', 'AG-014': '#eab308',
-  'AG-015': '#ec4899', 'AG-006': '#eab308', 'AG-016': '#10b981',
-  'AG-007': '#ec4899', 'AG-017': '#8b5cf6', 'AG-018': '#10b981'
-};
-
-var buildAgentNames = {
-  'AG-005': 'Estratega', 'AG-013': 'Decomposer', 'AG-014': 'Risk',
-  'AG-015': 'Stakeholder', 'AG-006': 'Resource', 'AG-016': 'Cost',
-  'AG-007': 'Planificador', 'AG-017': 'Quality', 'AG-018': 'Advisor'
-};
-
-var buildPipelineOrder = ['AG-005', 'AG-013', 'AG-014', 'AG-015', 'AG-006', 'AG-016', 'AG-007', 'AG-017'];
-var buildPipelineState = {};
-var buildPipelineStartTime = null;
-var buildPipelineCost = 0;
-var buildAdvisorSessionId = null;
-
 let AUTH_TOKEN = localStorage.getItem('pmo_token') || null;
 let AUTH_USER = null;
 let AUTH_PERMISOS = [];
@@ -5525,7 +5481,6 @@ function loadBuildPMSelect() {
 setTimeout(() => {
   loadBuildPMSelect();
   loadBuildPlansFromDB();
-  if (typeof loadBuildLive === 'function') loadBuildLive();
 }, 600);
 
 async function loadBuildPlansFromDB() {
@@ -6378,52 +6333,6 @@ function updateGlobalIncidentProgress() {
   });
 }
 
-async function loadBuildLive() {
-  try {
-    var resp = await authFetch(API_BASE + '/build/live');
-    var projects = await resp.json();
-    var container = document.getElementById('build-live-list');
-    if (!container) return;
-    container.innerHTML = '';
-
-    if (projects.length === 0) {
-      container.innerHTML = '<div style="font-size:10px;color:#8b8f98;text-align:center;padding:16px;">No hay proyectos BUILD activos</div>';
-      return;
-    }
-
-    projects.forEach(function(p) {
-      var card = document.createElement('div');
-      card.style.cssText = 'background:#1a1d24;border:1px solid #333840;border-radius:8px;padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:border-color 0.2s;';
-      card.onmouseover = function() { card.style.borderColor = '#10b981'; };
-      card.onmouseout = function() { card.style.borderColor = '#333840'; };
-
-      var inicio = new Date(p.fecha_inicio);
-      var dias = Math.floor((Date.now() - inicio.getTime()) / 86400000);
-      var tiempoStr = dias + 'd';
-      var prioColor = (p.prioridad === 'Alta' || p.prioridad === 'Critica') ? '#ef4444' : p.prioridad === 'Media' ? '#eab308' : '#22c55e';
-      var progreso = p.progreso_pct || 0;
-
-      card.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">' +
-        '<div style="font-size:11px;font-weight:600;color:#e8e9ed;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (p.nombre || 'Proyecto') + '</div>' +
-        '<span style="font-size:7px;padding:1px 5px;border-radius:3px;background:' + prioColor + '20;color:' + prioColor + ';font-weight:600;flex-shrink:0;">' + (p.prioridad || 'Media') + '</span></div>' +
-        '<div style="font-size:9px;color:#8b8f98;margin-bottom:6px;">PM: ' + (p.pm_asignado || 'Pendiente') + '</div>' +
-        '<div style="height:4px;background:#22262e;border-radius:2px;margin-bottom:6px;overflow:hidden;"><div style="height:100%;width:' + progreso + '%;background:linear-gradient(90deg,#10b981,#22c55e);border-radius:2px;"></div></div>' +
-        '<div style="display:flex;justify-content:space-between;font-size:8px;color:#8b8f98;">' +
-        '<span>' + progreso + '% \u2014 Sprint ' + (p.sprint_actual || 1) + '/' + (p.total_sprints || 16) + '</span>' +
-        '<span style="color:#10b981;">' + (p.gate_actual || 'G2') + '</span></div>' +
-        '<div style="display:flex;justify-content:space-between;font-size:8px;color:#8b8f98;margin-top:4px;">' +
-        '<span>\u23f1 ' + tiempoStr + '</span>' +
-        '<span>' + (p.estado || '') + '</span></div>';
-      container.appendChild(card);
-    });
-
-    var counter = document.getElementById('build-live-count');
-    if (counter) counter.textContent = projects.length;
-  } catch(e) {
-    console.error('loadBuildLive error:', e);
-  }
-}
-
 async function loadActiveIncidents() {
   var sidebar = document.getElementById('run-incidents-sidebar');
   if (!sidebar) return;
@@ -6930,129 +6839,6 @@ function toggleRunTaskDetail(taskId, container) {
   });
 }
 
-// =============================================
-// BUILD PIPELINE v2.0 — Pipeline bar + progress
-// =============================================
-
-function renderBuildPipelineBar(containerId) {
-  var container = document.getElementById(containerId);
-  if (!container) return;
-
-  var bar = document.createElement('div');
-  bar.id = 'build-pipeline-bar-v2';
-  bar.style.cssText = 'display:flex;align-items:center;gap:4px;background:#1a1d24;border-radius:12px;padding:10px 14px;margin-bottom:12px;overflow-x:auto;';
-
-  var label = document.createElement('span');
-  label.style.cssText = 'font-size:9px;color:#8b8f98;margin-right:6px;flex-shrink:0;';
-  label.textContent = 'PMBOK 7 \u25b8';
-  bar.appendChild(label);
-
-  buildPipelineOrder.forEach(function(agentId, idx) {
-    var state = buildPipelineState[agentId] || 'pending';
-    var color = buildAgentColors[agentId];
-    var name = buildAgentNames[agentId];
-
-    var agentDiv = document.createElement('div');
-    agentDiv.id = 'build-pipe-' + agentId;
-    agentDiv.style.cssText = 'display:flex;align-items:center;gap:5px;padding:4px 6px;border-radius:6px;flex-shrink:0;opacity:' + (state === 'pending' ? '0.35' : state === 'done' ? '0.7' : '1') + ';' + (state === 'active' ? 'background:rgba(255,255,255,0.06);' : '');
-
-    var iconDiv = document.createElement('div');
-    iconDiv.style.cssText = 'width:32px;height:32px;flex-shrink:0;color:' + color + ';';
-    iconDiv.innerHTML = buildAgentIcons[agentId];
-    agentDiv.appendChild(iconDiv);
-
-    var textDiv = document.createElement('div');
-    var nameSpan = document.createElement('div');
-    nameSpan.style.cssText = 'font-size:9px;font-weight:600;line-height:1.2;color:' + color + ';' + (state === 'done' ? 'text-decoration:line-through;' : '');
-    nameSpan.textContent = agentId;
-    var subSpan = document.createElement('div');
-    subSpan.style.cssText = 'font-size:7px;color:#8b8f98;';
-    subSpan.textContent = name + (state === 'done' ? ' \u2713' : '');
-    textDiv.appendChild(nameSpan);
-    textDiv.appendChild(subSpan);
-    agentDiv.appendChild(textDiv);
-
-    bar.appendChild(agentDiv);
-
-    if (idx < buildPipelineOrder.length - 1) {
-      var arrow = document.createElement('span');
-      arrow.style.cssText = 'color:#333840;font-size:10px;flex-shrink:0;';
-      arrow.textContent = '\u25b8';
-      bar.appendChild(arrow);
-    }
-  });
-
-  var progLabel = document.createElement('span');
-  progLabel.id = 'build-pipe-progress-label';
-  progLabel.style.cssText = 'margin-left:auto;font-size:10px;color:#8b8f98;flex-shrink:0;';
-  progLabel.textContent = 'READY';
-  bar.appendChild(progLabel);
-
-  container.innerHTML = '';
-  container.appendChild(bar);
-}
-
-function activateBuildAgent(agentId) {
-  buildPipelineState[agentId] = 'active';
-  var el = document.getElementById('build-pipe-' + agentId);
-  if (el) {
-    el.style.opacity = '1';
-    el.style.background = 'rgba(255,255,255,0.06)';
-    el.style.animation = 'pulse 2s infinite';
-  }
-}
-
-function completeBuildAgent(agentId, latencyMs, costUsd) {
-  buildPipelineState[agentId] = 'done';
-  buildPipelineCost += (costUsd || 0.04);
-  var el = document.getElementById('build-pipe-' + agentId);
-  if (el) {
-    el.style.opacity = '0.7';
-    el.style.background = 'none';
-    el.style.animation = 'none';
-    var nameEl = el.querySelector('div > div:first-child');
-    if (nameEl) nameEl.style.textDecoration = 'line-through';
-    var subEl = el.querySelector('div > div:last-child');
-    if (subEl) subEl.textContent = buildAgentNames[agentId] + ' \u2713';
-  }
-}
-
-function updateBuildProgress(pct) {
-  var label = document.getElementById('build-pipe-progress-label');
-  if (label) label.textContent = pct + '%';
-  var bar = document.getElementById('build-progress-fill');
-  if (bar) bar.style.width = pct + '%';
-  var pctEl = document.getElementById('build-progress-pct');
-  if (pctEl) pctEl.textContent = pct + '%';
-}
-
-function renderBuildProgressBar(containerId) {
-  var container = document.getElementById(containerId);
-  if (!container) return;
-
-  var bar = document.createElement('div');
-  bar.style.cssText = 'display:flex;align-items:center;gap:16px;background:#1a1d24;border-radius:10px;padding:10px 16px;margin-bottom:12px;';
-
-  var timeDiv = document.createElement('div');
-  timeDiv.innerHTML = '<div id="build-progress-time" style="font-size:28px;font-weight:700;font-family:monospace;color:#22c55e;letter-spacing:1px;">--:--</div><div style="font-size:9px;color:#8b8f98">Tiempo</div>';
-  bar.appendChild(timeDiv);
-
-  var pctDiv = document.createElement('div');
-  pctDiv.innerHTML = '<div id="build-progress-pct" style="font-size:24px;font-weight:700;font-family:monospace;color:#3b82f6;">0%</div><div style="font-size:9px;color:#8b8f98">Progreso</div>';
-  bar.appendChild(pctDiv);
-
-  var trackDiv = document.createElement('div');
-  trackDiv.style.cssText = 'flex:1;';
-  trackDiv.innerHTML = '<div style="display:flex;justify-content:space-between;font-size:9px;color:#8b8f98;"><span id="build-progress-info">Esperando...</span><span id="build-progress-cost">~0.00 USD</span></div><div style="height:6px;background:#181b20;border-radius:3px;margin-top:4px;overflow:hidden;"><div id="build-progress-fill" style="height:100%;width:0%;background:linear-gradient(90deg,#10b981,#d946ef,#eab308,#ec4899);border-radius:3px;transition:width 0.5s;"></div></div>';
-  bar.appendChild(trackDiv);
-
-  container.appendChild(bar);
-}
-
-// =============================================
-// BUILD PIPELINE v1 — Legacy functions (below)
-// =============================================
-
 function _buildPipelineBar(agentsUsed, activeAgent) {
   var allAgents = [
     {id:'AG-001', name:'AG-001 Dispatcher'},
@@ -7182,14 +6968,6 @@ async function executeBuildPipeline(text) {
   if (execBtn) execBtn.disabled = true;
   if (statusEl) { statusEl.textContent = 'Running'; statusEl.style.color = 'var(--blue)'; }
 
-  // Inicializar estado
-  buildPipelineState = {};
-  buildPipelineOrder.forEach(function(id) { buildPipelineState[id] = 'pending'; });
-  buildPipelineStartTime = Date.now();
-  buildPipelineCost = 0;
-  buildAdvisorSessionId = 'BUILD-' + Date.now();
-
-  // Preparar área de pipeline
   var area = document.getElementById('build-pipeline-area');
   var idleEl = document.getElementById('build-pipeline-idle');
   if (idleEl) idleEl.style.display = 'none';
@@ -7201,18 +6979,13 @@ async function executeBuildPipeline(text) {
   dashboard.id = 'build-steps';
   area.appendChild(dashboard);
 
-  // Renderizar pipeline bar v2 + progress bar
-  var pipeBarContainer = document.createElement('div');
-  pipeBarContainer.id = 'build-pipe-container';
-  dashboard.appendChild(pipeBarContainer);
-  renderBuildPipelineBar('build-pipe-container');
+  var pipeline = createAnimatedPipeline(['AG-005', 'AG-006', 'AG-007']);
+  dashboard.appendChild(pipeline);
 
-  var progBarContainer = document.createElement('div');
-  progBarContainer.id = 'build-prog-container';
-  dashboard.appendChild(progBarContainer);
-  renderBuildProgressBar('build-prog-container');
+  var progressArea = document.createElement('div');
+  progressArea.id = 'build-progress';
+  dashboard.appendChild(progressArea);
 
-  // Log panel
   var logContainer = document.createElement('div');
   var logTitle = document.createElement('div');
   logTitle.className = 'build-section-title';
@@ -7224,14 +6997,10 @@ async function executeBuildPipeline(text) {
   logContainer.appendChild(logBox);
   dashboard.appendChild(logContainer);
 
-  // Área para pausas y resultados
-  var pauseArea = document.createElement('div');
-  pauseArea.id = 'build-pause-area';
-  dashboard.appendChild(pauseArea);
-
-  var sessionId = buildAdvisorSessionId;
+  var sessionId = 'build-' + Date.now();
+  var startTime = Date.now();
   function elapsed() {
-    var s = Math.floor((Date.now() - buildPipelineStartTime) / 1000);
+    var s = Math.floor((Date.now() - startTime) / 1000);
     var m = Math.floor(s / 60); s = s % 60;
     return (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s);
   }
@@ -7254,41 +7023,26 @@ async function executeBuildPipeline(text) {
     entry.appendChild(msgSpan);
     log.appendChild(entry);
     log.scrollTop = log.scrollHeight;
-    // Update timer
-    var timeEl = document.getElementById('build-progress-time');
-    if (timeEl) timeEl.textContent = elapsed();
   }
 
-  // Acumular datos entre agentes
-  var pipelineData = {
-    formText: text,
-    edtResult: null,
-    subtasksResult: null,
-    risksResult: null,
-    stakeholdersResult: null,
-    resourceResult: null,
-    selectedPM: null,
-    costResult: null,
-    planResult: null,
-    qualityResult: null
-  };
-
-  // Timer para actualizar reloj cada segundo
-  var buildTimer = setInterval(function() {
-    var timeEl = document.getElementById('build-progress-time');
-    if (timeEl) timeEl.textContent = elapsed();
-    var costEl = document.getElementById('build-progress-cost');
-    if (costEl) costEl.textContent = '~' + buildPipelineCost.toFixed(2) + ' USD';
-  }, 1000);
+  function addPreview(title, color, content) {
+    var wrapper = document.createElement('div');
+    var titleEl = document.createElement('div');
+    titleEl.className = 'build-section-title';
+    titleEl.style.color = color;
+    titleEl.textContent = title;
+    var box = document.createElement('div');
+    box.style.cssText = 'background:#22262e;border:1px solid #333840;border-left:3px solid ' + color + ';border-radius:8px;padding:12px;margin-bottom:12px;max-height:180px;overflow-y:auto;font-size:12px;color:#b0b4bc;white-space:pre-wrap;';
+    box.textContent = content.substring(0, 2000);
+    wrapper.appendChild(titleEl);
+    wrapper.appendChild(box);
+    progressArea.appendChild(wrapper);
+  }
 
   try {
-    // ═══ PASO 1: AG-005 Estratega EDT/WBS ═══
-    activateBuildAgent('AG-005');
-    updateBuildProgress(5);
     addLog('AG-005', 'estratega', 'Recibido proyecto. Analizando con PMBOK 7...', false);
     addLog('AG-005', 'estratega', 'tool: decompose_pmbok()', true);
 
-    var t0 = Date.now();
     var resp5 = await authFetch(API_BASE + '/agents/AG-005/invoke', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -7296,609 +7050,110 @@ async function executeBuildPipeline(text) {
     });
     var r5 = await resp5.json();
     if (!resp5.ok) throw new Error(r5.detail || 'AG-005 error');
-    pipelineData.edtResult = r5.response || r5.result || '';
-    completeBuildAgent('AG-005', Date.now() - t0, 0.04);
-    updateBuildProgress(12);
-    addLog('AG-005', 'estratega', 'EDT generada en ' + ((Date.now() - t0)/1000).toFixed(1) + 's', false);
+    var result5 = r5.response || r5.result || '';
 
-    // PAUSA 1: Gobernador revisa EDT
-    pipelineData.edtResult = await showBuildPause(1, pipelineData);
+    setAgentState('AG-005', 'done', '\u2713');
+    setAgentState('AG-006', 'active');
+    addLog('AG-005', 'estratega', 'EDT generada. Pasando al Resource Manager PMO...', false);
+    addPreview('AG-005 Estratega \u2014 EDT generada', '#10b981', result5);
 
-    // ═══ PASO 2: AG-013 Task Decomposer ═══
-    activateBuildAgent('AG-013');
-    updateBuildProgress(18);
-    addLog('AG-013', 'estratega', 'Descomponiendo subtareas técnicas...', false);
-    addLog('AG-013', 'estratega', 'tool: decompose_subtasks()', true);
+    addLog('AG-006', 'resource', 'Buscando t\u00e9cnicos por skills...', false);
+    addLog('AG-006', 'resource', 'tool: query_staff_by_skill()', true);
 
-    var t1 = Date.now();
-    var edtText = typeof pipelineData.edtResult === 'string' ? pipelineData.edtResult : JSON.stringify(pipelineData.edtResult);
-    var resp13 = await authFetch(API_BASE + '/agents/AG-013/invoke', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({message: 'EDT aprobado:\n' + edtText.substring(0, 2000), session_id: sessionId})
-    });
-    var r13 = await resp13.json();
-    if (!resp13.ok) throw new Error(r13.detail || 'AG-013 error');
-    pipelineData.subtasksResult = r13.response || r13.result || '';
-    completeBuildAgent('AG-013', Date.now() - t1, 0.05);
-    updateBuildProgress(25);
-    addLog('AG-013', 'estratega', 'Subtareas generadas en ' + ((Date.now() - t1)/1000).toFixed(1) + 's', false);
-
-    // PAUSA 2: Gobernador revisa subtareas
-    pipelineData.subtasksResult = await showBuildPause(2, pipelineData);
-
-    // ═══ PASO 3: AG-014 + AG-015 en paralelo ═══
-    activateBuildAgent('AG-014');
-    activateBuildAgent('AG-015');
-    updateBuildProgress(32);
-    addLog('AG-014', 'resource', 'Analizando riesgos...', false);
-    addLog('AG-015', 'resource', 'Mapeando stakeholders...', false);
-
-    var t2 = Date.now();
-    var subtText = typeof pipelineData.subtasksResult === 'string' ? pipelineData.subtasksResult : JSON.stringify(pipelineData.subtasksResult);
-    var contextForRisk = 'PROYECTO:\n' + text.substring(0, 500) + '\n\nEDT+SUBTAREAS:\n' + subtText.substring(0, 1500);
-    var contextForStk = 'PROYECTO:\n' + text.substring(0, 500) + '\n\nEDT:\n' + edtText.substring(0, 1000);
-
-    var parallelResults = await Promise.all([
-      authFetch(API_BASE + '/agents/AG-014/invoke', {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({message: contextForRisk, session_id: sessionId})
-      }).then(function(r) { return r.json(); }),
-      authFetch(API_BASE + '/agents/AG-015/invoke', {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({message: contextForStk, session_id: sessionId})
-      }).then(function(r) { return r.json(); })
-    ]);
-    pipelineData.risksResult = parallelResults[0].response || parallelResults[0].result || '';
-    pipelineData.stakeholdersResult = parallelResults[1].response || parallelResults[1].result || '';
-    completeBuildAgent('AG-014', Date.now() - t2, 0.04);
-    completeBuildAgent('AG-015', Date.now() - t2, 0.04);
-    updateBuildProgress(50);
-    addLog('AG-014', 'resource', 'Riesgos analizados', false);
-    addLog('AG-015', 'resource', 'Stakeholders mapeados', false);
-
-    // PAUSA 3: Gobernador revisa riesgos + stakeholders
-    var pause3Data = await showBuildPause(3, pipelineData);
-    if (pause3Data && pause3Data.risks) pipelineData.risksResult = pause3Data.risks;
-    if (pause3Data && pause3Data.stakeholders) pipelineData.stakeholdersResult = pause3Data.stakeholders;
-
-    // ═══ PASO 4: AG-006 Resource Manager PMO ═══
-    activateBuildAgent('AG-006');
-    updateBuildProgress(56);
-    addLog('AG-006', 'resource', 'Buscando PM candidatos y formando equipo...', false);
-    addLog('AG-006', 'resource', 'tool: query_pm_candidates()', true);
-
-    var t3 = Date.now();
-    var risksText = typeof pipelineData.risksResult === 'string' ? pipelineData.risksResult : JSON.stringify(pipelineData.risksResult);
     var resp6 = await authFetch(API_BASE + '/agents/AG-006/invoke', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({message: 'EDT:\n' + edtText.substring(0, 1000) + '\n\nSUBTAREAS:\n' + subtText.substring(0, 1000) + '\n\nRIESGOS:\n' + risksText.substring(0, 500), session_id: sessionId})
+      body: JSON.stringify({message: 'Plan del Estratega:\n' + result5.substring(0, 1500), session_id: sessionId})
     });
     var r6 = await resp6.json();
     if (!resp6.ok) throw new Error(r6.detail || 'AG-006 error');
-    pipelineData.resourceResult = r6.response || r6.result || '';
-    completeBuildAgent('AG-006', Date.now() - t3, 0.04);
-    updateBuildProgress(62);
-    addLog('AG-006', 'resource', 'Equipo propuesto en ' + ((Date.now() - t3)/1000).toFixed(1) + 's', false);
+    var result6 = r6.response || r6.result || '';
 
-    // PAUSA 4: Gobernador selecciona PM + revisa equipo
-    pipelineData.selectedPM = await showBuildPause(4, pipelineData);
+    var hasCycle = result6.toLowerCase().indexOf('cycle_back') >= 0 || result6.indexOf('IMPOSIBLE') >= 0;
+    if (hasCycle) {
+      setAgentState('AG-006', 'fail', '\u21BA');
+      addLog('AG-006', 'resource', 'CYCLE BACK: Ajuste de recursos necesario', false);
+    } else {
+      setAgentState('AG-006', 'done', '\u2713');
+      addLog('AG-006', 'resource', 'Equipo formado. Pasando al Planificador...', false);
+    }
+    setAgentState('AG-007', 'active');
+    addPreview('AG-006 Resource Manager PMO \u2014 ' + (hasCycle ? 'Cycle Back' : 'Equipo'), hasCycle ? '#ef4444' : '#eab308', result6);
 
-    // ═══ PASO 5: AG-016 + AG-007 en paralelo ═══
-    activateBuildAgent('AG-016');
-    activateBuildAgent('AG-007');
-    updateBuildProgress(70);
-    addLog('AG-016', 'planificador', 'Calculando presupuesto + ROI + EVM...', false);
-    addLog('AG-007', 'planificador', 'Generando Gantt + sprints + backlog...', false);
+    addLog('AG-007', 'planificador', 'Calculando ruta cr\u00edtica y paralelizaciones...', false);
+    addLog('AG-007', 'planificador', 'tool: calc_critical_path()', true);
 
-    var t4 = Date.now();
-    var resText = typeof pipelineData.resourceResult === 'string' ? pipelineData.resourceResult : JSON.stringify(pipelineData.resourceResult);
-    var contextFull = 'PROYECTO:\n' + text.substring(0, 500) + '\n\nEDT:\n' + edtText.substring(0, 1000) + '\n\nEQUIPO:\n' + resText.substring(0, 800);
-
-    var parallelResults2 = await Promise.all([
-      authFetch(API_BASE + '/agents/AG-016/invoke', {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({message: contextFull + '\n\nRIESGOS:\n' + risksText.substring(0, 500), session_id: sessionId})
-      }).then(function(r) { return r.json(); }),
-      authFetch(API_BASE + '/agents/AG-007/invoke', {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({message: contextFull + '\n\nINSTRUCCION: Usa calc_critical_path, generate_gantt_mermaid, create_kanban_cards fase 1.', session_id: sessionId})
-      }).then(function(r) { return r.json(); })
-    ]);
-    pipelineData.costResult = parallelResults2[0].response || parallelResults2[0].result || '';
-    pipelineData.planResult = parallelResults2[1].response || parallelResults2[1].result || '';
-    completeBuildAgent('AG-016', Date.now() - t4, 0.04);
-    completeBuildAgent('AG-007', Date.now() - t4, 0.04);
-    updateBuildProgress(87);
-    addLog('AG-016', 'planificador', 'Presupuesto y ROI calculados', false);
-    addLog('AG-007', 'planificador', 'Gantt generado con paralelizacion', false);
-
-    // ═══ PASO 6: AG-017 Quality Gate ═══
-    activateBuildAgent('AG-017');
-    updateBuildProgress(93);
-    addLog('AG-017', 'estratega', 'Definiendo quality gates + DoD...', false);
-    addLog('AG-017', 'estratega', 'tool: define_quality_gates()', true);
-
-    var t5 = Date.now();
-    var costText = typeof pipelineData.costResult === 'string' ? pipelineData.costResult : JSON.stringify(pipelineData.costResult);
-    var resp17 = await authFetch(API_BASE + '/agents/AG-017/invoke', {
+    var resp7 = await authFetch(API_BASE + '/agents/AG-007/invoke', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({message: 'EDT:\n' + edtText.substring(0, 800) + '\n\nRIESGOS:\n' + risksText.substring(0, 500) + '\n\nPRESUPUESTO:\n' + costText.substring(0, 500), session_id: sessionId})
+      body: JSON.stringify({message: 'PROYECTO:\n' + text.substring(0, 500) + '\n\nEDT:\n' + result5.substring(0, 1500) + '\n\nEQUIPO:\n' + result6.substring(0, 1000) + '\n\nINSTRUCCI\u00d3N: Usa calc_critical_path, generate_gantt_mermaid, create_kanban_cards fase 1, create_budget.', session_id: sessionId})
     });
-    var r17 = await resp17.json();
-    if (!resp17.ok) throw new Error(r17.detail || 'AG-017 error');
-    pipelineData.qualityResult = r17.response || r17.result || '';
-    completeBuildAgent('AG-017', Date.now() - t5, 0.04);
-    updateBuildProgress(100);
-    addLog('AG-017', 'estratega', 'Quality gates definidos', false);
+    var r7 = await resp7.json();
+    if (!resp7.ok) throw new Error(r7.detail || 'AG-007 error');
+    var result7 = r7.response || r7.result || '';
 
-    clearInterval(buildTimer);
-    var totalTime = ((Date.now() - buildPipelineStartTime) / 1000).toFixed(1);
-    addLog('CHAIN', 'estratega', 'Pipeline BUILD completado en ' + totalTime + 's — ~' + buildPipelineCost.toFixed(2) + ' USD', false);
-    var progLabel = document.getElementById('build-pipe-progress-label');
-    if (progLabel) { progLabel.textContent = '100%'; progLabel.style.color = '#22c55e'; }
-    var progInfo = document.getElementById('build-progress-info');
-    if (progInfo) progInfo.textContent = 'Pipeline completado en ' + totalTime + 's';
+    setAgentState('AG-007', 'done', '\u2713');
+    setPipelineComplete(true);
+    addLog('AG-007', 'planificador', 'Gantt generado con paralelizaci\u00f3n.', false);
+    addLog('CHAIN', 'estratega', 'Pipeline BUILD completado en ' + elapsed(), false);
 
-    // Pantalla final
-    showBuildFinalScreen(pipelineData);
+    var chainResult = {
+      chain: 'BUILD', agents: ['AG-005', 'AG-006', 'AG-007'],
+      result: result7, session_id: sessionId
+    };
+
+    try {
+      var plResp = await authFetch(API_BASE + '/build/plans');
+      var plans = await plResp.json();
+      if (plans.length > 0) {
+        chainResult.structured = { plan: {
+          plan_id: plans[0].id, id_proyecto: plans[0].id_proyecto,
+          nombre: plans[0].nombre, presupuesto: plans[0].presupuesto,
+          duracion_semanas: plans[0].duracion_semanas,
+          prioridad: plans[0].prioridad, plan_data: plans[0].plan_data || {}
+        }};
+      }
+    } catch(ex) {}
+
+    try {
+      var tkResp = await authFetch(API_BASE + '/kanban/tareas');
+      var allTk = await tkResp.json();
+      var recent = allTk.filter(function(t) { return t.fecha_creacion && new Date(t.fecha_creacion) > new Date(Date.now() - 300000); });
+      if (recent.length > 0 && chainResult.structured) {
+        chainResult.structured.tasks = recent.map(function(t) {
+          return {id: t.id, titulo: t.titulo, columna: t.columna || 'Backlog', id_tecnico: t.id_tecnico || ''};
+        });
+      }
+    } catch(ex) {}
+
+    // Fetch budget breakdown
+    try {
+      var budgetResp = await authFetch(API_BASE + '/presupuestos');
+      var budgets = await budgetResp.json();
+      if (budgets.length > 0 && chainResult.structured) {
+        var lb = budgets[0];
+        chainResult.structured.budget = {
+          total_labor: lb.total_labor, total_capex: lb.total_capex,
+          total_opex: lb.total_opex, total_rrhh: lb.total_rrhh,
+          total_reservas: lb.total_reservas, bac_total: lb.bac_total,
+          horas_internas: lb.horas_internas, tarifa_hora: lb.tarifa_hora_interna
+        };
+      }
+    } catch(ex) {}
+
+    progressArea.innerHTML = '';
+    logContainer.remove();
+    var data = _parseBuildResult(chainResult);
+    _renderBuildDashboardContent(progressArea, data);
+    dashboard.appendChild(logContainer);
 
   } catch(e) {
-    clearInterval(buildTimer);
-    addLog('ERROR', 'resource', e.message || String(e), false);
-    var progInfo2 = document.getElementById('build-progress-info');
-    if (progInfo2) progInfo2.textContent = 'Error: ' + (e.message || e);
+    addLog('ERROR', 'resource', e.message, false);
+    setPipelineComplete(false);
   }
 
   if (execBtn) execBtn.disabled = false;
   if (statusEl) { statusEl.textContent = 'Idle'; statusEl.style.color = 'var(--yellow)'; }
-}
-
-// Placeholder de showBuildPause — se implementa en FASES 7-10
-function renderAdvisorChat(containerId, pauseNumber) {
-  var container = document.getElementById(containerId);
-  if (!container) return;
-
-  var panel = document.createElement('div');
-  panel.style.cssText = 'background:#0f1724;border:1px solid rgba(16,185,129,0.25);border-radius:10px;overflow:hidden;margin-top:12px;';
-
-  var header = document.createElement('div');
-  header.style.cssText = 'padding:8px 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(16,185,129,0.15);';
-  header.innerHTML = '<div style="width:28px;height:28px;border-radius:50%;background:rgba(16,185,129,0.2);color:#10b981;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;">' + (buildAgentIcons['AG-018'] ? '<div style="width:20px;height:20px;color:#10b981;">' + buildAgentIcons['AG-018'] + '</div>' : '?') + '</div><div><div style="font-size:11px;font-weight:600;color:#10b981;">AG-018 Governance Advisor</div><div style="font-size:8px;color:#8b8f98;">Contexto acumulativo \u2014 Pausa ' + pauseNumber + '/4</div></div>';
-  panel.appendChild(header);
-
-  var badgesDiv = document.createElement('div');
-  badgesDiv.style.cssText = 'display:flex;gap:3px;flex-wrap:wrap;padding:6px 12px;border-bottom:1px solid rgba(16,185,129,0.1);';
-  var allBadges = ['Business Case', 'EDT', 'Subtareas', 'Riesgos', 'Stakeholders', 'PMs', 'Equipo'];
-  var activeBadges = allBadges.slice(0, pauseNumber + 1);
-  activeBadges.forEach(function(b) {
-    var badge = document.createElement('span');
-    badge.style.cssText = 'font-size:7px;padding:1px 5px;border-radius:3px;background:rgba(16,185,129,0.15);color:#10b981;font-weight:600;';
-    badge.textContent = b;
-    badgesDiv.appendChild(badge);
-  });
-  panel.appendChild(badgesDiv);
-
-  var messagesDiv = document.createElement('div');
-  messagesDiv.id = 'advisor-messages-' + pauseNumber;
-  messagesDiv.style.cssText = 'padding:8px 12px;max-height:200px;overflow-y:auto;';
-  var welcomeMsg = document.createElement('div');
-  welcomeMsg.style.cssText = 'font-size:10px;color:#10b981;background:rgba(16,185,129,0.06);padding:6px 8px;border-radius:6px;margin-bottom:6px;';
-  welcomeMsg.textContent = 'Hola. Soy tu asistente de gobernanza. Puedo ayudarte a validar los datos generados y resolver dudas antes de aprobar esta fase.';
-  messagesDiv.appendChild(welcomeMsg);
-  panel.appendChild(messagesDiv);
-
-  var suggestions = {
-    1: ['El EDT cubre todo el alcance?', 'Faltan skills en el catalogo?', 'Los hitos son realistas?'],
-    2: ['Las subtareas son suficientes?', 'Hay tecnologias no instaladas?', 'Los story points son correctos?'],
-    3: ['El 15% de contingencia es suficiente?', 'Falta algun stakeholder clave?', 'Hay riesgos regulatorios?'],
-    4: ['Por que recomiendas a este PM?', 'El equipo tiene experiencia similar?', 'Hay conflictos de carga?']
-  };
-  var sugsDiv = document.createElement('div');
-  sugsDiv.style.cssText = 'padding:4px 12px 8px;display:flex;flex-direction:column;gap:3px;';
-  (suggestions[pauseNumber] || []).forEach(function(s) {
-    var sugBtn = document.createElement('div');
-    sugBtn.style.cssText = 'font-size:8px;color:#10b981;cursor:pointer;padding:3px 6px;border-radius:4px;background:rgba(16,185,129,0.06);';
-    sugBtn.textContent = '\ud83d\udca1 ' + s;
-    sugBtn.onclick = function() { sendAdvisorMessage(pauseNumber, s); };
-    sugsDiv.appendChild(sugBtn);
-  });
-  panel.appendChild(sugsDiv);
-
-  var inputRow = document.createElement('div');
-  inputRow.style.cssText = 'display:flex;gap:6px;padding:8px 12px;border-top:1px solid rgba(16,185,129,0.15);';
-  var inputField = document.createElement('input');
-  inputField.id = 'advisor-input-' + pauseNumber;
-  inputField.style.cssText = 'flex:1;background:#1a2332;border:1px solid rgba(16,185,129,0.2);border-radius:6px;padding:6px 10px;color:#e8e9ed;font-size:10px;font-family:inherit;';
-  inputField.placeholder = 'Pregunta al advisor...';
-  inputField.onkeypress = function(e) { if (e.key === 'Enter') sendAdvisorMessage(pauseNumber); };
-  var sendBtn = document.createElement('button');
-  sendBtn.style.cssText = 'background:#10b981;border:none;color:#fff;padding:6px 12px;border-radius:6px;font-size:10px;cursor:pointer;font-weight:600;';
-  sendBtn.textContent = 'Enviar';
-  sendBtn.onclick = function() { sendAdvisorMessage(pauseNumber); };
-  inputRow.appendChild(inputField);
-  inputRow.appendChild(sendBtn);
-  panel.appendChild(inputRow);
-
-  container.appendChild(panel);
-}
-
-async function sendAdvisorMessage(pauseNumber, suggestedText) {
-  var input = document.getElementById('advisor-input-' + pauseNumber);
-  var message = suggestedText || (input ? input.value : '');
-  if (!message || !message.trim()) return;
-  if (input) input.value = '';
-
-  var messagesDiv = document.getElementById('advisor-messages-' + pauseNumber);
-  if (!messagesDiv) return;
-
-  var userDiv = document.createElement('div');
-  userDiv.style.cssText = 'margin-bottom:8px;font-size:10px;text-align:right;';
-  var userBubble = document.createElement('span');
-  userBubble.style.cssText = 'background:rgba(59,130,246,0.1);color:#93c5fd;padding:4px 8px;border-radius:6px;display:inline-block;max-width:85%;text-align:left;';
-  userBubble.textContent = message;
-  userDiv.appendChild(userBubble);
-  messagesDiv.appendChild(userDiv);
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
-
-  var loadingDiv = document.createElement('div');
-  loadingDiv.style.cssText = 'font-size:9px;color:#8b8f98;margin-bottom:8px;';
-  loadingDiv.textContent = 'AG-018 pensando...';
-  messagesDiv.appendChild(loadingDiv);
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
-
-  try {
-    var resp = await authFetch(API_BASE + '/build/advisor/chat', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        session_id: buildAdvisorSessionId || 'BUILD-' + Date.now(),
-        message: message,
-        context: { pause: pauseNumber }
-      })
-    });
-    var result = await resp.json();
-    var reply = result.reply || result.response || 'Sin respuesta del advisor';
-
-    loadingDiv.remove();
-    var botDiv = document.createElement('div');
-    botDiv.style.cssText = 'margin-bottom:8px;font-size:10px;';
-    var botBubble = document.createElement('span');
-    botBubble.style.cssText = 'background:rgba(16,185,129,0.06);color:#10b981;padding:6px 8px;border-radius:6px;display:inline-block;max-width:90%;line-height:1.4;';
-    botBubble.textContent = reply;
-    botDiv.appendChild(botBubble);
-    messagesDiv.appendChild(botDiv);
-  } catch(e) {
-    loadingDiv.remove();
-    var errDiv = document.createElement('div');
-    errDiv.style.cssText = 'font-size:9px;color:#ef4444;margin-bottom:8px;';
-    errDiv.textContent = 'Error: ' + (e.message || 'No se pudo contactar AG-018');
-    messagesDiv.appendChild(errDiv);
-  }
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
-}
-
-async function showBuildPause(pauseNumber, data) {
-  return new Promise(function(resolve) {
-    var pauseArea = document.getElementById('build-pause-area');
-    if (!pauseArea) { resolve(data); return; }
-    pauseArea.innerHTML = '';
-
-    var pauseDiv = document.createElement('div');
-    pauseDiv.style.cssText = 'background:rgba(234,179,8,0.04);border:2px dashed rgba(234,179,8,0.3);border-radius:12px;padding:16px;margin-bottom:12px;';
-
-    var pauseHeader = document.createElement('div');
-    pauseHeader.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;';
-    var pauseTitles = {1:'Revisar EDT/WBS + Acta + Alcance',2:'Revisar subtareas tecnicas + CMDB',3:'Revisar Riesgos + Stakeholders',4:'Seleccionar PM + Revisar equipo'};
-    pauseHeader.innerHTML = '<div><div style="font-size:13px;font-weight:600;color:#eab308;">\u23f8 Pipeline en pausa \u2014 Gobernanza (' + pauseNumber + '/4)</div><div style="font-size:10px;color:#8b8f98;margin-top:2px;">' + (pauseTitles[pauseNumber]||'') + '</div></div>';
-    var btnGroup = document.createElement('div');
-    btnGroup.style.cssText = 'display:flex;gap:8px;';
-    var approveBtn = document.createElement('button');
-    approveBtn.id = 'build-pause-approve-' + pauseNumber;
-    approveBtn.style.cssText = 'padding:8px 18px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:#22c55e;color:#fff;';
-    approveBtn.textContent = 'Aprobar y continuar \u25b8';
-    btnGroup.appendChild(approveBtn);
-    pauseHeader.appendChild(btnGroup);
-    pauseDiv.appendChild(pauseHeader);
-
-    var layout = document.createElement('div');
-    layout.style.cssText = 'display:grid;grid-template-columns:1fr 280px;gap:12px;';
-    var mainContent = document.createElement('div');
-    mainContent.id = 'build-pause-main-' + pauseNumber;
-    var sideContent = document.createElement('div');
-    sideContent.id = 'build-pause-side-' + pauseNumber;
-
-    // ── PAUSA 1: EDT + Acta + Alcance ──
-    if (pauseNumber === 1) {
-      var edtData = data.edtResult || data;
-      var parsed = null;
-      if (typeof edtData === 'string') { try { var jm = edtData.match(/\{[\s\S]*\}/); if (jm) parsed = JSON.parse(jm[0]); } catch(e) {} }
-      else if (typeof edtData === 'object') parsed = edtData;
-
-      var tabBar = document.createElement('div');
-      tabBar.style.cssText = 'display:flex;gap:4px;margin-bottom:12px;';
-      ['EDT/WBS','Acta Constitucion','Alcance'].forEach(function(tab,idx) {
-        var tb = document.createElement('button');
-        tb.style.cssText = 'padding:6px 14px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid '+(idx===0?'#10b981':'#333840')+';background:'+(idx===0?'rgba(16,185,129,0.15)':'transparent')+';color:'+(idx===0?'#10b981':'#8b8f98')+';';
-        tb.textContent = tab;
-        tb.onclick = function() { tabBar.querySelectorAll('button').forEach(function(b){b.style.background='transparent';b.style.borderColor='#333840';b.style.color='#8b8f98';}); tb.style.background='rgba(16,185,129,0.15)';tb.style.borderColor='#10b981';tb.style.color='#10b981'; document.querySelectorAll('.pause1-tab').forEach(function(t){t.style.display='none';}); var el=document.getElementById('pause1-tab-'+idx); if(el) el.style.display='block'; };
-        tabBar.appendChild(tb);
-      });
-      mainContent.appendChild(tabBar);
-
-      // Tab 0: EDT
-      var edtTab = document.createElement('div'); edtTab.id='pause1-tab-0'; edtTab.className='pause1-tab';
-      if (parsed && parsed.edt && parsed.edt.fases) {
-        var faseColors = ['#10b981','#3b82f6','#d946ef','#eab308','#ec4899'];
-        var totalTareas=0, totalHoras=0;
-        parsed.edt.fases.forEach(function(fase,fi) {
-          var fd = document.createElement('div');
-          fd.style.cssText = 'background:#1a1d24;border:1px solid #333840;border-left:3px solid '+faseColors[fi%faseColors.length]+';border-radius:8px;padding:12px;margin-bottom:8px;';
-          fd.innerHTML = '<div style="font-size:12px;font-weight:600;color:'+faseColors[fi%faseColors.length]+';margin-bottom:8px;display:flex;justify-content:space-between;"><span>'+(fase.nombre||'Fase '+(fi+1))+'</span><span style="font-size:10px;color:#8b8f98;">'+(fase.horas||0)+'h \u00b7 S'+(fase.semana_inicio||'?')+'-S'+(fase.semana_fin||'?')+'</span></div>';
-          (fase.paquetes||[]).forEach(function(paq) {
-            var phtml = '<div style="margin-left:12px;margin-bottom:6px;"><div style="font-size:10px;font-weight:600;color:#e8e9ed;margin-bottom:4px;">\ud83d\udce6 '+(paq.nombre||'')+'</div>';
-            (paq.tareas||[]).forEach(function(t) { totalTareas++; totalHoras+=(t.horas||0);
-              phtml += '<div style="display:flex;align-items:center;gap:6px;padding:3px 0 3px 12px;font-size:10px;"><span style="color:#8b8f98;">'+(t.id_tarea||'')+'</span><span style="color:#e8e9ed;flex:1;">'+(t.nombre||'')+'</span><span style="background:rgba(139,92,246,0.15);color:#a78bfa;padding:1px 6px;border-radius:3px;font-size:8px;">'+(t.skill||'')+'</span><span style="color:#8b8f98;font-size:9px;">'+(t.horas||0)+'h</span></div>';
-            });
-            phtml += '</div>'; fd.innerHTML += phtml;
-          });
-          edtTab.appendChild(fd);
-        });
-        sideContent.innerHTML = '<div style="background:#1a1d24;border:1px solid #333840;border-radius:8px;padding:12px;margin-bottom:8px;"><div style="font-size:11px;font-weight:600;color:#e8e9ed;margin-bottom:8px;">Resumen EDT</div><div style="font-size:10px;color:#8b8f98;line-height:1.8;"><div>\ud83d\udcc1 Fases: <span style="color:#e8e9ed;">'+parsed.edt.fases.length+'</span></div><div>\u2611 Tareas: <span style="color:#e8e9ed;">'+totalTareas+'</span></div><div>\u23f1 Horas: <span style="color:#e8e9ed;">'+totalHoras+'h</span></div></div></div>';
-      } else {
-        var rawText = document.createElement('textarea'); rawText.id='pause1-edt-raw';
-        rawText.style.cssText = 'width:100%;min-height:300px;background:#1a1d24;border:1px solid #333840;border-radius:8px;padding:12px;color:#e8e9ed;font-size:11px;font-family:monospace;resize:vertical;';
-        rawText.value = typeof edtData === 'string' ? edtData : JSON.stringify(edtData,null,2);
-        edtTab.appendChild(rawText);
-        sideContent.innerHTML = '<div style="background:#1a1d24;border:1px solid #333840;border-radius:8px;padding:12px;font-size:10px;color:#8b8f98;">AG-005 genero texto libre. Puedes editarlo antes de aprobar.</div>';
-      }
-      mainContent.appendChild(edtTab);
-
-      // Tab 1: Acta
-      var actaTab = document.createElement('div'); actaTab.id='pause1-tab-1'; actaTab.className='pause1-tab'; actaTab.style.display='none';
-      var actaData = (parsed && parsed.acta_constitucion) || {};
-      actaTab.innerHTML = '<div style="background:#1a1d24;border:1px solid #333840;border-radius:8px;padding:14px;"><div style="margin-bottom:8px;"><label style="font-size:9px;color:#8b8f98;display:block;margin-bottom:3px;">Descripcion de alto nivel</label><textarea style="width:100%;min-height:60px;background:#22262e;border:1px solid #333840;border-radius:6px;padding:8px;color:#e8e9ed;font-size:10px;resize:vertical;">'+(actaData.descripcion_alto_nivel||'')+'</textarea></div><div style="margin-bottom:8px;"><label style="font-size:9px;color:#8b8f98;display:block;margin-bottom:3px;">Objetivos SMART</label><textarea style="width:100%;min-height:60px;background:#22262e;border:1px solid #333840;border-radius:6px;padding:8px;color:#e8e9ed;font-size:10px;resize:vertical;">'+(actaData.objetivos_smart||[]).join('\n')+'</textarea></div><div><label style="font-size:9px;color:#8b8f98;display:block;margin-bottom:3px;">Criterios de exito</label><textarea style="width:100%;min-height:40px;background:#22262e;border:1px solid #333840;border-radius:6px;padding:8px;color:#e8e9ed;font-size:10px;resize:vertical;">'+(actaData.criterios_exito||'')+'</textarea></div></div>';
-      mainContent.appendChild(actaTab);
-
-      // Tab 2: Alcance
-      var alcTab = document.createElement('div'); alcTab.id='pause1-tab-2'; alcTab.className='pause1-tab'; alcTab.style.display='none';
-      var alcData = (parsed && parsed.alcance) || {};
-      alcTab.innerHTML = '<div style="background:#1a1d24;border:1px solid #333840;border-radius:8px;padding:14px;"><div style="margin-bottom:8px;"><label style="font-size:9px;color:#8b8f98;display:block;margin-bottom:3px;">Alcance del producto</label><textarea style="width:100%;min-height:60px;background:#22262e;border:1px solid #333840;border-radius:6px;padding:8px;color:#e8e9ed;font-size:10px;resize:vertical;">'+(alcData.alcance_producto||'')+'</textarea></div><div style="margin-bottom:8px;"><label style="font-size:9px;color:#8b8f98;display:block;margin-bottom:3px;">Exclusiones</label><textarea style="width:100%;min-height:40px;background:#22262e;border:1px solid #333840;border-radius:6px;padding:8px;color:#e8e9ed;font-size:10px;resize:vertical;">'+(alcData.exclusiones||[]).join('\n')+'</textarea></div><div><label style="font-size:9px;color:#8b8f98;display:block;margin-bottom:3px;">Restricciones</label><textarea style="width:100%;min-height:40px;background:#22262e;border:1px solid #333840;border-radius:6px;padding:8px;color:#e8e9ed;font-size:10px;resize:vertical;">'+(alcData.restricciones||[]).join('\n')+'</textarea></div></div>';
-      mainContent.appendChild(alcTab);
-    }
-
-    // ── PAUSA 2: Subtareas tecnicas ──
-    if (pauseNumber === 2) {
-      var subtData = data.subtasksResult || '';
-      var subtParsed = null;
-      if (typeof subtData === 'string') { try { var jm2 = subtData.match(/\{[\s\S]*\}/); if (jm2) subtParsed = JSON.parse(jm2[0]); } catch(e) {} }
-      else if (typeof subtData === 'object') subtParsed = subtData;
-
-      var subtArray = [];
-      if (subtParsed) {
-        subtArray = subtParsed.subtasks || subtParsed.subtasks_by_task || subtParsed.items || [];
-        if (!Array.isArray(subtArray) && typeof subtArray === 'object') {
-          var tempArr = []; Object.keys(subtArray).forEach(function(k) { (subtArray[k]||[]).forEach(function(st) { st._parentTask = k; tempArr.push(st); }); }); subtArray = tempArr;
-        }
-      }
-
-      var subtCount = 0; var techSet = {};
-      subtArray.forEach(function(st, idx) {
-        subtCount++;
-        if (st.tecnologia) techSet[st.tecnologia] = (techSet[st.tecnologia]||0)+1;
-        var card = document.createElement('div');
-        card.style.cssText = 'background:#1a1d24;border:1px solid #333840;border-radius:8px;padding:10px 12px;margin-bottom:6px;';
-        card.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:flex-start;"><div style="flex:1;"><div style="font-size:11px;font-weight:600;color:#e8e9ed;margin-bottom:4px;">'+(st._parentTask?'<span style="color:#8b8f98;font-size:9px;">'+st._parentTask+' \u25b8 </span>':'')+(st.titulo||'Subtarea '+(idx+1))+'</div><div style="font-size:9px;color:#8b8f98;margin-bottom:6px;">'+(st.descripcion_tecnica||st.descripcion||'')+'</div><div style="display:flex;gap:4px;flex-wrap:wrap;">'+(st.tecnologia?'<span style="font-size:7px;padding:1px 5px;border-radius:3px;background:rgba(217,70,239,0.15);color:#e879f9;">'+st.tecnologia+'</span>':'')+(st.skill_requerido?'<span style="font-size:7px;padding:1px 5px;border-radius:3px;background:rgba(139,92,246,0.15);color:#a78bfa;">'+st.skill_requerido+'</span>':'')+'</div>'+(st.criterio_exito?'<div style="font-size:8px;color:#22c55e;margin-top:4px;">\u2705 '+st.criterio_exito+'</div>':'')+'</div><div style="text-align:right;flex-shrink:0;margin-left:8px;"><div style="font-size:10px;font-weight:600;color:#e8e9ed;">'+(st.horas_estimadas||0)+'h</div>'+(st.story_points?'<div style="font-size:8px;color:#eab308;">'+st.story_points+' pts</div>':'')+'</div></div>';
-        mainContent.appendChild(card);
-      });
-      if (subtCount === 0) {
-        var rawSub = document.createElement('textarea');
-        rawSub.style.cssText = 'width:100%;min-height:300px;background:#1a1d24;border:1px solid #333840;border-radius:8px;padding:12px;color:#e8e9ed;font-size:11px;font-family:monospace;resize:vertical;';
-        rawSub.value = typeof subtData === 'string' ? subtData : JSON.stringify(subtData,null,2);
-        mainContent.appendChild(rawSub);
-      }
-      sideContent.innerHTML = '<div style="background:#1a1d24;border:1px solid #333840;border-radius:8px;padding:12px;margin-bottom:8px;"><div style="font-size:11px;font-weight:600;color:#e8e9ed;margin-bottom:8px;">Resumen Subtareas</div><div style="font-size:10px;color:#8b8f98;line-height:1.8;"><div>Subtareas: <span style="color:#e8e9ed;">'+subtCount+'</span></div><div>Tecnologias: <span style="color:#d946ef;">'+Object.keys(techSet).length+'</span></div></div></div>';
-    }
-
-    // ── PAUSA 3: Riesgos + Stakeholders ──
-    if (pauseNumber === 3) {
-      var tabBar3 = document.createElement('div');
-      tabBar3.style.cssText = 'display:flex;gap:4px;margin-bottom:12px;';
-      ['Riesgos','Stakeholders'].forEach(function(tab,idx) {
-        var tb3 = document.createElement('button');
-        var colors3 = ['#eab308','#ec4899'];
-        tb3.style.cssText = 'padding:6px 14px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid '+(idx===0?colors3[0]:'#333840')+';background:'+(idx===0?'rgba(234,179,8,0.15)':'transparent')+';color:'+(idx===0?colors3[0]:'#8b8f98')+';';
-        tb3.textContent = tab;
-        tb3.onclick = function() { tabBar3.querySelectorAll('button').forEach(function(b){b.style.background='transparent';b.style.borderColor='#333840';b.style.color='#8b8f98';}); tb3.style.background='rgba('+(idx===0?'234,179,8':'236,72,153')+',0.15)'; tb3.style.borderColor=colors3[idx]; tb3.style.color=colors3[idx]; document.querySelectorAll('.pause3-tab').forEach(function(t){t.style.display='none';}); var el3=document.getElementById('pause3-tab-'+idx); if(el3) el3.style.display='block'; };
-        tabBar3.appendChild(tb3);
-      });
-      mainContent.appendChild(tabBar3);
-
-      // Risks tab
-      var risksTab = document.createElement('div'); risksTab.id='pause3-tab-0'; risksTab.className='pause3-tab';
-      var risksData = data.risksResult || '';
-      var risksParsed = null;
-      if (typeof risksData === 'string') { try { var rm = risksData.match(/\{[\s\S]*\}/); if (rm) risksParsed = JSON.parse(rm[0]); } catch(e) {} }
-      else if (typeof risksData === 'object') risksParsed = risksData;
-      var risksList = (risksParsed && (risksParsed.risks||[])) || [];
-      risksList.forEach(function(rk,idx) {
-        var score = (rk.probabilidad||3)*(rk.impacto||3);
-        var sc = score>=15?{bg:'rgba(239,68,68,0.15)',color:'#ef4444'}:score>=10?{bg:'rgba(249,115,22,0.15)',color:'#f97316'}:score>=5?{bg:'rgba(234,179,8,0.15)',color:'#eab308'}:{bg:'rgba(34,197,94,0.15)',color:'#22c55e'};
-        var rkCard = document.createElement('div');
-        rkCard.style.cssText = 'background:#1a1d24;border:1px solid #333840;border-left:3px solid '+sc.color+';border-radius:8px;padding:10px 12px;margin-bottom:6px;';
-        rkCard.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:flex-start;"><div style="flex:1;"><div style="font-size:11px;font-weight:600;color:#e8e9ed;margin-bottom:3px;">R'+(idx+1)+': '+(rk.descripcion||'')+'</div><div style="font-size:9px;color:#8b8f98;margin-bottom:4px;">'+(rk.categoria||'Tecnico')+' \u2014 P:'+(rk.probabilidad||'?')+' I:'+(rk.impacto||'?')+'</div>'+(rk.plan_mitigacion?'<div style="font-size:9px;color:#3b82f6;">\ud83d\udee1 '+rk.plan_mitigacion+'</div>':'')+'</div><div style="background:'+sc.bg+';color:'+sc.color+';padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;flex-shrink:0;">'+score+'</div></div>';
-        risksTab.appendChild(rkCard);
-      });
-      mainContent.appendChild(risksTab);
-
-      // Stakeholders tab
-      var stkTab = document.createElement('div'); stkTab.id='pause3-tab-1'; stkTab.className='pause3-tab'; stkTab.style.display='none';
-      var stkData = data.stakeholdersResult || '';
-      var stkParsed = null;
-      if (typeof stkData === 'string') { try { var sm = stkData.match(/\{[\s\S]*\}/); if (sm) stkParsed = JSON.parse(sm[0]); } catch(e) {} }
-      else if (typeof stkData === 'object') stkParsed = stkData;
-      var stkList = (stkParsed && (stkParsed.stakeholders||[])) || [];
-      stkList.forEach(function(sh) {
-        var initials = (sh.nombre||'XX').split(' ').map(function(w){return w[0]||'';}).join('').substring(0,2).toUpperCase();
-        var shCard = document.createElement('div');
-        shCard.style.cssText = 'background:#1a1d24;border:1px solid #333840;border-radius:8px;padding:10px 12px;margin-bottom:6px;display:flex;align-items:center;gap:10px;';
-        shCard.innerHTML = '<div style="width:36px;height:36px;border-radius:50%;background:rgba(236,72,153,0.15);color:#ec4899;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">'+initials+'</div><div style="flex:1;"><div style="font-size:11px;font-weight:600;color:#e8e9ed;">'+(sh.nombre||'')+'</div><div style="font-size:9px;color:#8b8f98;">'+(sh.cargo||'')+' \u2014 '+(sh.area||'')+'</div><div style="display:flex;gap:4px;margin-top:3px;"><span style="font-size:7px;padding:1px 5px;border-radius:3px;background:rgba(234,179,8,0.15);color:#eab308;">P:'+(sh.nivel_poder||'?')+'</span><span style="font-size:7px;padding:1px 5px;border-radius:3px;background:rgba(59,130,246,0.15);color:#3b82f6;">I:'+(sh.nivel_interes||'?')+'</span><span style="font-size:7px;padding:1px 5px;border-radius:3px;background:rgba(139,92,246,0.15);color:#a78bfa;">'+(sh.estrategia||'')+'</span></div></div>';
-        stkTab.appendChild(shCard);
-      });
-      mainContent.appendChild(stkTab);
-      sideContent.innerHTML = '<div style="background:#1a1d24;border:1px solid #333840;border-radius:8px;padding:12px;margin-bottom:8px;"><div style="font-size:11px;font-weight:600;color:#e8e9ed;margin-bottom:8px;">Resumen</div><div style="font-size:10px;color:#8b8f98;line-height:1.8;"><div>Riesgos: <span style="color:#eab308;">'+risksList.length+'</span></div><div>Stakeholders: <span style="color:#ec4899;">'+stkList.length+'</span></div><div>Criticos (>15): <span style="color:#ef4444;">'+risksList.filter(function(r){return(r.probabilidad||3)*(r.impacto||3)>=15;}).length+'</span></div></div></div>';
-    }
-
-    // ── PAUSA 4: PM candidatos + Equipo ──
-    if (pauseNumber === 4) {
-      var resData = data.resourceResult || '';
-      var pmTitle = document.createElement('div');
-      pmTitle.style.cssText = 'font-size:12px;font-weight:600;color:#e8e9ed;margin-bottom:8px;';
-      pmTitle.textContent = 'Project Managers Candidatos';
-      mainContent.appendChild(pmTitle);
-
-      var selectedPMData = null;
-      var pmCards = document.createElement('div');
-      pmCards.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;';
-      pmCards.id = 'pm-candidates-grid';
-      mainContent.appendChild(pmCards);
-
-      (async function() {
-        try {
-          var pmResp = await authFetch(API_BASE + '/pmo/managers/candidates');
-          var pms = await pmResp.json();
-          var top3 = pms.slice(0,3);
-          top3.forEach(function(pm,idx) {
-            var card = document.createElement('div');
-            card.style.cssText = 'background:#1a1d24;border:2px solid '+(idx===0?'#22c55e':'#333840')+';border-radius:8px;padding:12px;cursor:pointer;transition:border-color 0.2s;';
-            if (idx===0) card.style.boxShadow='0 0 8px rgba(34,197,94,0.15)';
-            var initials = (pm.nombre||'XX').split(' ').map(function(w){return w[0]||'';}).join('').substring(0,2).toUpperCase();
-            card.innerHTML = (idx===0?'<div style="font-size:7px;background:rgba(34,197,94,0.15);color:#22c55e;padding:1px 6px;border-radius:3px;display:inline-block;margin-bottom:6px;">\u2605 Recomendado</div>':'')+'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><div style="width:36px;height:36px;border-radius:50%;background:rgba(59,130,246,0.15);color:#3b82f6;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;">'+initials+'</div><div><div style="font-size:11px;font-weight:600;color:#e8e9ed;">'+(pm.nombre||'')+'</div><div style="font-size:8px;color:#8b8f98;">'+(pm.nivel||'')+' \u2014 '+(pm.especialidad||'')+'</div></div></div><div style="font-size:8px;color:#8b8f98;">Exito: '+(pm.tasa_exito||0)+'% \u2014 Carga: '+(pm.carga_actual||0)+'%</div>';
-            card.onclick = function() {
-              document.querySelectorAll('#pm-candidates-grid > div').forEach(function(c){c.style.borderColor='#333840';c.style.boxShadow='none';});
-              card.style.borderColor='#22c55e'; card.style.boxShadow='0 0 8px rgba(34,197,94,0.15)';
-              selectedPMData = pm;
-            };
-            pmCards.appendChild(card);
-          });
-          if (top3.length > 0) selectedPMData = top3[0];
-        } catch(e) { pmCards.innerHTML = '<div style="color:#ef4444;font-size:10px;">Error cargando PMs</div>'; }
-      })();
-
-      var teamTitle = document.createElement('div');
-      teamTitle.style.cssText = 'font-size:12px;font-weight:600;color:#e8e9ed;margin-bottom:8px;margin-top:8px;';
-      teamTitle.textContent = 'Equipo Tecnico Propuesto';
-      mainContent.appendChild(teamTitle);
-      var teamBox = document.createElement('div');
-      teamBox.style.cssText = 'background:#1a1d24;border:1px solid #333840;border-radius:8px;padding:12px;max-height:200px;overflow-y:auto;font-size:10px;color:#b0b4bc;white-space:pre-wrap;';
-      teamBox.textContent = typeof resData === 'string' ? resData.substring(0,1500) : JSON.stringify(resData,null,2).substring(0,1500);
-      mainContent.appendChild(teamBox);
-      sideContent.innerHTML = '<div style="background:#1a1d24;border:1px solid #333840;border-radius:8px;padding:12px;font-size:10px;color:#8b8f98;line-height:1.6;"><div style="font-size:11px;font-weight:600;color:#e8e9ed;margin-bottom:6px;">Instrucciones</div><div>\u2022 Selecciona un PM haciendo click</div><div>\u2022 El PM recomendado tiene borde verde</div><div>\u2022 Pulsa "Aprobar" cuando estes conforme</div></div>';
-
-      approveBtn.onclick = function() { pauseDiv.remove(); resolve(selectedPMData || data); };
-    }
-
-    // Ensamblar
-    layout.appendChild(mainContent);
-    var advisorContainer = document.createElement('div');
-    advisorContainer.id = 'advisor-container-' + pauseNumber;
-    sideContent.appendChild(advisorContainer);
-    layout.appendChild(sideContent);
-    pauseDiv.appendChild(layout);
-    pauseArea.appendChild(pauseDiv);
-    renderAdvisorChat('advisor-container-' + pauseNumber, pauseNumber);
-
-    if (pauseNumber !== 4) {
-      approveBtn.onclick = function() {
-        if (pauseNumber === 1) {
-          var rawEl = document.getElementById('pause1-edt-raw');
-          if (rawEl) { try { resolve(JSON.parse(rawEl.value)); } catch(e) { resolve(rawEl.value); } }
-          else resolve(data.edtResult || data);
-        } else { resolve(data.subtasksResult || data.risksResult || data); }
-        pauseDiv.remove();
-      };
-    }
-  });
-}
-
-// ── showBuildFinalScreen ──
-function showBuildFinalScreen(pipelineData) {
-  var pauseArea = document.getElementById('build-pause-area');
-  if (!pauseArea) return;
-  pauseArea.innerHTML = '';
-
-  var finalDiv = document.createElement('div');
-  finalDiv.style.cssText = 'background:rgba(34,197,94,0.04);border:2px solid rgba(34,197,94,0.2);border-radius:12px;padding:16px;';
-  finalDiv.innerHTML = '<div style="text-align:center;margin-bottom:16px;"><div style="font-size:16px;font-weight:700;color:#22c55e;">\u2705 Pipeline BUILD completado \u2014 9 agentes ejecutados</div><div style="font-size:10px;color:#8b8f98;margin-top:4px;">Revise el resumen y pulse "Lanzar proyecto" para activar.</div></div>';
-
-  var metrics = document.createElement('div');
-  metrics.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;';
-  var metricItems = [
-    {label:'Coste pipeline',value:'~'+buildPipelineCost.toFixed(2)+' USD',color:'#3b82f6'},
-    {label:'Tiempo total',value:((Date.now()-buildPipelineStartTime)/1000).toFixed(0)+'s',color:'#10b981'},
-    {label:'Agentes',value:'9 / 9',color:'#d946ef'}
-  ];
-  metricItems.forEach(function(m) {
-    metrics.innerHTML += '<div style="background:#1a1d24;border:1px solid #333840;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:20px;font-weight:700;color:'+m.color+';">'+m.value+'</div><div style="font-size:9px;color:#8b8f98;">'+m.label+'</div></div>';
-  });
-  finalDiv.appendChild(metrics);
-
-  var tabBar = document.createElement('div');
-  tabBar.style.cssText = 'display:flex;gap:4px;margin-bottom:12px;';
-  ['Resultado AG-016 (Costes)','Resultado AG-007 (Plan)','Resultado AG-017 (Quality)'].forEach(function(tab,idx) {
-    var tb = document.createElement('button');
-    tb.style.cssText = 'padding:6px 12px;border-radius:6px;font-size:9px;font-weight:600;cursor:pointer;border:1px solid '+(idx===0?'#10b981':'#333840')+';background:'+(idx===0?'rgba(16,185,129,0.15)':'transparent')+';color:'+(idx===0?'#10b981':'#8b8f98')+';';
-    tb.textContent = tab;
-    tb.onclick = function() { tabBar.querySelectorAll('button').forEach(function(b){b.style.background='transparent';b.style.borderColor='#333840';b.style.color='#8b8f98';}); tb.style.background='rgba(16,185,129,0.15)';tb.style.borderColor='#10b981';tb.style.color='#10b981'; document.querySelectorAll('.final-tab').forEach(function(t){t.style.display='none';}); var el=document.getElementById('final-tab-'+idx); if(el) el.style.display='block'; };
-    tabBar.appendChild(tb);
-  });
-  finalDiv.appendChild(tabBar);
-
-  var tabContents = [pipelineData.costResult, pipelineData.planResult, pipelineData.qualityResult];
-  tabContents.forEach(function(content,idx) {
-    var tabDiv = document.createElement('div'); tabDiv.id='final-tab-'+idx; tabDiv.className='final-tab'; tabDiv.style.display=idx===0?'block':'none';
-    var textContent = typeof content === 'string' ? content : JSON.stringify(content,null,2);
-    tabDiv.innerHTML = '<div style="background:#1a1d24;border:1px solid #333840;border-radius:8px;padding:12px;max-height:300px;overflow-y:auto;font-size:10px;color:#b0b4bc;white-space:pre-wrap;font-family:monospace;">'+(textContent||'Sin datos').substring(0,3000)+'</div>';
-    finalDiv.appendChild(tabDiv);
-  });
-
-  var launchDiv = document.createElement('div');
-  launchDiv.style.cssText = 'text-align:center;margin-top:16px;padding-top:16px;border-top:1px solid rgba(34,197,94,0.2);';
-  var launchBtn = document.createElement('button');
-  launchBtn.style.cssText = 'padding:14px 48px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#22c55e,#10b981);color:#fff;box-shadow:0 0 20px rgba(34,197,94,0.2);transition:all 0.3s;';
-  launchBtn.textContent = '\ud83d\ude80 Lanzar Proyecto';
-  launchBtn.onmouseover = function() { launchBtn.style.boxShadow='0 0 30px rgba(34,197,94,0.4)'; };
-  launchBtn.onmouseout = function() { launchBtn.style.boxShadow='0 0 20px rgba(34,197,94,0.2)'; };
-  launchBtn.onclick = async function() {
-    launchBtn.disabled = true;
-    launchBtn.textContent = '\u23f3 Lanzando...';
-    launchBtn.style.background = 'linear-gradient(135deg,#eab308,#f97316)';
-    try {
-      var projName = pipelineData.formText ? pipelineData.formText.substring(0,80) : 'Proyecto BUILD';
-      var projId = 'PRJ-' + Date.now().toString(36).toUpperCase();
-      await authFetch(API_BASE + '/build/live', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          id_proyecto: projId, nombre: projName,
-          pm_asignado: (pipelineData.selectedPM && pipelineData.selectedPM.nombre) || 'Pendiente',
-          prioridad: 'Alta', estado: 'EN_EJECUCION',
-          total_sprints: 16, presupuesto_bac: 0, story_points_total: 0
-        })
-      });
-      launchBtn.textContent = '\u2705 Proyecto lanzado \u2014 Sprint 1 activo';
-      launchBtn.style.background = 'linear-gradient(135deg,#22c55e,#10b981)';
-      if (typeof loadBuildLive === 'function') loadBuildLive();
-    } catch(e) {
-      launchBtn.textContent = '\u274c Error: ' + (e.message || e);
-      launchBtn.style.background = '#ef4444';
-    }
-  };
-  launchDiv.appendChild(launchBtn);
-  finalDiv.appendChild(launchDiv);
-  pauseArea.appendChild(finalDiv);
 }
 
 function _parseBuildResult(chainResult) {
