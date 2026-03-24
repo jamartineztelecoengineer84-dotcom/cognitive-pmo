@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from typing import Optional
 from agents.config import AGENT_CONFIGS
 from agents.engine import AgentEngine
+from agents.spawner import SpawnableEngine, SPAWNABLE_AGENTS
 from database import get_pool
 
 router = APIRouter(prefix="/agents", tags=["agents"])
@@ -26,13 +27,38 @@ class InvokeRequest(BaseModel):
 
 @router.post("/{agent_id}/invoke")
 async def invoke_agent(agent_id: str, body: InvokeRequest):
-    """Invoca un agente individual"""
+    """Invoca un agente individual (con spawning si configurado)"""
     if agent_id not in AGENT_CONFIGS:
         raise HTTPException(404, f"Agent {agent_id} not configured")
     pool = get_pool()
     if not pool:
         raise HTTPException(503, "Database not available")
     config = AGENT_CONFIGS[agent_id]
+
+    # Check if agent has spawning configured
+    if agent_id in SPAWNABLE_AGENTS:
+        spawn_config = SPAWNABLE_AGENTS[agent_id]
+        spawner = SpawnableEngine(
+            config=config,
+            db_pool=pool,
+            director_prompt=spawn_config["director_prompt"],
+            worker_prompt_template=spawn_config["worker_prompt_template"],
+            merger_prompt=spawn_config.get("merger_prompt", ""),
+            max_workers=spawn_config.get("max_workers", 8),
+            worker_max_tokens=spawn_config.get("worker_max_tokens", 4096),
+            programmatic_merge=spawn_config.get("programmatic_merge", False),
+            merge_function=spawn_config.get("merge_function"),
+        )
+        result_data = await spawner.invoke(
+            body.message, body.session_id or ""
+        )
+        return {
+            "agent_id": agent_id,
+            "response": result_data["response"],
+            "spawning_info": result_data["spawning_info"]
+        }
+
+    # Normal (non-spawnable) agent
     engine = AgentEngine(config, pool)
     result = await engine.invoke(
         user_msg=body.message,

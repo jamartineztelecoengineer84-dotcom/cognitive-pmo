@@ -30,3 +30,22 @@ WHERE sync_status IN ('PENDIENTE', 'EN_PROCESO');
 -- Índice para task advisor worker
 CREATE INDEX IF NOT EXISTS idx_kanban_recent
 ON kanban_tareas (fecha_creacion DESC);
+
+-- Pipeline sessions (estado persistente de pipelines BUILD)
+CREATE TABLE IF NOT EXISTS pipeline_sessions (
+  id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  nombre_proyecto VARCHAR NOT NULL DEFAULT '',
+  estado VARCHAR DEFAULT 'EN_PROGRESO',
+  pausa_actual INTEGER DEFAULT 0,
+  pipeline_data JSONB NOT NULL DEFAULT '{}',
+  business_case JSONB DEFAULT '{}',
+  session_id VARCHAR DEFAULT '',
+  tiempo_acumulado_ms INTEGER DEFAULT 0,
+  coste_acumulado NUMERIC DEFAULT 0,
+  agentes_completados JSONB DEFAULT '[]',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_pipeline_sessions_estado
+ON pipeline_sessions (estado, updated_at DESC);

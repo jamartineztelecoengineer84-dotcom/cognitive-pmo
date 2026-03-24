@@ -1173,6 +1173,23 @@ async def create_build_plan(p: BuildPlanCreate):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/build/plans/{plan_id}")
+async def get_build_plan(plan_id: str):
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    try:
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow("SELECT * FROM build_project_plans WHERE id = $1", plan_id)
+            if not row:
+                raise HTTPException(status_code=404, detail="Plan not found")
+            return serialize(row)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.delete("/build/plans/{plan_id}")
 async def delete_build_plan(plan_id: str):
     pool = get_pool()
@@ -1186,6 +1203,85 @@ async def delete_build_plan(plan_id: str):
             return {"ok": True}
     except HTTPException:
         raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Pipeline Sessions (estado persistente) ─────────────────────────────────
+
+@app.post("/pipeline/sessions")
+async def save_pipeline_session(body: dict):
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    session_id = body.get("id") or str(uuid.uuid4())
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute("""
+                INSERT INTO pipeline_sessions (id, nombre_proyecto, estado, pausa_actual, pipeline_data, business_case, session_id, tiempo_acumulado_ms, coste_acumulado, agentes_completados)
+                VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7, $8, $9, $10::jsonb)
+                ON CONFLICT (id) DO UPDATE SET
+                    estado = $3, pausa_actual = $4, pipeline_data = $5::jsonb,
+                    tiempo_acumulado_ms = $8, coste_acumulado = $9,
+                    agentes_completados = $10::jsonb, updated_at = now()
+            """, session_id, body.get("nombre", ""), body.get("estado", "EN_PROGRESO"),
+                body.get("pausa_actual", 0),
+                json.dumps(body.get("pipeline_data", {}), ensure_ascii=False, default=str),
+                json.dumps(body.get("business_case", {}), ensure_ascii=False, default=str),
+                body.get("session_id", ""),
+                body.get("tiempo_ms", 0), float(body.get("coste", 0)),
+                json.dumps(body.get("agentes_completados", [])))
+        return {"id": session_id, "status": "saved"}
+    except Exception as e:
+        logger.warning(f"Error saving pipeline session: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/pipeline/sessions")
+async def list_pipeline_sessions():
+    pool = get_pool()
+    if not pool:
+        return []
+    try:
+        async with pool.acquire() as conn:
+            rows = await conn.fetch("""
+                SELECT id, nombre_proyecto, estado, pausa_actual, tiempo_acumulado_ms, coste_acumulado, agentes_completados, created_at, updated_at
+                FROM pipeline_sessions
+                WHERE estado != 'LANZADO'
+                ORDER BY updated_at DESC LIMIT 20
+            """)
+            return [serialize(r) for r in rows]
+    except Exception as e:
+        logger.warning(f"Error listing pipeline sessions: {e}")
+        return []
+
+
+@app.get("/pipeline/sessions/{sid}")
+async def get_pipeline_session(sid: str):
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    try:
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow("SELECT * FROM pipeline_sessions WHERE id = $1", sid)
+            if not row:
+                raise HTTPException(status_code=404, detail="Session not found")
+            return serialize(row)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/pipeline/sessions/{sid}")
+async def delete_pipeline_session(sid: str):
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute("DELETE FROM pipeline_sessions WHERE id = $1", sid)
+        return {"deleted": True}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

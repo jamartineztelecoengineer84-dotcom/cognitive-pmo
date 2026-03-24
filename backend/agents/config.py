@@ -84,7 +84,7 @@ AGENT_CONFIGS["AG-005"] = AgentConfig(
         DECOMPOSE_PMBOK_SCHEMA, ASSIGN_SKILLS_TO_TASKS_SCHEMA,
         CREATE_BUILD_PROJECT_SCHEMA,
     ],
-    max_tokens=2048,
+    max_tokens=8192,
 )
 
 AGENT_CONFIGS["AG-013"] = AgentConfig(
@@ -95,7 +95,7 @@ AGENT_CONFIGS["AG-013"] = AgentConfig(
         DECOMPOSE_SUBTASKS_SCHEMA, QUERY_CMDB_ACTIVO_SCHEMA,
         QUERY_CMDB_SOFTWARE_SCHEMA, QUERY_CMDB_RELACIONES_SCHEMA,
     ],
-    max_tokens=2048,
+    max_tokens=4096,
 )
 
 AGENT_CONFIGS["AG-014"] = AgentConfig(
@@ -136,7 +136,7 @@ AGENT_CONFIGS["AG-016"] = AgentConfig(
     tools=[
         CALC_ROI_SCHEMA, CALC_EVM_BASELINE_SCHEMA, CREATE_BUDGET_SCHEMA,
     ],
-    max_tokens=2048,
+    max_tokens=8192,
 )
 
 AGENT_CONFIGS["AG-007"] = AgentConfig(
@@ -148,7 +148,7 @@ AGENT_CONFIGS["AG-007"] = AgentConfig(
         CREATE_KANBAN_CARDS_SCHEMA, CREATE_BUILD_PROJECT_SCHEMA,
         CREATE_BUDGET_SCHEMA,
     ],
-    max_tokens=2048,
+    max_tokens=8192,
 )
 
 AGENT_CONFIGS["AG-017"] = AgentConfig(
@@ -215,3 +215,37 @@ BUILD_PIPELINE_ORDER = [
 ]
 
 BUILD_ADVISOR = "AG-018"  # Disponible durante las 4 pausas
+
+# =============================================
+# CONFIGURACIÓN DE SPAWNING (Director/Workers/Merger)
+# =============================================
+from agents.spawner import SPAWNABLE_AGENTS, merge_ag013_subtasks, merge_ag007_sprints
+
+# AG-005: LLM merger (necesita generar Acta+Alcance+meta_negocio coherente)
+SPAWNABLE_AGENTS["AG-005"] = {
+    "director_prompt": load_prompt("ag005_director.txt"),
+    "worker_prompt_template": load_prompt("ag005_worker.txt"),
+    "merger_prompt": load_prompt("ag005_merger.txt"),
+    "max_workers": 6,
+    "worker_max_tokens": 4096,
+}
+
+# AG-013: merger LLM (los workers mezclan texto narrativo con JSON)
+SPAWNABLE_AGENTS["AG-013"] = {
+    "director_prompt": load_prompt("ag013_director.txt"),
+    "worker_prompt_template": load_prompt("ag013_worker.txt"),
+    "merger_prompt": load_prompt("ag013_merger.txt"),
+    "max_workers": 6,
+    "worker_max_tokens": 6144,
+}
+
+# AG-007: merge PROGRAMÁTICO (concatenar sprints + renumerar — sin llamar a Claude)
+SPAWNABLE_AGENTS["AG-007"] = {
+    "director_prompt": load_prompt("ag007_director.txt"),
+    "worker_prompt_template": load_prompt("ag007_worker.txt"),
+    "merger_prompt": "",
+    "max_workers": 6,
+    "worker_max_tokens": 3072,
+    "programmatic_merge": True,
+    "merge_function": merge_ag007_sprints,
+}

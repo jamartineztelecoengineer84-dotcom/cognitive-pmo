@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;font-family:system-ui,-apple-system,sans-serif;color:#e8e9ed;padding:16px}
+.container{max-width:1100px;margin:0 auto}
+.pipeline-bar{display:flex;align-items:center;gap:4px;background:#1a1d24;border-radius:12px;padding:10px 14px;margin-bottom:12px;overflow-x:auto}
+.pipe-agent{display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;opacity:0.35;flex-shrink:0}
+.pipe-agent.done{opacity:0.7}
+.pipe-icon{width:32px;height:32px;flex-shrink:0}
+.pipe-label{font-size:9px;font-weight:600;line-height:1.2}
+.pipe-sub{font-size:7px;color:#8b8f98}
+.pipe-arrow{color:#333840;font-size:12px;flex-shrink:0}
+.progress-bar{display:flex;align-items:center;gap:16px;background:#1a1d24;border-radius:10px;padding:10px 16px;margin-bottom:12px}
+.prog-time{font-size:28px;font-weight:700;font-family:monospace;letter-spacing:1px}
+.prog-label{font-size:9px;color:#8b8f98}
+.pause-bar{background:rgba(234,179,8,0.08);border:2px dashed rgba(234,179,8,0.4);border-radius:10px;padding:12px 16px;margin-bottom:12px}
+.pause-title{font-size:13px;font-weight:600;color:#eab308;margin-bottom:4px}
+.pause-sub{font-size:10px;color:#8b8f98}
+.pause-actions{display:flex;gap:8px;margin-top:8px;align-items:center}
+.btn{padding:8px 18px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:none}
+.btn-approve{background:#22c55e;color:#fff}
+.btn-approve:disabled{background:#333840;color:#8b8f98;cursor:not-allowed}
+.btn-reject{background:none;border:1px solid rgba(239,68,68,0.3);color:#ef4444}
+.pause-status{font-size:10px;font-weight:600;margin-left:auto}
+.main-layout{display:flex;gap:12px}
+.main-left{flex:2;min-width:0}
+.main-right{flex:1;min-width:280px;max-width:320px}
+.section{background:#1a1d24;border:1px solid #333840;border-radius:10px;padding:14px;margin-bottom:10px}
+.section-header{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.section-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+.ia-badge{font-size:7px;padding:1px 5px;border-radius:3px;background:rgba(234,179,8,0.15);color:#eab308;font-weight:600}
+
+/* PM Cards */
+.pm-candidates-title{font-size:10px;font-weight:600;color:#06b6d4;text-transform:uppercase;margin-bottom:8px}
+.pm-card{background:#22262e;border:1px solid #3a3f4a;border-radius:10px;padding:12px;margin-bottom:8px;cursor:pointer;position:relative;transition:all 0.2s}
+.pm-card:hover{border-color:#06b6d4}
+.pm-card.selected{border-color:#22c55e;border-width:2px;background:rgba(34,197,94,0.04)}
+.pm-card.recommended{border-left:4px solid #22c55e}
+.pm-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.pm-avatar{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0}
+.pm-name{font-size:14px;font-weight:600;color:#e8e9ed}
+.pm-role{font-size:10px;color:#8b8f98}
+.pm-score{font-size:28px;font-weight:700;font-family:monospace;margin-left:auto}
+.pm-details{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}
+.pm-detail{background:#181b20;border-radius:6px;padding:6px 8px;text-align:center}
+.pm-detail-value{font-size:13px;font-weight:700;font-family:monospace}
+.pm-detail-label{font-size:7px;color:#8b8f98;text-transform:uppercase;margin-top:1px}
+.pm-skills{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:8px}
+.pm-skill{font-size:7px;padding:2px 6px;border-radius:3px;font-weight:600}
+.pm-skill.match{background:rgba(34,197,94,0.12);color:#22c55e;border:1px solid rgba(34,197,94,0.25)}
+.pm-skill.partial{background:rgba(234,179,8,0.12);color:#eab308;border:1px solid rgba(234,179,8,0.25)}
+.pm-skill.no{background:rgba(239,68,68,0.08);color:#ef4444;border:1px solid rgba(239,68,68,0.15)}
+.pm-certs{display:flex;gap:4px;margin-bottom:6px}
+.pm-cert{font-size:7px;padding:2px 6px;border-radius:3px;background:rgba(139,92,246,0.12);color:#8b5cf6;font-weight:600;border:1px solid rgba(139,92,246,0.25)}
+.pm-reason{font-size:9px;color:#06b6d4;background:rgba(6,182,212,0.06);border-radius:4px;padding:4px 8px;line-height:1.4}
+.pm-btn{padding:6px 16px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;border:none}
+.pm-btn-select{background:none;border:1px solid #06b6d4;color:#06b6d4}
+.pm-btn-select:hover{background:#06b6d4;color:#fff}
+.pm-btn-selected{background:#22c55e;color:#fff}
+.pm-recommend{position:absolute;top:-6px;right:12px;font-size:8px;padding:2px 8px;border-radius:4px;background:#22c55e;color:#fff;font-weight:600}
+.score-bar{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+.score-bar-label{font-size:8px;color:#8b8f98;min-width:80px}
+.score-bar-track{flex:1;height:5px;background:#181b20;border-radius:3px;overflow:hidden}
+.score-bar-fill{height:100%;border-radius:3px}
+.score-bar-val{font-size:8px;font-family:monospace;color:#8b8f98;min-width:25px;text-align:right}
+
+/* Team with CHANGE button */
+.team-title{font-size:10px;font-weight:600;color:#06b6d4;text-transform:uppercase;margin:16px 0 8px;display:flex;align-items:center;gap:6px}
+.team-silo{margin-bottom:8px}
+.team-silo-header{display:flex;align-items:center;gap:6px;margin-bottom:4px;padding:4px 8px;border-radius:6px}
+.team-silo-name{font-size:10px;font-weight:600}
+.team-silo-hours{font-size:9px;font-family:monospace;color:#8b8f98;margin-left:auto}
+.team-member{display:flex;align-items:center;gap:8px;background:#22262e;border:1px solid #3a3f4a;border-radius:6px;padding:6px 10px;margin-bottom:3px;margin-left:16px}
+.team-avatar{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;flex-shrink:0}
+.team-name{font-size:10px;font-weight:600;color:#e8e9ed}
+.team-info{font-size:8px;color:#8b8f98}
+.team-score{font-size:14px;font-weight:700;font-family:monospace;margin-left:auto}
+.team-hours{font-size:9px;font-family:monospace;color:#8b8f98;min-width:40px;text-align:right}
+.team-conflict{font-size:7px;padding:1px 5px;border-radius:3px;background:rgba(239,68,68,0.12);color:#ef4444;font-weight:600}
+.team-change-btn{font-size:8px;padding:3px 8px;border:1px solid rgba(234,179,8,0.3);background:none;color:#eab308;border-radius:4px;cursor:pointer;margin-left:6px;font-weight:600}
+.team-change-btn:hover{background:rgba(234,179,8,0.1)}
+.team-change-btn.active{color:#ef4444;border-color:rgba(239,68,68,0.3)}
+
+/* Change panel (inline dropdown) */
+.change-panel{display:none;margin-left:16px;margin-bottom:4px;background:#181b20;border:1px solid rgba(234,179,8,0.3);border-radius:0 0 8px 8px;padding:8px 10px;margin-top:-4px}
+.change-panel.open{display:block}
+.change-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.change-silo-badge{font-size:8px;padding:2px 6px;border-radius:3px;font-weight:600}
+.change-candidate{display:flex;align-items:center;gap:8px;padding:5px 8px;background:#22262e;border:1px solid #3a3f4a;border-radius:6px;margin-bottom:3px;cursor:pointer;transition:all 0.15s}
+.change-candidate:hover{border-color:#22c55e}
+.change-candidate.recommended{border-left:3px solid #22c55e}
+.change-avatar{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;flex-shrink:0}
+.change-name{font-size:10px;font-weight:600;color:#e8e9ed}
+.change-info{font-size:8px;color:#8b8f98}
+.change-score{font-size:16px;font-weight:700;font-family:monospace;min-width:28px;text-align:center}
+.change-assign-btn{font-size:8px;padding:3px 10px;border-radius:4px;cursor:pointer;font-weight:600;border:none}
+.change-assign-btn.green{background:#22c55e;color:#fff}
+.change-assign-btn.gray{background:none;border:1px solid #333840;color:#8b8f98}
+.change-current{font-size:8px;color:#8b8f98;font-style:italic;padding:4px 8px;border:1px dashed rgba(34,197,94,0.2);border-radius:4px;opacity:0.5;margin-top:4px;text-decoration:line-through}
+
+/* Sidebar */
+.sidebar-card{background:#1a1d24;border:1px solid #333840;border-radius:10px;padding:12px;margin-bottom:10px}
+.sidebar-title{font-size:10px;font-weight:600;color:#8b8f98;text-transform:uppercase;margin-bottom:8px}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.stat-item{background:#22262e;border-radius:6px;padding:8px;text-align:center}
+.stat-value{font-size:18px;font-weight:700;font-family:monospace}
+.stat-label{font-size:7px;color:#8b8f98;text-transform:uppercase;margin-top:2px}
+.advisor-panel{background:#0f1724;border:1px solid rgba(16,185,129,0.25);border-radius:10px;overflow:hidden;margin-bottom:10px}
+.advisor-header{padding:8px 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(16,185,129,0.15)}
+.advisor-icon{width:28px;height:28px;border-radius:50%;background:rgba(16,185,129,0.2);color:#10b981;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.advisor-title{font-size:11px;font-weight:600;color:#10b981}
+.advisor-sub{font-size:8px;color:#8b8f98}
+.advisor-context{display:flex;gap:3px;flex-wrap:wrap;padding:6px 12px;border-bottom:1px solid rgba(16,185,129,0.1)}
+.ctx-badge{font-size:7px;padding:1px 5px;border-radius:3px;background:rgba(16,185,129,0.1);color:#10b981;font-weight:600}
+.ctx-badge.new{background:rgba(6,182,212,0.15);color:#06b6d4}
+.advisor-messages{padding:8px 12px;max-height:200px;overflow-y:auto}
+.advisor-msg{margin-bottom:8px;font-size:10px;line-height:1.4}
+.advisor-msg.system{color:#10b981;background:rgba(16,185,129,0.06);padding:6px 8px;border-radius:6px}
+.advisor-msg.user span{background:rgba(59,130,246,0.1);padding:4px 8px;border-radius:6px;display:inline-block}
+.advisor-msg.bot span{background:rgba(16,185,129,0.06);padding:4px 8px;border-radius:6px;display:inline-block}
+.advisor-suggestions{padding:4px 12px 8px;display:flex;flex-direction:column;gap:3px}
+.advisor-sug{font-size:8px;color:#10b981;cursor:pointer;padding:3px 6px;border-radius:4px;background:rgba(16,185,129,0.06)}
+.advisor-sug:hover{background:rgba(16,185,129,0.12)}
+.advisor-input-row{display:flex;gap:6px;padding:8px 12px;border-top:1px solid rgba(16,185,129,0.15)}
+.advisor-input{flex:1;background:#1a2332;border:1px solid rgba(16,185,129,0.2);border-radius:6px;padding:6px 10px;color:#e8e9ed;font-size:10px;font-family:inherit}
+.advisor-input::placeholder{color:#4b5563}
+.advisor-send{background:#10b981;border:none;color:#fff;padding:6px 12px;border-radius:6px;font-size:10px;cursor:pointer;font-weight:600}
+.advisor-upload{display:flex;align-items:center;gap:4px;padding:4px 12px;border-top:1px solid rgba(16,185,129,0.1)}
+.advisor-upload-btn{font-size:8px;color:#8b8f98;cursor:pointer;padding:3px 8px;border:1px dashed #333840;border-radius:4px}
+.advisor-upload-btn:hover{border-color:#10b981;color:#10b981}
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- PIPELINE BAR (condensed) -->
+<div class="pipeline-bar">
+<div style="font-size:9px;color:#8b8f98;margin-right:6px;flex-shrink:0">PMBOK 7 ▸</div>
+<div class="pipe-agent done"><svg class="pipe-icon" viewBox="0 0 100 100"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#10b981" stroke-width="5"/><circle cx="50" cy="20" r="5" fill="#10b981"/></svg><div><div class="pipe-label" style="color:#10b981;text-decoration:line-through">005</div><div class="pipe-sub">✓</div></div></div><div class="pipe-arrow">▸</div>
+<div class="pipe-agent done"><svg class="pipe-icon" viewBox="0 0 100 100"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#d946ef" stroke-width="5"/><rect x="30" y="30" width="15" height="15" rx="2" fill="none" stroke="#d946ef" stroke-width="5"/></svg><div><div class="pipe-label" style="color:#d946ef;text-decoration:line-through">013</div><div class="pipe-sub">✓</div></div></div><div class="pipe-arrow">▸</div>
+<div class="pipe-agent done"><svg class="pipe-icon" viewBox="0 0 100 100"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#eab308" stroke-width="5"/><rect x="35" y="50" width="8" height="20" rx="1" fill="#eab308"/></svg><div><div class="pipe-label" style="color:#eab308;text-decoration:line-through">014</div><div class="pipe-sub">✓</div></div></div><div class="pipe-arrow">▸</div>
+<div class="pipe-agent done"><svg class="pipe-icon" viewBox="0 0 100 100"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#ec4899" stroke-width="5"/><circle cx="40" cy="50" r="8" fill="none" stroke="#ec4899" stroke-width="5"/></svg><div><div class="pipe-label" style="color:#ec4899;text-decoration:line-through">015</div><div class="pipe-sub">✓</div></div></div><div class="pipe-arrow">▸</div>
+<div class="pipe-agent done"><svg class="pipe-icon" viewBox="0 0 100 100"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#eab308" stroke-width="5"/><rect x="30" y="30" width="15" height="15" rx="1" fill="#eab308"/></svg><div><div class="pipe-label" style="color:#eab308;text-decoration:line-through">006</div><div class="pipe-sub">✓</div></div></div><div class="pipe-arrow">▸</div>
+<div class="pipe-agent"><svg class="pipe-icon" viewBox="0 0 100 100"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#10b981" stroke-width="5"/><ellipse cx="50" cy="40" rx="20" ry="10" fill="none" stroke="#10b981" stroke-width="5"/></svg><div><div class="pipe-label" style="color:#10b981">016</div><div class="pipe-sub">Cost</div></div></div><div class="pipe-arrow">▸</div>
+<div class="pipe-agent"><svg class="pipe-icon" viewBox="0 0 100 100"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#ec4899" stroke-width="5"/><rect x="30" y="35" width="40" height="8" rx="2" fill="#ec4899"/></svg><div><div class="pipe-label" style="color:#ec4899">007</div><div class="pipe-sub">Planif.</div></div></div><div class="pipe-arrow">▸</div>
+<div class="pipe-agent"><svg class="pipe-icon" viewBox="0 0 100 100"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#8b5cf6" stroke-width="5"/><rect x="35" y="45" width="30" height="25" rx="2" fill="#8b5cf6"/></svg><div><div class="pipe-label" style="color:#8b5cf6">017</div><div class="pipe-sub">Quality</div></div></div>
+<div style="margin-left:auto;font-size:10px;color:#8b8f98">62%</div>
+</div>
+
+<!-- PAUSE -->
+<div class="pause-bar">
+<div style="display:flex;justify-content:space-between;align-items:center">
+<div>
+<div class="pause-title">⏸ Pipeline en pausa — Selección de PM + revisión equipo (4/4)</div>
+<div class="pause-sub">Seleccione PM y revise el equipo técnico. Puede cambiar cualquier técnico por otro del mismo silo.</div>
+</div>
+<div class="pause-actions">
+<span class="pause-status" id="pause-status" style="color:#ef4444">PM no seleccionado</span>
+<button class="btn btn-approve" id="btn-confirm" disabled>Confirmar y continuar ▸</button>
+</div>
+</div>
+</div>
+
+<div class="main-layout">
+<div class="main-left">
+
+<!-- PM CANDIDATES (condensed - same as before but shorter) -->
+<div class="section">
+<div class="section-header">
+<svg width="24" height="24" viewBox="0 0 100 100"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#06b6d4" stroke-width="5"/><rect x="30" y="30" width="15" height="15" rx="1" fill="#06b6d4"/></svg>
+<div class="section-title" style="color:#06b6d4">Selecciona PM del proyecto</div>
+<span class="ia-badge">3 candidatos · Scoring automático</span>
+</div>
+
+<div class="pm-card recommended" onclick="selectPM(this)">
+<div class="pm-recommend">★ Recomendado</div>
+<div class="pm-header">
+<div class="pm-avatar" style="background:rgba(6,182,212,0.2);color:#06b6d4">DP</div>
+<div><div class="pm-name">Daniel Prieto Gallardo</div><div class="pm-role">PM-003 · Seguridad · PMP + CISSP · 8 años</div></div>
+<div style="text-align:right"><div class="pm-score" style="color:#22c55e">92</div></div>
+</div>
+<div class="pm-details">
+<div class="pm-detail"><div class="pm-detail-value" style="color:#22c55e">1</div><div class="pm-detail-label">Activos</div></div>
+<div class="pm-detail"><div class="pm-detail-value" style="color:#22c55e">94%</div><div class="pm-detail-label">Éxito</div></div>
+<div class="pm-detail"><div class="pm-detail-value" style="color:#e8e9ed">12</div><div class="pm-detail-label">Completados</div></div>
+<div class="pm-detail"><div class="pm-detail-value" style="color:#22c55e">15h</div><div class="pm-detail-label">Carga</div></div>
+</div>
+<div class="pm-skills"><span class="pm-skill match">Linux ✓</span><span class="pm-skill match">Seguridad ✓</span><span class="pm-skill match">Infra ✓</span><span class="pm-skill match">Migración ✓</span><span class="pm-skill partial">DevOps ~</span></div>
+<div class="pm-reason">Experiencia directa en PRJ0011 (mismo tipo migración). Match 4/5 skills. Baja carga. CISSP para seguridad.</div>
+<div style="margin-top:8px;text-align:right"><button class="pm-btn pm-btn-select" onclick="event.stopPropagation()">Elegir PM</button></div>
+</div>
+
+<div class="pm-card" onclick="selectPM(this)">
+<div class="pm-header">
+<div class="pm-avatar" style="background:rgba(168,85,247,0.2);color:#a855f7">LM</div>
+<div><div class="pm-name">Laura Mendoza Prieto</div><div class="pm-role">PM-007 · Infraestructura · PMP + PRINCE2 · 6 años</div></div>
+<div style="text-align:right"><div class="pm-score" style="color:#eab308">78</div></div>
+</div>
+<div class="pm-details">
+<div class="pm-detail"><div class="pm-detail-value" style="color:#eab308">2</div><div class="pm-detail-label">Activos</div></div>
+<div class="pm-detail"><div class="pm-detail-value" style="color:#22c55e">91%</div><div class="pm-detail-label">Éxito</div></div>
+<div class="pm-detail"><div class="pm-detail-value" style="color:#e8e9ed">8</div><div class="pm-detail-label">Completados</div></div>
+<div class="pm-detail"><div class="pm-detail-value" style="color:#eab308">28h</div><div class="pm-detail-label">Carga</div></div>
+</div>
+<div class="pm-reason">Buen match infra y DevOps. Sin experiencia en migraciones. Carga media.</div>
+<div style="margin-top:8px;text-align:right"><button class="pm-btn pm-btn-select" onclick="event.stopPropagation()">Elegir PM</button></div>
+</div>
+
+<div class="pm-card" onclick="selectPM(this)">
+<div class="pm-header">
+<div class="pm-avatar" style="background:rgba(249,115,22,0.2);color:#f97316">AM</div>
+<div><div class="pm-name">Alejandro Muñoz Torres</div><div class="pm-role">PM-012 · Senior · PMP + SAFe · 12 años</div></div>
+<div style="text-align:right"><div class="pm-score" style="color:#f97316">65</div></div>
+</div>
+<div class="pm-details">
+<div class="pm-detail"><div class="pm-detail-value" style="color:#ef4444">3</div><div class="pm-detail-label">Activos</div></div>
+<div class="pm-detail"><div class="pm-detail-value" style="color:#22c55e">96%</div><div class="pm-detail-label">Éxito</div></div>
+<div class="pm-detail"><div class="pm-detail-value" style="color:#e8e9ed">24</div><div class="pm-detail-label">Completados</div></div>
+<div class="pm-detail"><div class="pm-detail-value" style="color:#ef4444">38h</div><div class="pm-detail-label">Carga</div></div>
+</div>
+<div class="pm-reason">Máxima experiencia (24 proy, 96% éxito). Penalizado: 3 activos (máximo), 38h carga.</div>
+<div style="margin-top:8px;text-align:right"><button class="pm-btn pm-btn-select" onclick="event.stopPropagation()">Elegir PM</button></div>
+</div>
+</div>
+
+<!-- EQUIPO TÉCNICO CON CAMBIAR -->
+<div class="section">
+<div class="team-title">Equipo técnico — 12 recursos · 1.840h · <span style="color:#eab308;font-size:9px">Puede cambiar cualquiera</span></div>
+
+<!-- SILO LINUX -->
+<div class="team-silo">
+<div class="team-silo-header" style="background:rgba(6,182,212,0.08)">
+<span class="team-silo-name" style="color:#06b6d4">Linux</span>
+<span style="font-size:8px;color:#8b8f98">4 técnicos</span>
+<span class="team-silo-hours">680h</span>
+</div>
+
+<div id="member-linux-1">
+<div class="team-member">
+<div class="team-avatar" style="background:rgba(6,182,212,0.2);color:#06b6d4">RS</div>
+<div><div class="team-name">Ricardo Soto Méndez</div><div class="team-info">N4 · Linux · Carga: 8h</div></div>
+<div class="team-score" style="color:#22c55e">94</div>
+<div class="team-hours">200h</div>
+<button class="team-change-btn" onclick="toggleChange('linux-1', 'Linux')">Cambiar</button>
+</div>
+</div>
+<div class="change-panel" id="change-linux-1">
+<div class="change-header">
+<span style="font-size:9px;color:#eab308;font-weight:600">Reasignar — <span class="change-silo-badge" style="background:rgba(6,182,212,0.12);color:#06b6d4">Solo silo Linux</span></span>
+<span style="font-size:8px;color:#8b8f98">3 disponibles</span>
+</div>
+<div class="change-candidate recommended">
+<div class="change-avatar" style="background:rgba(6,182,212,0.2);color:#06b6d4">AL</div>
+<div><div class="change-name">Andrés López Vidal <span style="color:#22c55e;font-size:8px">★</span></div><div class="change-info">N4 · Linux · Carga: 0h · Disponible inmediata</div></div>
+<div class="change-score" style="color:#22c55e">96</div>
+<button class="change-assign-btn green" onclick="reassign('linux-1','Andrés López Vidal','AL','96')">Asignar</button>
+</div>
+<div class="change-candidate">
+<div class="change-avatar" style="background:rgba(6,182,212,0.2);color:#06b6d4">FM</div>
+<div><div class="change-name">Felipe Moreno Ruiz</div><div class="change-info">N2 · Linux · Carga: 12h</div></div>
+<div class="change-score" style="color:#eab308">79</div>
+<button class="change-assign-btn gray" onclick="reassign('linux-1','Felipe Moreno Ruiz','FM','79')">Asignar</button>
+</div>
+<div class="change-candidate">
+<div class="change-avatar" style="background:rgba(6,182,212,0.2);color:#06b6d4">SC</div>
+<div><div class="change-name">Sonia Castro Prieto</div><div class="change-info">N2 · Linux · Carga: 22h</div></div>
+<div class="change-score" style="color:#f97316">64</div>
+<button class="change-assign-btn gray" onclick="reassign('linux-1','Sonia Castro Prieto','SC','64')">Asignar</button>
+</div>
+<div class="change-current">Ricardo Soto Méndez — actual (se reasignará)</div>
+<div style="font-size:8px;color:#8b8f98;margin-top:6px;display:flex;align-items:center;gap:4px">
+<span style="color:#eab308">⚠</span> La reasignación libera al técnico actual y asigna al nuevo las 200h de este silo.
+</div>
+</div>
+
+<div id="member-linux-2">
+<div class="team-member">
+<div class="team-avatar" style="background:rgba(6,182,212,0.2);color:#06b6d4">MN</div>
+<div><div class="team-name">Marina Nieto Calvo</div><div class="team-info">N4 · Linux · Carga: 11h</div></div>
+<div class="team-score" style="color:#22c55e">91</div>
+<div class="team-hours">200h</div>
+<button class="team-change-btn" onclick="toggleChange('linux-2', 'Linux')">Cambiar</button>
+</div>
+</div>
+<div class="change-panel" id="change-linux-2"></div>
+
+<div id="member-linux-3">
+<div class="team-member">
+<div class="team-avatar" style="background:rgba(6,182,212,0.2);color:#06b6d4">JG</div>
+<div><div class="team-name">Jorge García Ruiz</div><div class="team-info">N2 · Linux · Carga: 0h</div></div>
+<div class="team-score" style="color:#eab308">82</div>
+<div class="team-hours">180h</div>
+<button class="team-change-btn" onclick="toggleChange('linux-3', 'Linux')">Cambiar</button>
+</div>
+</div>
+<div class="change-panel" id="change-linux-3"></div>
+
+<div id="member-linux-4">
+<div class="team-member" style="border-color:rgba(239,68,68,0.3)">
+<div class="team-avatar" style="background:rgba(239,68,68,0.2);color:#ef4444">PC</div>
+<div><div class="team-name">Patricia Castro Gil</div><div class="team-info">N2 · Linux · Carga: 15h</div></div>
+<span class="team-conflict">⚠ PRJ0022</span>
+<div class="team-score" style="color:#f97316">71</div>
+<div class="team-hours">100h</div>
+<button class="team-change-btn" onclick="toggleChange('linux-4', 'Linux')" style="color:#ef4444;border-color:rgba(239,68,68,0.3)">Cambiar ⚠</button>
+</div>
+</div>
+<div class="change-panel" id="change-linux-4"></div>
+</div>
+
+<!-- SILO SEGURIDAD -->
+<div class="team-silo">
+<div class="team-silo-header" style="background:rgba(239,68,68,0.08)">
+<span class="team-silo-name" style="color:#ef4444">Seguridad</span>
+<span style="font-size:8px;color:#8b8f98">2 técnicos</span>
+<span class="team-silo-hours">200h</span>
+</div>
+<div class="team-member">
+<div class="team-avatar" style="background:rgba(239,68,68,0.2);color:#ef4444">JV</div>
+<div><div class="team-name">Jorge Vázquez Ramos</div><div class="team-info">N4 · Seguridad · Carga: 5h</div></div>
+<div class="team-score" style="color:#22c55e">89</div>
+<div class="team-hours">120h</div>
+<button class="team-change-btn" onclick="toggleChange('seg-1', 'Seguridad')">Cambiar</button>
+</div>
+<div class="change-panel" id="change-seg-1"></div>
+<div class="team-member">
+<div class="team-avatar" style="background:rgba(239,68,68,0.2);color:#ef4444">SH</div>
+<div><div class="team-name">Sara Herrero Blanco</div><div class="team-info">N2 · Seguridad · Carga: 7h</div></div>
+<div class="team-score" style="color:#22c55e">85</div>
+<div class="team-hours">80h</div>
+<button class="team-change-btn" onclick="toggleChange('seg-2', 'Seguridad')">Cambiar</button>
+</div>
+<div class="change-panel" id="change-seg-2"></div>
+</div>
+
+<!-- SILO DEVOPS -->
+<div class="team-silo">
+<div class="team-silo-header" style="background:rgba(34,197,94,0.08)">
+<span class="team-silo-name" style="color:#22c55e">DevOps</span>
+<span style="font-size:8px;color:#8b8f98">2 técnicos</span>
+<span class="team-silo-hours">240h</span>
+</div>
+<div class="team-member">
+<div class="team-avatar" style="background:rgba(34,197,94,0.2);color:#22c55e">IP</div>
+<div><div class="team-name">Ignacio Prieto Cano</div><div class="team-info">N2 · DevOps · Carga: 7h</div></div>
+<div class="team-score" style="color:#22c55e">88</div>
+<div class="team-hours">140h</div>
+<button class="team-change-btn" onclick="toggleChange('devops-1', 'DevOps')">Cambiar</button>
+</div>
+<div class="change-panel" id="change-devops-1"></div>
+<div class="team-member">
+<div class="team-avatar" style="background:rgba(34,197,94,0.2);color:#22c55e">CC</div>
+<div><div class="team-name">Cristina Castillo Cabrera</div><div class="team-info">N2 · DevOps · Carga: 11h</div></div>
+<div class="team-score" style="color:#eab308">80</div>
+<div class="team-hours">100h</div>
+<button class="team-change-btn" onclick="toggleChange('devops-2', 'DevOps')">Cambiar</button>
+</div>
+<div class="change-panel" id="change-devops-2"></div>
+</div>
+
+<div style="font-size:9px;color:#8b8f98;text-align:center;padding:6px;border:1px dashed #333840;border-radius:6px;margin-top:4px">+ 4 técnicos más: QA (2) · Redes (1) · BBDD (1)</div>
+</div>
+
+</div>
+
+<!-- SIDEBAR -->
+<div class="main-right">
+
+<div class="sidebar-card">
+<div class="sidebar-title">Resumen equipo</div>
+<div class="stat-grid">
+<div class="stat-item"><div class="stat-value" style="color:#06b6d4">3</div><div class="stat-label">PM candidatos</div></div>
+<div class="stat-item"><div class="stat-value" style="color:#e8e9ed">12</div><div class="stat-label">Técnicos</div></div>
+<div class="stat-item"><div class="stat-value" style="color:#f97316">1.840h</div><div class="stat-label">Horas total</div></div>
+<div class="stat-item"><div class="stat-value" style="color:#ef4444">1</div><div class="stat-label">Conflictos</div></div>
+</div>
+<div id="conflict-alert" style="margin-top:6px;background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.15);border-radius:4px;padding:4px 8px;font-size:8px;color:#ef4444;line-height:1.3">
+⚠ Patricia Castro (Linux) tiene conflicto con PRJ0022. Recomendación: usar botón "Cambiar ⚠" para reasignar.
+</div>
+</div>
+
+<div class="advisor-panel">
+<div class="advisor-header">
+<div class="advisor-icon">?</div>
+<div><div class="advisor-title">AG-018 Advisor</div><div class="advisor-sub">Contexto TOTAL</div></div>
+<div style="margin-left:auto;font-size:7px;padding:2px 6px;border-radius:3px;background:rgba(16,185,129,0.15);color:#10b981">ONLINE</div>
+</div>
+<div class="advisor-context">
+<span class="ctx-badge">EDT ✓</span>
+<span class="ctx-badge">Subtareas ✓</span>
+<span class="ctx-badge">Riesgos ✓</span>
+<span class="ctx-badge">Stakeholders ✓</span>
+<span class="ctx-badge new">PMs + Equipo</span>
+</div>
+<div class="advisor-messages">
+<div class="advisor-msg system">
+Patricia Castro tiene 15h en PRJ0022 + 100h aquí = 115h. Si PRJ0022 se retrasa, es un riesgo directo (R3). Sugiero: cámbiala por Andrés López (N4, carga 0h, score 96) pulsando "Cambiar ⚠" en su fila.
+</div>
+</div>
+<div class="advisor-suggestions">
+<div class="advisor-sug">💡 "¿Hay riesgo de sobrecarga en el equipo?"</div>
+<div class="advisor-sug">💡 "Si cambio a Patricia, ¿quién es mejor?"</div>
+<div class="advisor-sug">💡 "¿El equipo tiene experiencia en RHEL 9?"</div>
+</div>
+<div class="advisor-input-row">
+<input class="advisor-input" type="text" placeholder="Pregunta sobre PMs o equipo...">
+<button class="advisor-send">Enviar</button>
+</div>
+</div>
+
+<div class="sidebar-card">
+<div class="sidebar-title">Siguientes pasos</div>
+<div style="font-size:9px;color:#8b8f98;line-height:1.8">
+<div>⑥ AG-016 → Presupuesto + ROI + EVM</div>
+<div>⑦ AG-007 → Gantt + Ruta crítica + Kanban</div>
+<div>⑧ AG-017 → Quality gates + DoD</div>
+<div style="margin-top:4px;color:#22c55e;font-weight:600">→ Proyecto en sidebar BUILD LIVE</div>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+
+<script>
+function selectPM(card) {
+  document.querySelectorAll('.pm-card').forEach(c => {
+    c.classList.remove('selected');
+    var b = c.querySelector('.pm-btn');
+    if(b){b.className='pm-btn pm-btn-select';b.textContent='Elegir PM';}
+  });
+  card.classList.add('selected');
+  var btn = card.querySelector('.pm-btn');
+  if(btn){btn.className='pm-btn pm-btn-selected';btn.textContent='✓ PM Seleccionado';}
+  document.getElementById('pause-status').textContent='✓ PM seleccionado';
+  document.getElementById('pause-status').style.color='#22c55e';
+  var cb=document.getElementById('btn-confirm');
+  cb.disabled=false;cb.style.background='#22c55e';cb.style.color='#fff';cb.style.cursor='pointer';
+}
+
+function toggleChange(memberId, silo) {
+  var panel = document.getElementById('change-' + memberId);
+  var btn = panel.previousElementSibling.querySelector('.team-change-btn') || 
+            document.querySelector('#member-' + memberId + ' .team-change-btn');
+  if (panel.classList.contains('open')) {
+    panel.classList.remove('open');
+    if(btn){btn.textContent='Cambiar';btn.classList.remove('active');}
+  } else {
+    document.querySelectorAll('.change-panel').forEach(p=>p.classList.remove('open'));
+    document.querySelectorAll('.team-change-btn').forEach(b=>{b.textContent=b.textContent.includes('⚠')?'Cambiar ⚠':'Cambiar';b.classList.remove('active');});
+    panel.classList.add('open');
+    if(btn){btn.textContent='Cancelar';btn.classList.add('active');}
+    if (!panel.innerHTML.trim()) {
+      panel.innerHTML = '<div style="font-size:9px;color:#8b8f98;padding:8px;text-align:center">Cargando candidatos del silo ' + silo + '...</div>';
+    }
+  }
+}
+
+function reassign(memberId, newName, initials, score) {
+  var memberDiv = document.getElementById('member-' + memberId);
+  var teamMember = memberDiv.querySelector('.team-member');
+  var nameEl = teamMember.querySelector('.team-name');
+  var avatarEl = teamMember.querySelector('.team-avatar');
+  var scoreEl = teamMember.querySelector('.team-score');
+  nameEl.textContent = newName;
+  avatarEl.textContent = initials;
+  scoreEl.textContent = score;
+  scoreEl.style.color = parseInt(score) >= 85 ? '#22c55e' : parseInt(score) >= 70 ? '#eab308' : '#f97316';
+  var conflict = teamMember.querySelector('.team-conflict');
+  if(conflict) conflict.remove();
+  var changeBtn = teamMember.querySelector('.team-change-btn');
+  if(changeBtn){changeBtn.style.color='#eab308';changeBtn.style.borderColor='rgba(234,179,8,0.3)';changeBtn.textContent='Cambiar';}
+  document.getElementById('change-' + memberId).classList.remove('open');
+  teamMember.style.borderColor = '#22c55e';
+  setTimeout(function(){teamMember.style.borderColor='#3a3f4a';},2000);
+}
+</script>
+</body>
+</html>

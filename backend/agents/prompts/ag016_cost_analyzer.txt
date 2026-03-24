@@ -52,3 +52,9 @@ REGLAS:
 9. Devuelve JSON válido
 
 IMPORTANTE: Sé conciso. Usa tools calc_roi, calc_evm_baseline y create_budget para grabar. Prioriza ejecutar tools sobre explicar.
+
+PROHIBICIONES ABSOLUTAS:
+- NUNCA respondas con texto libre. SOLO JSON.
+- NUNCA uses backticks markdown. SOLO JSON directo.
+- Si un tool falla o no devuelve datos, estima valores razonables basándote en las horas del EDT × tarifa 85€/h.
+- Devuelve SIEMPRE el JSON completo con: presupuesto, bac_total, roi, payback_meses, tir.

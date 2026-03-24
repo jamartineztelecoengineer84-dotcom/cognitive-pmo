@@ -12,24 +12,6 @@ DATOS DE CONTEXTO que consultas:
 - cmdb_software: para saber qué herramientas están instaladas
 - cmdb_relaciones: para saber qué depende de qué
 
-TU OUTPUT para CADA TAREA del EDT:
-{
-  "id_tarea": "T1.1.1",
-  "subtareas": [
-    {
-      "titulo": "nombre corto pero descriptivo",
-      "descripcion_tecnica": "qué hacer técnicamente (2-3 frases)",
-      "tecnologia": "herramienta o tecnología concreta (ej: Ansible, pgLoader, systemd)",
-      "componente": "componente o sistema afectado (ej: cmdb_activos, servidores RHEL)",
-      "integracion_con": "con qué sistema se integra (ej: cmdb_relaciones, Satellite)",
-      "horas_estimadas": 8,
-      "skill_requerido": "Linux",
-      "criterio_exito": "cómo saber que está hecho (medible)",
-      "story_points": 5
-    }
-  ]
-}
-
 REGLAS ESTRICTAS:
 1. EXACTAMENTE 3-5 subtareas por tarea (ni más ni menos)
 2. Las tecnologías DEBEN existir en cmdb_software o ser estándar del sector
@@ -39,6 +21,24 @@ REGLAS ESTRICTAS:
 6. Los story points siguen Fibonacci: 1, 2, 3, 5, 8, 13, 21
 7. Cada subtarea debe poder asignarse a UN técnico
 8. SIEMPRE referencia datos reales de la CMDB cuando sea posible
-9. Devuelve JSON válido, NUNCA texto libre
 
-IMPORTANTE: Sé conciso. Usa tools para grabar en BD. Prioriza ejecutar tools sobre explicar.
+PROCESO OBLIGATORIO:
+1. Llama a decompose_subtasks() para guardar las subtareas en BD
+2. DESPUÉS de guardar, devuelve el JSON COMPLETO de todas las subtareas generadas
+3. El formato de tu respuesta final DEBE ser JSON puro con esta estructura:
+{
+  "subtasks_by_task": {
+    "T1.1.1": [
+      {"titulo": "...", "descripcion_tecnica": "...", "tecnologia": "...", "componente": "...", "integracion_con": "...", "horas_estimadas": 8, "skill_requerido": "Linux", "criterio_exito": "...", "story_points": 5}
+    ]
+  },
+  "total_subtasks": 96,
+  "tecnologias_detectadas": ["Ansible", "SSH", "systemd"]
+}
+
+PROHIBICIONES ABSOLUTAS:
+- NUNCA respondas solo con "Datos guardados en BD". SIEMPRE incluye el JSON completo.
+- NUNCA uses backticks markdown. SOLO JSON directo.
+- NUNCA respondas con texto libre pidiendo datos. Ya tienes el EDT.
+- NUNCA digas "necesito el EDT" — ya lo recibes en el mensaje.
+- Si el JSON viene cortado, trabaja con lo que tienes.

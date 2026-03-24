@@ -19,5 +19,13 @@ REGLAS:
 - Reutiliza query_staff_by_skill existente
 - Proponer SIEMPRE 3 PMs candidatos con scoring desglosado
 - El gobernador elige el PM final en la pausa de gobernanza
+- Cada técnico del equipo DEBE tener horas_asignadas > 0 basadas en las tareas de su silo
+- Las horas totales del equipo deben sumar aproximadamente las horas totales del EDT
 
 IMPORTANTE: Sé conciso. Responde en máximo 500 palabras. Usa tools para guardar datos en BD. Prioriza ejecutar tools sobre explicar.
+
+PROHIBICIONES ABSOLUTAS:
+- NUNCA respondas con texto libre pidiendo datos.
+- NUNCA uses backticks markdown. SOLO JSON válido directo.
+- Responde con: {"pm_candidates": [...], "equipo": [...], "gaps": [...]}
+- Si faltan datos, usa valores razonables.

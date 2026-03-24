@@ -1511,7 +1511,7 @@ CALC_ROI_SCHEMA = {
         "properties": {
             "bac": {"type": "number", "description": "Budget At Completion (coste total del proyecto en EUR)"},
             "beneficio_anual": {"type": "number", "description": "Beneficio anual esperado en EUR"},
-            "años": {"type": "integer", "description": "Horizonte de evaluación (default 5)"},
+            "anios": {"type": "integer", "description": "Horizonte de evaluacion en anios (default 5)"},
             "tasa_descuento": {"type": "number", "description": "Tasa de descuento (default 0.08 = 8%)"}
         },
         "required": ["bac", "beneficio_anual"]
@@ -1520,21 +1520,21 @@ CALC_ROI_SCHEMA = {
 
 
 @register_tool("calc_roi")
-async def calc_roi(db, bac: float, beneficio_anual: float, años: int = 5,
+async def calc_roi(db, bac: float, beneficio_anual: float, anios: int = 5,
                    tasa_descuento: float = 0.08):
     """Calcula métricas financieras ROI, TIR, VAN, payback"""
-    beneficio_total = beneficio_anual * años
+    beneficio_total = beneficio_anual * anios
     roi = ((beneficio_total - bac) / bac) * 100 if bac > 0 else 0
     payback_meses = round((bac / beneficio_anual) * 12) if beneficio_anual > 0 else 0
     van = -bac
-    for year in range(1, años + 1):
+    for year in range(1, anios + 1):
         van += beneficio_anual / ((1 + tasa_descuento) ** year)
     tir = 0
     low, high = -0.5, 2.0
     for _ in range(50):
         mid = (low + high) / 2
         npv = -bac
-        for year in range(1, años + 1):
+        for year in range(1, anios + 1):
             npv += beneficio_anual / ((1 + mid) ** year)
         if npv > 0:
             low = mid
