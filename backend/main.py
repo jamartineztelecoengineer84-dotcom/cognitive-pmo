@@ -1286,6 +1286,233 @@ async def delete_pipeline_session(sid: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/pipeline/sessions/{sid}/populate")
+async def populate_build_tables(sid: str):
+    """Lee pipeline_data de una sesión y rellena las tablas BUILD individuales."""
+    import json as _json
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503)
+
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow("SELECT * FROM pipeline_sessions WHERE id = $1", sid)
+        if not row:
+            raise HTTPException(404, "Sesión no encontrada")
+
+        pd = row["pipeline_data"]
+        if isinstance(pd, str):
+            pd = _json.loads(pd)
+
+        id_proyecto = sid
+        stats = {"subtasks": 0, "risks": 0, "stakeholders": 0, "sprints": 0, "sprint_items": 0, "quality_gates": 0}
+
+        # Clean previous data for this project (idempotent re-run)
+        for tbl in ['build_subtasks', 'build_risks', 'build_stakeholders', 'build_sprint_items', 'build_sprints', 'build_quality_gates']:
+            await conn.execute(f"DELETE FROM {tbl} WHERE id_proyecto = $1", id_proyecto)
+
+        def safe_parse(raw):
+            if not raw:
+                return None
+            if isinstance(raw, dict):
+                return raw
+            if isinstance(raw, str):
+                try:
+                    clean = raw.replace("```json", "").replace("```", "").strip()
+                    first = clean.find("{")
+                    last = clean.rfind("}")
+                    if first >= 0 and last > first:
+                        return _json.loads(clean[first:last+1])
+                    return _json.loads(clean)
+                except Exception as e1:
+                    # Retry with strict=False and encoding cleanup
+                    # Retry: fix truncated JSON
+                    try:
+                        clean2 = raw.replace("```json", "").replace("```", "").strip()
+                        f2 = clean2.find("{")
+                        if f2 >= 0:
+                            snippet = clean2[f2:]
+                            try:
+                                return _json.loads(snippet)
+                            except _json.JSONDecodeError as je:
+                                # Truncate before error, strip trailing comma, close all brackets
+                                pos = je.pos if je.pos else len(snippet)
+                                # Walk back to find last complete value
+                                trunc = snippet[:pos]
+                                # Remove trailing partial value
+                                for ch in ['"', ',', ':', ' ', '\n', '\r', '\t']:
+                                    trunc = trunc.rstrip(ch)
+                                # Ensure arrays and objects are closed
+                                ob = trunc.count('{') - trunc.count('}')
+                                oa = trunc.count('[') - trunc.count(']')
+                                trunc += ']' * max(0, oa) + '}' * max(0, ob)
+                                return _json.loads(trunc)
+                    except Exception as e2:
+                        logger.warning(f"safe_parse retry fail: {e1} / {e2}")
+                    return None
+            return None
+
+        # ── 1. SUBTASKS ──
+        try:
+            st = safe_parse(pd.get("subtasksResult"))
+            if st:
+                sbt = st.get("subtasks_by_task") or st.get("subtasks") or {}
+                if isinstance(sbt, dict):
+                    for task_id, items in sbt.items():
+                        if not isinstance(items, list):
+                            continue
+                        for idx, item in enumerate(items):
+                            if not isinstance(item, dict):
+                                continue
+                            await conn.execute("""
+                                INSERT INTO build_subtasks (id_proyecto, id_tarea_padre, orden, titulo,
+                                    descripcion_tecnica, tecnologia, skill_requerido,
+                                    horas_estimadas, story_points)
+                                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                                ON CONFLICT DO NOTHING
+                            """, id_proyecto, task_id, idx + 1,
+                                (item.get("titulo") or "")[:200],
+                                (item.get("descripcion_tecnica") or "")[:500],
+                                (item.get("tecnologia") or "")[:100],
+                                (item.get("skill_requerido") or item.get("skill") or "")[:100],
+                                float(item.get("horas_estimadas") or 0),
+                                int(item.get("story_points") or 0))
+                            stats["subtasks"] += 1
+        except Exception as e:
+            logger.warning(f"populate subtasks error: {e}")
+
+        # ── 2. RISKS ──
+        try:
+            rk = safe_parse(pd.get("risksResult"))
+            if rk:
+                risks = rk.get("risks") or rk.get("riesgos") or []
+                if isinstance(risks, list):
+                    for r in risks:
+                        if not isinstance(r, dict):
+                            continue
+                        await conn.execute("""
+                            INSERT INTO build_risks (id_proyecto, descripcion,
+                                probabilidad, impacto, categoria,
+                                plan_mitigacion, plan_contingencia, responsable, trigger_evento)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                            ON CONFLICT DO NOTHING
+                        """, id_proyecto,
+                            (r.get("descripcion") or "")[:500],
+                            int(r.get("probabilidad") or 3),
+                            int(r.get("impacto") or 3),
+                            (r.get("categoria") or "Técnico")[:100],
+                            (r.get("plan_mitigacion") or "")[:500],
+                            (r.get("plan_contingencia") or "")[:500],
+                            (r.get("responsable") or "")[:100],
+                            (r.get("trigger_evento") or r.get("trigger") or "")[:500])
+                        stats["risks"] += 1
+        except Exception as e:
+            logger.warning(f"populate risks error: {e}")
+
+        # ── 3. STAKEHOLDERS ──
+        try:
+            sk = safe_parse(pd.get("stakeholdersResult"))
+            if sk:
+                stks = sk.get("stakeholders") or sk.get("interesados") or []
+                if isinstance(stks, list):
+                    for s in stks:
+                        if not isinstance(s, dict):
+                            continue
+                        await conn.execute("""
+                            INSERT INTO build_stakeholders (id_proyecto, nombre,
+                                cargo, area, nivel_poder, nivel_interes,
+                                estrategia, rol_raci, frecuencia_comunicacion, canal)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                            ON CONFLICT DO NOTHING
+                        """, id_proyecto,
+                            (s.get("nombre") or "")[:200],
+                            (s.get("cargo") or "")[:200],
+                            (s.get("area") or "")[:100],
+                            int(s.get("nivel_poder") or s.get("poder") or 3),
+                            int(s.get("nivel_interes") or s.get("interes") or 3),
+                            (s.get("estrategia") or "Monitorizar")[:200],
+                            (s.get("raci") or s.get("rol_raci") or "I")[:10],
+                            (s.get("frecuencia_comunicacion") or s.get("frecuencia") or "Mensual")[:50],
+                            (s.get("canal") or "Email")[:50])
+                        stats["stakeholders"] += 1
+        except Exception as e:
+            logger.warning(f"populate stakeholders error: {e}")
+
+        # ── 4. SPRINTS + SPRINT ITEMS ──
+        try:
+            pl = safe_parse(pd.get("planResult"))
+            if pl:
+                sprints = pl.get("sprints") or []
+                if isinstance(sprints, list):
+                    for sp in sprints:
+                        if not isinstance(sp, dict):
+                            continue
+                        sprint_num = int(sp.get("numero") or 0)
+                        sprint_id = f"{id_proyecto}-S{sprint_num}"
+                        await conn.execute("""
+                            INSERT INTO build_sprints (id, id_proyecto, sprint_number,
+                                nombre, sprint_goal, story_points_planificados)
+                            VALUES ($1, $2, $3, $4, $5, $6)
+                            ON CONFLICT DO NOTHING
+                        """, sprint_id, id_proyecto, sprint_num,
+                            f"Sprint {sprint_num}",
+                            (sp.get("goal") or "")[:200],
+                            int(sp.get("story_points") or 0))
+                        stats["sprints"] += 1
+
+                        items = sp.get("items") or sp.get("backlog") or []
+                        if isinstance(items, list):
+                            for idx, it in enumerate(items):
+                                if not isinstance(it, dict):
+                                    continue
+                                item_key = it.get("id") or f"PROJ-{sprint_num:02d}{idx+1:02d}"
+                                await conn.execute("""
+                                    INSERT INTO build_sprint_items (id_proyecto, id_sprint,
+                                        sprint_number, item_key, tipo, titulo, descripcion,
+                                        silo, prioridad, story_points, subtareas_total)
+                                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                                    ON CONFLICT DO NOTHING
+                                """, id_proyecto, sprint_id, sprint_num,
+                                    item_key[:50],
+                                    (it.get("tipo") or "TASK")[:50],
+                                    (it.get("titulo") or it.get("nombre") or "")[:200],
+                                    (it.get("descripcion") or "")[:500],
+                                    (it.get("silo") or "")[:100],
+                                    (it.get("prioridad") or "Media")[:50],
+                                    int(it.get("story_points") or it.get("pts") or 0),
+                                    int(it.get("subtareas_total") or 0))
+                                stats["sprint_items"] += 1
+        except Exception as e:
+            logger.warning(f"populate sprints error: {e}")
+
+        # ── 5. QUALITY GATES ──
+        try:
+            qg = safe_parse(pd.get("qualityResult"))
+            if qg:
+                gates = qg.get("gates") or qg.get("quality_gates") or []
+                if isinstance(gates, list):
+                    for g in gates:
+                        if not isinstance(g, dict):
+                            continue
+                        await conn.execute("""
+                            INSERT INTO build_quality_gates (id_proyecto, fase,
+                                gate_name, criterios_json, checklist_json,
+                                responsable_qa, estado)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7)
+                            ON CONFLICT DO NOTHING
+                        """, id_proyecto,
+                            (g.get("fase") or g.get("gate") or "")[:20],
+                            (g.get("gate_name") or g.get("nombre") or "")[:200],
+                            _json.dumps(g.get("criterios") or []),
+                            _json.dumps(g.get("checklist") or []),
+                            (g.get("responsable_qa") or "")[:100],
+                            (g.get("estado") or "PENDING")[:50])
+                        stats["quality_gates"] += 1
+        except Exception as e:
+            logger.warning(f"populate quality_gates error: {e}")
+
+    return {"ok": True, "id_proyecto": id_proyecto, "stats": stats}
+
+
 # =============================================
 # BUILD PIPELINE v2.0 — Endpoints
 # =============================================

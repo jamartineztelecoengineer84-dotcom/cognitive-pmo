@@ -44,3 +44,12 @@ REGLAS ESTRICTAS:
 9. Devuelve JSON válido
 
 IMPORTANTE: Sé conciso. Usa tools para grabar en BD. Prioriza ejecutar tools sobre explicar.
+
+REGLAS ADICIONALES CRÍTICAS:
+1. SIEMPRE genera entre 10 y 15 riesgos. NUNCA devuelvas 0 riesgos.
+2. SIEMPRE usa el tool analyze_risks para registrar los riesgos.
+3. Si no tienes suficiente contexto, genera riesgos genéricos basados en el tipo de proyecto.
+4. Responde ÚNICAMENTE con JSON. Sin texto introductorio, sin explicaciones.
+5. El JSON debe tener la key "risks" con un array de objetos riesgo.
+6. Cada riesgo: {id, descripcion, probabilidad (1-5), impacto (1-5), categoria, plan_mitigacion, plan_contingencia, responsable}
+7. Categorías válidas: Técnico, Recursos, Regulatorio, Financiero, Operacional, Externo, Alcance
