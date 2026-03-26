@@ -7341,6 +7341,10 @@ async function resumePipelineSession(sessionId) {
     if (idleEl) idleEl.style.display = 'none';
 
     var pauseArea = document.getElementById('build-pause-area');
+    if (!pauseArea) {
+      var pipeArea = document.getElementById('build-pipeline-area');
+      if (pipeArea) { pauseArea = document.createElement('div'); pauseArea.id = 'build-pause-area'; pipeArea.appendChild(pauseArea); }
+    }
     if (pauseArea) pauseArea.innerHTML = '';
 
     var onClose = function() {
@@ -10133,12 +10137,28 @@ function showBuildFinalScreen(pipelineData) {
       var last = str.lastIndexOf('}');
       if (first >= 0 && last > first) return JSON.parse(str.substring(first, last + 1));
       return JSON.parse(str);
-    } catch(e) { console.warn('safeParsePipelineData failed:', e.message); return null; }
+    } catch(e) { try { var fixed = str.replace(/,\s*$/, '').replace(/,\s*\]/, ']').replace(/,\s*\}/, '}'); var open = (fixed.match(/\[/g)||[]).length - (fixed.match(/\]/g)||[]).length; var openB = (fixed.match(/\{/g)||[]).length - (fixed.match(/\}/g)||[]).length; for(var fi=0;fi<open;fi++) fixed+=']'; for(var fj=0;fj<openB;fj++) fixed+='}'; return JSON.parse(fixed); } catch(e2) { console.warn('safeParsePipelineData failed:', e.message); return null; } }
   }
 
   var costP = safeParsePipelineData(pipelineData.costResult);
   var planP = safeParsePipelineData(pipelineData.planResult);
   var qualP = safeParsePipelineData(pipelineData.qualityResult);
+  if (!qualP && pipelineData.qualityResult) {
+    try {
+      var qRaw = typeof pipelineData.qualityResult === 'string' ? pipelineData.qualityResult : JSON.stringify(pipelineData.qualityResult);
+      qRaw = qRaw.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
+      var qFirst = qRaw.indexOf('{'); var qLast = qRaw.lastIndexOf('}');
+      if (qFirst >= 0 && qLast > qFirst) {
+        var qStr = qRaw.substring(qFirst, qLast + 1);
+        qStr = qStr.replace(/,\s*\]/g, ']').replace(/,\s*\}/g, '}');
+        var qOpen = (qStr.match(/\[/g)||[]).length - (qStr.match(/\]/g)||[]).length;
+        var qOpenB = (qStr.match(/\{/g)||[]).length - (qStr.match(/\}/g)||[]).length;
+        for (var qi=0;qi<qOpen;qi++) qStr+=']';
+        for (var qj=0;qj<qOpenB;qj++) qStr+='}';
+        qualP = JSON.parse(qStr);
+      }
+    } catch(eQ) { console.warn('qualP manual parse failed:', eQ.message); }
+  }
   var edtP = safeParsePipelineData(pipelineData.edtResult);
   var risksP = safeParsePipelineData(pipelineData.risksResult);
   var pmData = pipelineData.selectedPM || {};
@@ -10181,9 +10201,10 @@ function showBuildFinalScreen(pipelineData) {
     var tb = document.createElement('div');
     tb.style.cssText = 'padding:8px 14px;border-radius:8px 8px 0 0;font-size:10px;font-weight:600;cursor:pointer;border:1px solid '+(idx===0?'#3a3f4a':'#333840')+';border-bottom:none;background:'+(idx===0?'#22262e':'#1a1d24')+';color:'+(idx===0?'#e8e9ed':'#8b8f98')+';';
     tb.textContent = label;
-    tb.onclick = function(){tabBar.querySelectorAll('div').forEach(function(b){b.style.background='#1a1d24';b.style.borderColor='#333840';b.style.color='#8b8f98';});tb.style.background='#22262e';tb.style.borderColor='#3a3f4a';tb.style.color='#e8e9ed';tabContents.forEach(function(tc,ti){tc.style.display=ti===idx?'block':'none';});};
+    tb.setAttribute('data-tab-idx', idx);
     tabBar.appendChild(tb);
   });
+  // tabs onclick se asigna después de insertar en DOM (ver setTimeout al final)
   finalDiv.appendChild(tabBar);
 
   var layout = document.createElement('div');
@@ -10411,66 +10432,108 @@ function showBuildFinalScreen(pipelineData) {
   // ═══ TAB 3: QUALITY GATES ═══
   var qualSec = document.createElement('div');
   qualSec.style.cssText = 'background:#1a1d24;border:1px solid #333840;border-radius:0 10px 10px 10px;padding:14px;margin-bottom:10px;';
-  var qualHtml = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;"><span style="font-size:14px;font-weight:600;color:#8b5cf6;">AG-017 — Quality Gates + Definition of Done</span><span style="font-size:9px;padding:2px 8px;border-radius:4px;background:rgba(139,92,246,0.12);color:#a78bfa;font-weight:600;">Validado por IA</span></div>';
+  var qualHtml = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;"><span style="font-size:14px;font-weight:600;color:#8b5cf6;">AG-017 — Quality Gates + Definition of Done</span><span style="font-size:9px;padding:2px 8px;border-radius:4px;background:rgba(139,92,246,0.15);color:#8b5cf6;font-weight:600;">Validado por IA</span></div>';
 
-  var gates = (qualP && qualP.gates) || [];
-  if(gates.length>0) {
-    // Normalize gate keys: handle both gate/nombre and fase/gate_name
-    gates.forEach(function(g) {
-      if(!g.gate && g.fase) g.gate = g.fase;
-      if(!g.nombre && g.gate_name) g.nombre = g.gate_name;
-      // Auto-assign estados if missing: first gate = PASSED, second = NEXT, rest = PENDING
-      if(!g.estado) {
-        // G0 = PASSED (idea approved since pipeline ran), G1 = PASSED, G2 = NEXT
-        var gNum = parseInt((g.gate||'').replace(/\D/g,''));
-        if(gNum <= 1) g.estado = 'PASSED';
-        else if(gNum === 2) g.estado = 'NEXT';
+  var gates = (qualP && (qualP.gates || qualP.quality_gates)) || [];
+  var dodList = (qualP && (qualP.dod_por_tarea || qualP.dod)) || [];
+  var gateColors = {'G0':'#22c55e','G1':'#22c55e','G2':'#eab308','G3':'#3b82f6','G4':'#8b5cf6','G5':'#ec4899'};
+  var gateStatusColors = {'PASSED':'#22c55e','NEXT':'#eab308','PENDING':'#8b8f98','FAILED':'#ef4444'};
+
+  if (gates.length > 0) {
+    // Normalize + auto-assign states
+    gates.forEach(function(g, gi) {
+      if (!g.fase && g.gate) g.fase = g.gate;
+      if (!g.gate_name && g.nombre) g.gate_name = g.nombre;
+      if (!g.estado) {
+        var gNum = parseInt((g.fase||g.gate||'').replace(/\D/g,''));
+        if (gNum <= 1) g.estado = 'PASSED';
+        else if (gNum === 2) g.estado = 'NEXT';
         else g.estado = 'PENDING';
       }
     });
-    qualHtml += '<div style="display:flex;gap:8px;margin-bottom:20px;overflow-x:auto;padding:8px 0;">';
-    gates.forEach(function(g,gi) {
-      var estado = (g.estado||'').toUpperCase();
-      var gc = estado==='PASSED'?'#22c55e':estado==='NEXT'?'#3b82f6':'#333840';
-      var textC = estado==='PASSED'?'#22c55e':estado==='NEXT'?'#3b82f6':'#8b8f98';
-      var bg = estado==='PASSED'?'rgba(34,197,94,0.1)':estado==='NEXT'?'rgba(59,130,246,0.1)':'rgba(51,56,64,0.3)';
-      qualHtml += '<div style="min-width:100px;background:'+bg+';border:2px solid '+gc+';border-radius:10px;padding:12px;text-align:center;cursor:pointer;transition:transform 0.15s;" onmouseenter="this.style.transform=\'scale(1.05)\'" onmouseleave="this.style.transform=\'scale(1)\'">';
-      qualHtml += '<div style="font-size:16px;font-weight:700;color:'+textC+';">'+(estado==='PASSED'?'\u2713':(g.gate||'G'+(gi+1)))+'</div>';
-      qualHtml += '<div style="font-size:11px;color:#8b8f98;">'+(g.nombre||'')+'</div>';
-      qualHtml += '<div style="font-size:10px;color:'+textC+';margin-top:4px;">'+(estado==='PASSED'?'\u2713 Aprobado':estado==='NEXT'?'\u25b6 Siguiente':'Pendiente')+'</div>';
-      if(g.semana) qualHtml += '<div style="font-size:9px;color:#8b8f98;">Sem '+g.semana+'</div>';
+
+    // Gate timeline visual
+    qualHtml += '<div style="display:flex;align-items:center;gap:0;margin-bottom:20px;overflow-x:auto;padding:8px 0;">';
+    gates.forEach(function(g, gi) {
+      var fase = g.fase || g.gate || ('G' + gi);
+      var nombre = g.gate_name || g.nombre || fase;
+      var estado = (g.estado||'PENDING').toUpperCase();
+      var color = gateColors[fase] || '#8b8f98';
+      var stColor = gateStatusColors[estado] || '#8b8f98';
+      var iconBg = estado === 'PASSED' ? 'rgba(34,197,94,0.15)' : (estado === 'NEXT' ? 'rgba(234,179,8,0.15)' : 'rgba(139,143,152,0.1)');
+      var icon = estado === 'PASSED' ? '\u2713' : (estado === 'NEXT' ? '\u25c9' : '\u25cb');
+
+      if (gi > 0) qualHtml += '<div style="flex:1;height:2px;background:' + (estado==='PASSED'||gi<=1 ? '#22c55e' : (gi === 2 ? 'linear-gradient(90deg,#22c55e,#eab308)' : '#333840')) + ';min-width:20px;"></div>';
+      qualHtml += '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;cursor:pointer;" onclick="var d=document.getElementById(\'gate-detail-'+gi+'\');if(d)d.style.display=d.style.display===\'none\'?\'block\':\'none\'">';
+      qualHtml += '<div style="width:56px;height:56px;border-radius:50%;border:2px solid '+color+';background:'+iconBg+';display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:'+color+';">'+icon+'</div>';
+      qualHtml += '<div style="font-size:12px;font-weight:700;color:'+color+';">'+fase+'</div>';
+      qualHtml += '<div style="font-size:10px;color:#8b8f98;max-width:110px;text-align:center;line-height:1.2;">'+nombre+'</div>';
+      qualHtml += '<div style="font-size:9px;padding:2px 6px;border-radius:3px;background:'+iconBg+';color:'+stColor+';font-weight:600;">'+estado+'</div>';
       qualHtml += '</div>';
-      if(gi<gates.length-1) qualHtml += '<div style="display:flex;align-items:center;"><div style="width:24px;height:2px;background:'+gc+';"></div></div>';
     });
     qualHtml += '</div>';
 
-    // Active gate checklist
-    var nextGate = gates.find(function(g){return (g.estado||'').toUpperCase()==='NEXT';});
-    var nextChecklist = nextGate ? (nextGate.checklist || nextGate.criterios || []) : [];
-    if(nextGate && nextChecklist.length > 0) {
-      qualHtml += '<div style="background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.2);border-radius:8px;padding:14px;margin-bottom:14px;"><div style="font-size:13px;font-weight:600;color:#3b82f6;margin-bottom:8px;">'+(nextGate.gate||'')+' '+(nextGate.nombre||'')+' — Checklist</div>';
-      nextChecklist.forEach(function(c){
-        var isDone = c.indexOf('\u2713')>=0;
-        qualHtml += '<div style="font-size:12px;color:'+(isDone?'#22c55e':'#e8e9ed')+';padding:3px 0;">'+(isDone?'\u2705':'\u2b1c')+' '+c.replace('\u2713','').replace('\u25cb','').trim()+'</div>';
-      });
-      if(nextGate.responsable_qa) qualHtml += '<div style="font-size:10px;color:#8b8f98;margin-top:6px;">Responsable QA: <span style="color:#a78bfa;font-weight:600;">'+nextGate.responsable_qa+'</span></div>';
-      qualHtml += '</div>';
-    }
-  }
+    // Gate details (expandible al click)
+    gates.forEach(function(g, gi) {
+      var fase = g.fase || g.gate || ('G' + gi);
+      var nombre = g.gate_name || g.nombre || fase;
+      var color = gateColors[fase] || '#8b8f98';
+      var criterios = g.criterios || [];
+      var checklist = g.checklist || [];
+      var responsable = g.responsable_qa || g.responsable || '';
+      var hidden = gi > 2 ? 'none' : 'block';
 
-  // DoD
-  var dod = (qualP && qualP.dod_por_tarea) || [];
-  if(dod.length>0) {
-    qualHtml += '<div style="font-size:13px;font-weight:600;color:#e8e9ed;margin-bottom:8px;">Definition of Done por tarea</div>';
-    dod.slice(0,8).forEach(function(d){
-      qualHtml += '<div style="background:#22262e;border-radius:6px;padding:10px 12px;margin-bottom:4px;cursor:pointer;border:1px solid transparent;transition:border-color 0.15s;" onmouseenter="this.style.borderColor=\'#a78bfa\'" onmouseleave="this.style.borderColor=\'transparent\'"><div style="font-size:12px;font-weight:600;color:#a78bfa;">'+(d.id_tarea||'')+'</div>';
-      (d.criterios||[]).forEach(function(c){qualHtml+='<div style="font-size:11px;color:#22c55e;padding:2px 0;padding-left:12px;">\u2022 '+c+'</div>';});
+      qualHtml += '<div id="gate-detail-'+gi+'" style="display:'+hidden+';background:#22262e;border:1px solid #3a3f4a;border-radius:8px;padding:14px 16px;margin-bottom:8px;border-left:3px solid '+color+';">';
+      qualHtml += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><span style="font-size:14px;font-weight:600;color:#e8e9ed;">'+fase+' \u2014 '+nombre+'</span>';
+      if (responsable) qualHtml += '<span style="font-size:10px;color:#8b8f98;">QA: '+responsable+'</span>';
+      qualHtml += '</div>';
+
+      if (criterios.length > 0) {
+        qualHtml += '<div style="font-size:10px;font-weight:600;color:#8b8f98;margin-bottom:3px;">CRITERIOS DE PASO:</div>';
+        criterios.forEach(function(c) {
+          qualHtml += '<div style="font-size:12px;color:#e8e9ed;padding:2px 0 2px 12px;display:flex;align-items:center;gap:4px;"><span style="color:'+color+';">\u25b8</span> '+c+'</div>';
+        });
+      }
+      if (checklist.length > 0) {
+        qualHtml += '<div style="font-size:10px;font-weight:600;color:#8b8f98;margin-top:6px;margin-bottom:3px;">CHECKLIST:</div>';
+        qualHtml += '<div style="display:flex;flex-wrap:wrap;gap:4px;">';
+        checklist.forEach(function(ch) {
+          qualHtml += '<span style="font-size:9px;padding:4px 8px;border-radius:3px;background:rgba(139,92,246,0.1);color:#8b5cf6;">\u2610 '+ch+'</span>';
+        });
+        qualHtml += '</div>';
+      }
       qualHtml += '</div>';
     });
+  } else {
+    qualHtml += '<div style="text-align:center;padding:20px;color:#8b8f98;font-size:11px;">AG-017 no gener\u00f3 quality gates para este proyecto.</div>';
   }
 
-  if(gates.length===0 && dod.length===0) {
-    qualHtml += '<div style="background:#22262e;border-radius:8px;padding:12px;font-size:10px;color:#8b8f98;white-space:pre-wrap;max-height:300px;overflow-y:auto;">'+(typeof pipelineData.qualityResult==='string'?pipelineData.qualityResult:JSON.stringify(pipelineData.qualityResult,null,2)||'Sin datos quality')+'</div>';
+  // DoD por tarea (colapsable)
+  if (dodList.length > 0) {
+    qualHtml += '<div style="margin-top:14px;border-top:1px solid #333840;padding-top:10px;">';
+    qualHtml += '<div style="font-size:13px;font-weight:600;color:#e8e9ed;margin-bottom:8px;cursor:pointer;" onclick="var d=document.getElementById(\'dod-list\');if(d)d.style.display=d.style.display===\'none\'?\'block\':\'none\';">Definition of Done por tarea ('+dodList.length+') \u25be</div>';
+    qualHtml += '<div id="dod-list" style="display:none;max-height:300px;overflow-y:auto;">';
+    dodList.slice(0, 20).forEach(function(dod) {
+      var tid = dod.id_tarea || '?';
+      var criterios = dod.criterios_aceptacion || dod.criterios || [];
+      var checks = dod.checklist_calidad || dod.checklist || [];
+      qualHtml += '<div style="background:#22262e;border:1px solid #3a3f4a;border-radius:6px;padding:6px 10px;margin-bottom:4px;border-left:3px solid #8b5cf6;">';
+      qualHtml += '<div style="font-size:12px;font-weight:600;color:#e8e9ed;margin-bottom:2px;">'+tid+'</div>';
+      if (criterios.length > 0) qualHtml += '<div style="font-size:10px;color:#8b8f98;">Aceptaci\u00f3n: '+criterios.join(' \u00b7 ')+'</div>';
+      if (checks.length > 0) {
+        qualHtml += '<div style="display:flex;gap:3px;margin-top:2px;flex-wrap:wrap;">';
+        checks.forEach(function(ch) { qualHtml += '<span style="font-size:8px;padding:2px 6px;border-radius:2px;background:rgba(139,92,246,0.08);color:#a78bfa;">'+ch+'</span>'; });
+        qualHtml += '</div>';
+      }
+      qualHtml += '</div>';
+    });
+    if (dodList.length > 20) qualHtml += '<div style="font-size:8px;color:#8b8f98;text-align:center;padding:4px;">... '+(dodList.length-20)+' tareas m\u00e1s con DoD definido</div>';
+    qualHtml += '</div></div>';
+  }
+
+  // Fallback: si no hay gates ni DoD, mostrar raw
+  if (gates.length === 0 && dodList.length === 0 && pipelineData.qualityResult) {
+    qualHtml += '<div style="background:#22262e;border-radius:8px;padding:12px;font-size:10px;color:#8b8f98;white-space:pre-wrap;max-height:300px;overflow-y:auto;">' + (typeof pipelineData.qualityResult === 'string' ? pipelineData.qualityResult : JSON.stringify(pipelineData.qualityResult, null, 2)) + '</div>';
   }
 
   qualSec.innerHTML = qualHtml;
@@ -10595,6 +10658,24 @@ function showBuildFinalScreen(pipelineData) {
   pauseArea.appendChild(finalDiv);
   var lsecEl = document.getElementById('launch-section-final');
   if(lsecEl) lsecEl.insertBefore(launchBtn, document.getElementById('launch-warning-final'));
+
+  // Asignar onclick de tabs DESPUÉS de insertar en DOM (fix para llamadas múltiples)
+  setTimeout(function() {
+    var pa = document.getElementById('build-pause-area');
+    if (!pa || !pa.children[0]) return;
+    var fd2 = pa.children[0];
+    var tb2 = fd2.children[1];
+    if (!tb2 || !tb2.children[0] || !tb2.children[0].getAttribute('data-tab-idx')) return;
+    tb2.onclick = function(e) {
+      var target = e.target;
+      var idx = parseInt(target.getAttribute('data-tab-idx'));
+      if (isNaN(idx)) return;
+      Array.from(tb2.children).forEach(function(b){b.style.background='#1a1d24';b.style.borderColor='#333840';b.style.color='#8b8f98';});
+      target.style.background='#22262e';target.style.borderColor='#3a3f4a';target.style.color='#e8e9ed';
+      var ml = tb2.parentNode.querySelector('div[style*="grid-template-columns"]');
+      if(ml && ml.children[0]) Array.from(ml.children[0].children).forEach(function(tc,ti){tc.style.display=ti===idx?'block':'none';});
+    };
+  }, 50);
 }
 
 function _parseBuildResult(chainResult) {
