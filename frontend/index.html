@@ -10026,100 +10026,291 @@ async function showBuildPause(pauseNumber, data, externalResolve) {
 }
 
 // ── showBuildFinalScreen ──
+// ═══ MODAL: Sprint Detail (P54) ═══
 function showSprintDetailModal(sprint, allSprints, pipelineData, onSave) {
+  var old = document.getElementById('modal-sprint-detail');
+  if (old) old.remove();
   var overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:10000;display:flex;align-items:center;justify-content:center;';
+  overlay.id = 'modal-sprint-detail';
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
   overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+  var items = sprint.items || [];
+  var totalPts = items.reduce(function(s,i){ return s + (i.story_points||0); }, 0);
+  var tipoCount = {};
+  items.forEach(function(i){ var t = (i.tipo||'TASK').toUpperCase(); tipoCount[t] = (tipoCount[t]||0) + 1; });
+  var tipoSummary = Object.keys(tipoCount).map(function(k){ return tipoCount[k] + ' ' + k; }).join(' \u00b7 ');
   var modal = document.createElement('div');
-  modal.style.cssText = 'background:#1a1d24;border:1px solid #333840;border-radius:12px;max-width:850px;width:95%;max-height:88vh;overflow-y:auto;';
-  var inpS = 'width:100%;background:#22262e;border:1px solid #333840;border-radius:8px;padding:10px 14px;color:#e8e9ed;font-size:13px;font-family:inherit;box-sizing:border-box;';
-  var labS = 'font-size:10px;color:#8b8f98;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;display:block;margin-top:12px;';
-  var totalPts = (sprint.items || []).reduce(function(s, it) { return s + (it.story_points || 0); }, 0);
-  var html = '<div style="padding:20px 24px;border-bottom:1px solid #333840;background:linear-gradient(135deg,rgba(59,130,246,0.08),rgba(139,92,246,0.08));"><div style="display:flex;justify-content:space-between;align-items:center;"><div><div style="font-size:22px;font-weight:700;color:#3b82f6;">Sprint ' + (sprint.numero || '?') + '</div><div style="font-size:13px;color:#8b8f98;">Semanas ' + (sprint.semana_inicio || '?') + '-' + (sprint.semana_fin || '?') + ' \u00b7 ' + (sprint.items || []).length + ' items \u00b7 ' + totalPts + ' pts</div></div><div class="modal-close" style="cursor:pointer;color:#8b8f98;font-size:22px;">\u2715</div></div></div>';
-  html += '<div style="padding:16px 24px;">';
-  html += '<label style="' + labS + '">Sprint Goal</label>';
-  html += '<input id="sprint-goal" value="' + (sprint.goal || sprint.nombre || '').replace(/"/g, '&quot;') + '" style="' + inpS + 'font-size:15px;">';
-  html += '<div style="margin-top:16px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div style="font-size:12px;font-weight:600;color:#e8e9ed;">Items del Sprint (' + (sprint.items || []).length + ')</div></div>';
-  (sprint.items || []).forEach(function(item, idx) {
-    var typeColor = item.tipo === 'TASK' ? '#3b82f6' : item.tipo === 'STORY' ? '#22c55e' : item.tipo === 'BUG' ? '#ef4444' : '#a855f7';
-    html += '<div class="sprint-item-row" data-idx="' + idx + '" style="display:grid;grid-template-columns:60px 1fr 80px 50px 40px;gap:8px;align-items:center;padding:8px;border-radius:6px;margin-bottom:4px;cursor:pointer;border:1px solid transparent;" onmouseenter="this.style.borderColor=\'#333840\';this.style.background=\'#22262e\'" onmouseleave="this.style.borderColor=\'transparent\';this.style.background=\'none\'">';
-    html += '<span style="font-size:10px;padding:2px 8px;border-radius:4px;background:' + typeColor + '20;color:' + typeColor + ';text-align:center;font-weight:600;">' + (item.tipo || 'TASK') + '</span>';
-    html += '<div><div style="font-size:13px;color:#e8e9ed;">' + (item.titulo || '') + '</div><div style="font-size:10px;color:#8b8f98;">' + (item.id || '') + '</div></div>';
-    html += '<span style="font-size:11px;padding:2px 8px;border-radius:4px;background:rgba(139,92,246,0.1);color:#a78bfa;">' + (item.silo || '') + '</span>';
-    html += '<span style="font-size:13px;font-weight:700;color:#eab308;text-align:center;">' + (item.story_points || 0) + '</span>';
-    html += '<span style="font-size:10px;color:#8b8f98;text-align:center;">' + (item.prioridad || '-') + '</span>';
-    html += '</div>';
+  modal.style.cssText = 'background:#1a1d24;border:1px solid #3a3f4a;border-radius:12px;padding:24px;width:90%;max-width:700px;max-height:85vh;overflow-y:auto;color:#e8e9ed;';
+  var h = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">';
+  h += '<div><div style="font-size:20px;font-weight:700;color:#3b82f6;">Sprint ' + (sprint.numero||'?') + '</div>';
+  h += '<div style="font-size:12px;color:#8b8f98;margin-top:2px;">' + tipoSummary + ' \u00b7 ' + totalPts + ' pts</div></div>';
+  h += '<div style="cursor:pointer;font-size:20px;color:#8b8f98;padding:4px 8px;" id="modal-sprint-close">\u2715</div></div>';
+  h += '<div style="margin-bottom:16px;"><label style="font-size:10px;color:#8b8f98;text-transform:uppercase;">Sprint Goal</label>';
+  h += '<input type="text" id="modal-sprint-goal" value="' + (sprint.goal||'').replace(/"/g,'&quot;') + '" style="width:100%;margin-top:4px;padding:8px 12px;background:#22262e;border:1px solid #333840;border-radius:6px;color:#e8e9ed;font-size:13px;outline:none;" /></div>';
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">';
+  h += '<div><label style="font-size:10px;color:#8b8f98;">Sem inicio</label><input type="number" id="modal-sprint-sem-ini" value="' + (sprint.semana_inicio||'') + '" style="width:100%;margin-top:4px;padding:6px 10px;background:#22262e;border:1px solid #333840;border-radius:6px;color:#e8e9ed;font-size:13px;outline:none;" /></div>';
+  h += '<div><label style="font-size:10px;color:#8b8f98;">Sem fin</label><input type="number" id="modal-sprint-sem-fin" value="' + (sprint.semana_fin||'') + '" style="width:100%;margin-top:4px;padding:6px 10px;background:#22262e;border:1px solid #333840;border-radius:6px;color:#e8e9ed;font-size:13px;outline:none;" /></div>';
+  h += '<div><label style="font-size:10px;color:#8b8f98;">Velocidad (pts)</label><input type="number" id="modal-sprint-pts" value="' + (sprint.story_points||0) + '" style="width:100%;margin-top:4px;padding:6px 10px;background:#22262e;border:1px solid #333840;border-radius:6px;color:#e8e9ed;font-size:13px;outline:none;" /></div>';
+  h += '</div>';
+  h += '<div style="font-size:11px;font-weight:600;color:#8b8f98;text-transform:uppercase;margin-bottom:8px;">Items (' + items.length + ')</div>';
+  items.forEach(function(it, ii) {
+    var tipo = (it.tipo||'TASK').toUpperCase();
+    var tc = tipo==='STORY'?'#22c55e':tipo==='BUG'?'#ef4444':tipo==='SPIKE'?'#a855f7':'#3b82f6';
+    h += '<div data-item-idx="' + ii + '" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid #22262e;cursor:pointer;transition:background 0.15s;" onmouseenter="this.style.background=\'#22262e\'" onmouseleave="this.style.background=\'none\'">';
+    h += '<span style="font-size:9px;padding:2px 6px;border-radius:3px;font-weight:700;background:' + tc + '20;color:' + tc + ';">' + tipo + '</span>';
+    h += '<span style="font-size:10px;font-family:monospace;color:#3b82f6;">' + (it.id||'') + '</span>';
+    h += '<span style="font-size:12px;color:#e8e9ed;flex:1;">' + (it.titulo||'') + '</span>';
+    h += '<span style="font-size:13px;font-weight:700;font-family:monospace;color:#3b82f6;">' + (it.story_points||0) + '</span>';
+    h += '</div>';
   });
-  html += '</div>';
-  html += '<label style="' + labS + '">Notas del Sprint</label>';
-  html += '<textarea id="sprint-notas" style="' + inpS + 'resize:vertical;min-height:50px;" placeholder="Observaciones, riesgos del sprint...">' + (sprint.notas || '') + '</textarea>';
-  html += '<div style="display:flex;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid #333840;">';
-  html += '<div style="flex:1;"></div>';
-  html += '<button class="modal-close" style="padding:10px 20px;border-radius:8px;border:1px solid #333840;background:none;color:#8b8f98;cursor:pointer;font-size:13px;">Cancelar</button>';
-  html += '<button id="sprint-save" style="padding:10px 24px;border-radius:8px;border:none;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;cursor:pointer;font-size:13px;font-weight:600;">Guardar</button>';
-  html += '</div></div>';
-  modal.innerHTML = html;
-  modal.querySelectorAll('.modal-close').forEach(function(el) { el.onclick = function() { overlay.remove(); }; });
-  modal.querySelectorAll('.sprint-item-row').forEach(function(row) {
-    row.onclick = function() {
-      var idx = parseInt(row.getAttribute('data-idx'));
-      var item = sprint.items[idx];
-      if (item) showSprintItemModal(item, sprint, function() {});
-    };
-  });
-  var saveBtn = modal.querySelector('#sprint-save');
-  if (saveBtn) saveBtn.onclick = function() {
-    sprint.goal = document.getElementById('sprint-goal').value;
-    sprint.nombre = document.getElementById('sprint-goal').value;
-    sprint.notas = document.getElementById('sprint-notas').value;
-    if (onSave) onSave(sprint);
-    overlay.remove();
-  };
+  h += '<div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">';
+  h += '<button id="modal-sprint-save" style="padding:8px 20px;background:#3b82f6;color:white;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">\ud83d\udcbe Guardar cambios</button>';
+  h += '<button id="modal-sprint-cancel" style="padding:8px 20px;background:#333840;color:#8b8f98;border:none;border-radius:6px;font-size:12px;cursor:pointer;">Cerrar</button>';
+  h += '</div>';
+  modal.innerHTML = h;
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
+  modal.querySelectorAll('[data-item-idx]').forEach(function(row) {
+    var idx = parseInt(row.getAttribute('data-item-idx'));
+    row.onclick = function() { showSprintItemModal(items[idx], sprint, function(){}); };
+  });
+  document.getElementById('modal-sprint-close').onclick = function() { overlay.remove(); };
+  document.getElementById('modal-sprint-cancel').onclick = function() { overlay.remove(); };
+  document.getElementById('modal-sprint-save').onclick = function() {
+    sprint.goal = document.getElementById('modal-sprint-goal').value;
+    sprint.semana_inicio = parseInt(document.getElementById('modal-sprint-sem-ini').value) || sprint.semana_inicio;
+    sprint.semana_fin = parseInt(document.getElementById('modal-sprint-sem-fin').value) || sprint.semana_fin;
+    sprint.story_points = parseInt(document.getElementById('modal-sprint-pts').value) || sprint.story_points;
+    if (typeof onSave === 'function') onSave();
+    overlay.remove();
+    if (typeof showToast === 'function') showToast('Sprint ' + (sprint.numero||'') + ' actualizado');
+  };
 }
 
-function showSprintItemModal(item, parentSprint, onSave) {
+// ═══ MODAL: Sprint Item Detail (P54) ═══
+function showSprintItemModal(item, sprint, onSave) {
+  var old = document.getElementById('modal-sprint-item');
+  if (old) old.remove();
   var overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:10001;display:flex;align-items:center;justify-content:center;';
+  overlay.id = 'modal-sprint-item';
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:10000;display:flex;align-items:center;justify-content:center;';
   overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
   var modal = document.createElement('div');
-  modal.style.cssText = 'background:#1a1d24;border:1px solid #333840;border-radius:12px;padding:24px;max-width:650px;width:95%;max-height:85vh;overflow-y:auto;';
-  var inpS = 'width:100%;background:#22262e;border:1px solid #333840;border-radius:8px;padding:10px 14px;color:#e8e9ed;font-size:13px;font-family:inherit;box-sizing:border-box;';
-  var labS = 'font-size:10px;color:#8b8f98;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;display:block;margin-top:12px;';
-  var typeColor = item.tipo === 'TASK' ? '#3b82f6' : item.tipo === 'STORY' ? '#22c55e' : item.tipo === 'BUG' ? '#ef4444' : '#a855f7';
-  var html = '';
-  html += '<div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:16px;"><div style="display:flex;gap:8px;align-items:center;"><span style="font-size:12px;padding:3px 10px;border-radius:4px;background:' + typeColor + '20;color:' + typeColor + ';font-weight:600;">' + (item.tipo || 'TASK') + '</span><span style="font-family:monospace;font-size:12px;color:#8b8f98;">' + (item.id || '') + '</span></div><div class="modal-close" style="cursor:pointer;color:#8b8f98;font-size:20px;">\u2715</div></div>';
-  html += '<label style="' + labS + '">T\u00edtulo</label><input id="item-titulo" value="' + (item.titulo || '').replace(/"/g, '&quot;') + '" style="' + inpS + 'font-size:15px;font-weight:600;">';
-  html += '<label style="' + labS + '">Descripci\u00f3n</label><textarea id="item-desc" style="' + inpS + 'resize:vertical;min-height:60px;">' + (item.descripcion || '') + '</textarea>';
-  html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">';
-  html += '<div><label style="' + labS + '">Tipo</label><select id="item-tipo" style="' + inpS + '"><option ' + (item.tipo === 'TASK' ? 'selected' : '') + '>TASK</option><option ' + (item.tipo === 'STORY' ? 'selected' : '') + '>STORY</option><option ' + (item.tipo === 'BUG' ? 'selected' : '') + '>BUG</option><option ' + (item.tipo === 'SPIKE' ? 'selected' : '') + '>SPIKE</option></select></div>';
-  html += '<div><label style="' + labS + '">Story Points</label><input id="item-pts" type="number" value="' + (item.story_points || 0) + '" style="' + inpS + '"></div>';
-  html += '<div><label style="' + labS + '">Prioridad</label><select id="item-prio" style="' + inpS + '"><option ' + (item.prioridad === 'Alta' ? 'selected' : '') + '>Alta</option><option ' + (item.prioridad === 'Media' ? 'selected' : '') + '>Media</option><option ' + (item.prioridad === 'Baja' ? 'selected' : '') + '>Baja</option></select></div>';
-  html += '</div>';
-  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">';
-  html += '<div><label style="' + labS + '">Silo</label><input id="item-silo" value="' + (item.silo || '') + '" style="' + inpS + '"></div>';
-  html += '<div><label style="' + labS + '">Asignado</label><input id="item-asignado" value="' + (item.asignado_nombre || item.asignado || '') + '" style="' + inpS + '"></div>';
-  html += '</div>';
-  html += '<label style="' + labS + '">Notas</label><textarea id="item-notas" style="' + inpS + 'resize:vertical;min-height:50px;border-color:rgba(34,197,94,0.3);" placeholder="Criterios de aceptaci\u00f3n, notas del PM...">' + (item.notas || '') + '</textarea>';
-  html += '<div style="display:flex;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid #333840;"><div style="flex:1;"></div><button class="modal-close" style="padding:10px 20px;border-radius:8px;border:1px solid #333840;background:none;color:#8b8f98;cursor:pointer;font-size:13px;">Cancelar</button><button id="item-save" style="padding:10px 24px;border-radius:8px;border:none;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;cursor:pointer;font-size:13px;font-weight:600;">Guardar</button></div>';
-  modal.innerHTML = html;
-  modal.querySelectorAll('.modal-close').forEach(function(el) { el.onclick = function() { overlay.remove(); }; });
-  var saveBtn = modal.querySelector('#item-save');
-  if (saveBtn) saveBtn.onclick = function() {
-    item.titulo = document.getElementById('item-titulo').value;
-    item.descripcion = document.getElementById('item-desc').value;
-    item.tipo = document.getElementById('item-tipo').value;
-    item.story_points = parseInt(document.getElementById('item-pts').value) || 0;
-    item.prioridad = document.getElementById('item-prio').value;
-    item.silo = document.getElementById('item-silo').value;
-    item.asignado_nombre = document.getElementById('item-asignado').value;
-    item.notas = document.getElementById('item-notas').value;
-    if (onSave) onSave(item);
-    overlay.remove();
-  };
+  modal.style.cssText = 'background:#1a1d24;border:1px solid #3a3f4a;border-radius:12px;padding:24px;width:90%;max-width:550px;max-height:85vh;overflow-y:auto;color:#e8e9ed;';
+  var tipo = (item.tipo||'TASK').toUpperCase();
+  var tc = tipo==='STORY'?'#22c55e':tipo==='BUG'?'#ef4444':tipo==='SPIKE'?'#a855f7':'#3b82f6';
+  var h = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">';
+  h += '<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:10px;padding:3px 8px;border-radius:4px;font-weight:700;background:' + tc + '20;color:' + tc + ';">' + tipo + '</span>';
+  h += '<span style="font-size:12px;font-family:monospace;color:#3b82f6;">' + (item.id||'') + '</span></div>';
+  h += '<div style="cursor:pointer;font-size:20px;color:#8b8f98;padding:4px 8px;" id="modal-item-close">\u2715</div></div>';
+  h += '<div style="margin-bottom:12px;"><label style="font-size:10px;color:#8b8f98;">T\u00edtulo</label>';
+  h += '<input type="text" id="modal-item-titulo" value="' + (item.titulo||'').replace(/"/g,'&quot;') + '" style="width:100%;margin-top:4px;padding:8px 12px;background:#22262e;border:1px solid #333840;border-radius:6px;color:#e8e9ed;font-size:13px;outline:none;" /></div>';
+  h += '<div style="margin-bottom:12px;"><label style="font-size:10px;color:#8b8f98;">Descripci\u00f3n</label>';
+  h += '<textarea id="modal-item-desc" rows="3" style="width:100%;margin-top:4px;padding:8px 12px;background:#22262e;border:1px solid #333840;border-radius:6px;color:#e8e9ed;font-size:12px;outline:none;resize:vertical;">' + (item.descripcion||'') + '</textarea></div>';
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:12px;">';
+  h += '<div><label style="font-size:10px;color:#8b8f98;">Tipo</label><select id="modal-item-tipo" style="width:100%;margin-top:4px;padding:6px 8px;background:#22262e;border:1px solid #333840;border-radius:6px;color:#e8e9ed;font-size:12px;"><option value="TASK"' + (tipo==='TASK'?' selected':'') + '>Task</option><option value="STORY"' + (tipo==='STORY'?' selected':'') + '>Story</option><option value="BUG"' + (tipo==='BUG'?' selected':'') + '>Bug</option><option value="SPIKE"' + (tipo==='SPIKE'?' selected':'') + '>Spike</option></select></div>';
+  h += '<div><label style="font-size:10px;color:#8b8f98;">Silo</label><input type="text" id="modal-item-silo" value="' + (item.silo||'').replace(/"/g,'&quot;') + '" style="width:100%;margin-top:4px;padding:6px 8px;background:#22262e;border:1px solid #333840;border-radius:6px;color:#e8e9ed;font-size:12px;outline:none;" /></div>';
+  h += '<div><label style="font-size:10px;color:#8b8f98;">Prioridad</label><select id="modal-item-prio" style="width:100%;margin-top:4px;padding:6px 8px;background:#22262e;border:1px solid #333840;border-radius:6px;color:#e8e9ed;font-size:12px;"><option value="Alta"' + ((item.prioridad||'')==='Alta'?' selected':'') + '>Alta</option><option value="Media"' + ((item.prioridad||'')==='Media'?' selected':'') + '>Media</option><option value="Baja"' + ((item.prioridad||'')==='Baja'?' selected':'') + '>Baja</option></select></div>';
+  h += '<div><label style="font-size:10px;color:#8b8f98;">Pts</label><input type="number" id="modal-item-pts" value="' + (item.story_points||0) + '" style="width:100%;margin-top:4px;padding:6px 8px;background:#22262e;border:1px solid #333840;border-radius:6px;color:#e8e9ed;font-size:12px;outline:none;" /></div>';
+  h += '</div>';
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">';
+  h += '<div><label style="font-size:10px;color:#8b8f98;">Asignado</label><input type="text" id="modal-item-asig" value="' + (item.asignado||item.asignado_nombre||'').replace(/"/g,'&quot;') + '" style="width:100%;margin-top:4px;padding:6px 8px;background:#22262e;border:1px solid #333840;border-radius:6px;color:#e8e9ed;font-size:12px;outline:none;" /></div>';
+  h += '<div><label style="font-size:10px;color:#8b8f98;">Skill</label><input type="text" id="modal-item-skill" value="' + (item.skill||item.skill_requerido||'').replace(/"/g,'&quot;') + '" style="width:100%;margin-top:4px;padding:6px 8px;background:#22262e;border:1px solid #333840;border-radius:6px;color:#e8e9ed;font-size:12px;outline:none;" /></div>';
+  h += '</div>';
+  h += '<div style="display:flex;gap:10px;justify-content:flex-end;">';
+  h += '<button id="modal-item-save" style="padding:8px 20px;background:#3b82f6;color:white;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">\ud83d\udcbe Guardar</button>';
+  h += '<button id="modal-item-cancel" style="padding:8px 20px;background:#333840;color:#8b8f98;border:none;border-radius:6px;font-size:12px;cursor:pointer;">Cerrar</button>';
+  h += '</div>';
+  modal.innerHTML = h;
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
+  document.getElementById('modal-item-close').onclick = function() { overlay.remove(); };
+  document.getElementById('modal-item-cancel').onclick = function() { overlay.remove(); };
+  document.getElementById('modal-item-save').onclick = function() {
+    item.titulo = document.getElementById('modal-item-titulo').value;
+    item.descripcion = document.getElementById('modal-item-desc').value;
+    item.tipo = document.getElementById('modal-item-tipo').value;
+    item.silo = document.getElementById('modal-item-silo').value;
+    item.prioridad = document.getElementById('modal-item-prio').value;
+    item.story_points = parseInt(document.getElementById('modal-item-pts').value) || 0;
+    item.asignado = document.getElementById('modal-item-asig').value;
+    item.skill = document.getElementById('modal-item-skill').value;
+    if (typeof onSave === 'function') onSave();
+    overlay.remove();
+    if (typeof showToast === 'function') showToast('Item ' + (item.id||'') + ' actualizado');
+  };
+}
+
+// ═══ MODAL: Gantt Sprint Detail (P55) ═══
+function showGanttDetailModal(sprint, planParsed, pipelineData) {
+  var old = document.getElementById('modal-gantt-detail');
+  if (old) old.remove();
+  var overlay = document.createElement('div');
+  overlay.id = 'modal-gantt-detail';
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+  var modal = document.createElement('div');
+  modal.style.cssText = 'background:#1a1d24;border:1px solid #3a3f4a;border-radius:12px;padding:24px;width:90%;max-width:600px;max-height:85vh;overflow-y:auto;color:#e8e9ed;';
+  var rc = (planParsed && planParsed.ruta_critica) || {};
+  var deps = sprint.dependencias || [];
+  var h = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">';
+  h += '<div style="font-size:20px;font-weight:700;color:#ec4899;">Sprint ' + (sprint.numero||'?') + ' \u2014 Gantt</div>';
+  h += '<div style="cursor:pointer;font-size:20px;color:#8b8f98;padding:4px 8px;" id="modal-gantt-close">\u2715</div></div>';
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">';
+  h += '<div><label style="font-size:10px;color:#8b8f98;">Sem inicio</label><input type="number" id="modal-gantt-ini" value="' + (sprint.semana_inicio||'') + '" style="width:100%;margin-top:4px;padding:6px 10px;background:#22262e;border:1px solid #333840;border-radius:6px;color:#e8e9ed;font-size:13px;outline:none;" /></div>';
+  h += '<div><label style="font-size:10px;color:#8b8f98;">Sem fin</label><input type="number" id="modal-gantt-fin" value="' + (sprint.semana_fin||'') + '" style="width:100%;margin-top:4px;padding:6px 10px;background:#22262e;border:1px solid #333840;border-radius:6px;color:#e8e9ed;font-size:13px;outline:none;" /></div>';
+  h += '<div><label style="font-size:10px;color:#8b8f98;">Story Points</label><input type="number" id="modal-gantt-pts" value="' + (sprint.story_points||0) + '" style="width:100%;margin-top:4px;padding:6px 10px;background:#22262e;border:1px solid #333840;border-radius:6px;color:#e8e9ed;font-size:13px;outline:none;" /></div>';
+  h += '</div>';
+  h += '<div style="margin-bottom:12px;"><label style="font-size:10px;color:#8b8f98;">Goal</label>';
+  h += '<input type="text" id="modal-gantt-goal" value="' + (sprint.goal||'').replace(/"/g,'&quot;') + '" style="width:100%;margin-top:4px;padding:8px 12px;background:#22262e;border:1px solid #333840;border-radius:6px;color:#e8e9ed;font-size:13px;outline:none;" /></div>';
+  if (rc.semanas || rc.holgura_total != null) {
+    h += '<div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:12px;margin-bottom:12px;">';
+    h += '<div style="font-size:11px;font-weight:600;color:#ef4444;margin-bottom:6px;">Ruta Cr\u00edtica del Proyecto</div>';
+    h += '<div style="font-size:12px;color:#e8e9ed;">Duraci\u00f3n total: <span style="font-weight:700;color:#ef4444;">' + (rc.semanas||'?') + ' semanas</span></div>';
+    if (rc.holgura_total != null) h += '<div style="font-size:12px;color:#e8e9ed;">Holgura total: <span style="font-weight:700;color:#eab308;">' + rc.holgura_total + ' sem</span></div>';
+    if (rc.tareas_criticas && rc.tareas_criticas.length) h += '<div style="font-size:11px;color:#8b8f98;margin-top:4px;">Tareas cr\u00edticas: ' + rc.tareas_criticas.join(', ') + '</div>';
+    h += '</div>';
+  }
+  if (deps.length > 0) {
+    h += '<div style="font-size:11px;font-weight:600;color:#8b8f98;margin-bottom:4px;">Dependencias</div>';
+    deps.forEach(function(d) { h += '<div style="font-size:11px;color:#e8e9ed;padding:2px 0;">\u2192 ' + d + '</div>'; });
+  }
+  h += '<div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">';
+  h += '<button id="modal-gantt-save" style="padding:8px 20px;background:#ec4899;color:white;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">\ud83d\udcbe Guardar</button>';
+  h += '<button id="modal-gantt-cancel" style="padding:8px 20px;background:#333840;color:#8b8f98;border:none;border-radius:6px;font-size:12px;cursor:pointer;">Cerrar</button>';
+  h += '</div>';
+  modal.innerHTML = h;
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  document.getElementById('modal-gantt-close').onclick = function() { overlay.remove(); };
+  document.getElementById('modal-gantt-cancel').onclick = function() { overlay.remove(); };
+  document.getElementById('modal-gantt-save').onclick = function() {
+    sprint.semana_inicio = parseInt(document.getElementById('modal-gantt-ini').value) || sprint.semana_inicio;
+    sprint.semana_fin = parseInt(document.getElementById('modal-gantt-fin').value) || sprint.semana_fin;
+    sprint.story_points = parseInt(document.getElementById('modal-gantt-pts').value) || sprint.story_points;
+    sprint.goal = document.getElementById('modal-gantt-goal').value;
+    overlay.remove();
+    if (typeof showToast === 'function') showToast('Sprint ' + (sprint.numero||'') + ' Gantt actualizado');
+  };
+}
+
+// ═══ MODAL: Budget Detail (P56) ═══
+function showBudgetDetailModal(costParsed, pipelineData) {
+  var old = document.getElementById('modal-budget-detail');
+  if (old) old.remove();
+  var overlay = document.createElement('div');
+  overlay.id = 'modal-budget-detail';
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+  var modal = document.createElement('div');
+  modal.style.cssText = 'background:#1a1d24;border:1px solid #3a3f4a;border-radius:12px;padding:24px;width:90%;max-width:650px;max-height:85vh;overflow-y:auto;color:#e8e9ed;';
+  var presup = (costParsed && costParsed.presupuesto) || costParsed || {};
+  var bac = presup.bac_total || presup.bac || (costParsed && costParsed.bac_total) || 0;
+  var financiero = (costParsed && costParsed.financiero) || {};
+  var reservas = presup.reservas || {};
+  var h = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">';
+  h += '<div style="font-size:20px;font-weight:700;color:#10b981;">AG-016 \u2014 Editar Presupuesto</div>';
+  h += '<div style="cursor:pointer;font-size:20px;color:#8b8f98;padding:4px 8px;" id="modal-budget-close">\u2715</div></div>';
+  h += '<div style="margin-bottom:16px;"><label style="font-size:10px;color:#8b8f98;text-transform:uppercase;">BAC (Budget at Completion) \u20ac</label>';
+  h += '<input type="number" id="modal-budget-bac" value="' + bac + '" style="width:100%;margin-top:4px;padding:10px 14px;background:#22262e;border:1px solid #333840;border-radius:6px;color:#22c55e;font-size:20px;font-weight:700;font-family:monospace;outline:none;" /></div>';
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">';
+  h += '<div><label style="font-size:10px;color:#8b8f98;">ROI (%)</label><input type="text" id="modal-budget-roi" value="' + (financiero.roi_pct||financiero.roi||'') + '" style="width:100%;margin-top:4px;padding:6px 10px;background:#22262e;border:1px solid #333840;border-radius:6px;color:#e8e9ed;font-size:13px;outline:none;" /></div>';
+  h += '<div><label style="font-size:10px;color:#8b8f98;">Payback (meses)</label><input type="number" id="modal-budget-payback" value="' + (financiero.payback_meses||'') + '" style="width:100%;margin-top:4px;padding:6px 10px;background:#22262e;border:1px solid #333840;border-radius:6px;color:#e8e9ed;font-size:13px;outline:none;" /></div>';
+  h += '<div><label style="font-size:10px;color:#8b8f98;">TIR (%)</label><input type="text" id="modal-budget-tir" value="' + (financiero.tir_pct||financiero.tir||'') + '" style="width:100%;margin-top:4px;padding:6px 10px;background:#22262e;border:1px solid #333840;border-radius:6px;color:#e8e9ed;font-size:13px;outline:none;" /></div>';
+  h += '</div>';
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">';
+  h += '<div><label style="font-size:10px;color:#8b8f98;">VAN (\u20ac)</label><input type="number" id="modal-budget-van" value="' + (financiero.van_eur||financiero.van||'') + '" style="width:100%;margin-top:4px;padding:6px 10px;background:#22262e;border:1px solid #333840;border-radius:6px;color:#e8e9ed;font-size:13px;outline:none;" /></div>';
+  h += '<div><label style="font-size:10px;color:#8b8f98;">Contingencia (%)</label><input type="number" id="modal-budget-conting" value="' + (reservas.contingencia_pct||10) + '" style="width:100%;margin-top:4px;padding:6px 10px;background:#22262e;border:1px solid #333840;border-radius:6px;color:#e8e9ed;font-size:13px;outline:none;" /></div>';
+  h += '</div>';
+  h += '<div style="background:rgba(234,179,8,0.06);border:1px solid rgba(234,179,8,0.15);border-radius:8px;padding:10px;margin-bottom:16px;font-size:11px;color:#eab308;">\u26a0 Los cambios se guardan en memoria del pipeline. Al pulsar "Lanzar proyecto" se persistir\u00e1n en BD.</div>';
+  h += '<div style="display:flex;gap:10px;justify-content:flex-end;">';
+  h += '<button id="modal-budget-save" style="padding:8px 20px;background:#10b981;color:white;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">\ud83d\udcbe Guardar</button>';
+  h += '<button id="modal-budget-cancel" style="padding:8px 20px;background:#333840;color:#8b8f98;border:none;border-radius:6px;font-size:12px;cursor:pointer;">Cerrar</button>';
+  h += '</div>';
+  modal.innerHTML = h;
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  document.getElementById('modal-budget-close').onclick = function() { overlay.remove(); };
+  document.getElementById('modal-budget-cancel').onclick = function() { overlay.remove(); };
+  document.getElementById('modal-budget-save').onclick = function() {
+    var newBac = parseInt(document.getElementById('modal-budget-bac').value) || bac;
+    if (presup) { presup.bac_total = newBac; }
+    if (costParsed) { costParsed.bac_total = newBac; }
+    financiero.roi_pct = document.getElementById('modal-budget-roi').value;
+    financiero.payback_meses = parseInt(document.getElementById('modal-budget-payback').value) || financiero.payback_meses;
+    financiero.tir_pct = document.getElementById('modal-budget-tir').value;
+    financiero.van_eur = parseInt(document.getElementById('modal-budget-van').value) || financiero.van_eur;
+    if (costParsed) costParsed.financiero = financiero;
+    reservas.contingencia_pct = parseInt(document.getElementById('modal-budget-conting').value) || reservas.contingencia_pct;
+    if (presup) presup.reservas = reservas;
+    overlay.remove();
+    if (typeof showToast === 'function') showToast('Presupuesto actualizado \u2014 BAC: ' + Number(newBac).toLocaleString() + '\u20ac');
+  };
+}
+
+// ═══ MODAL: Quality Gate Detail (P57) ═══
+function showQualityGateModal(gate, allGates, qualParsed, pipelineData) {
+  var old = document.getElementById('modal-quality-gate');
+  if (old) old.remove();
+  var overlay = document.createElement('div');
+  overlay.id = 'modal-quality-gate';
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+  var modal = document.createElement('div');
+  modal.style.cssText = 'background:#1a1d24;border:1px solid #3a3f4a;border-radius:12px;padding:24px;width:90%;max-width:550px;max-height:85vh;overflow-y:auto;color:#e8e9ed;';
+  var estado = (gate.estado||'PENDING').toUpperCase();
+  var gc = estado==='PASSED'?'#22c55e':estado==='NEXT'?'#3b82f6':'#8b8f98';
+  var checklist = gate.checklist || gate.criterios || [];
+  var h = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">';
+  h += '<div><div style="font-size:20px;font-weight:700;color:' + gc + ';">' + (gate.fase||gate.gate||'') + ' \u2014 ' + (gate.gate_name||gate.nombre||'') + '</div>';
+  h += '<div style="font-size:12px;color:#8b8f98;margin-top:2px;">Estado: <span style="color:' + gc + ';font-weight:600;">' + estado + '</span></div></div>';
+  h += '<div style="cursor:pointer;font-size:20px;color:#8b8f98;padding:4px 8px;" id="modal-quality-close">\u2715</div></div>';
+  h += '<div style="margin-bottom:16px;"><label style="font-size:10px;color:#8b8f98;text-transform:uppercase;">Estado del Gate</label>';
+  h += '<select id="modal-quality-estado" style="width:100%;margin-top:4px;padding:8px 12px;background:#22262e;border:1px solid #333840;border-radius:6px;color:#e8e9ed;font-size:13px;">';
+  h += '<option value="PASSED"' + (estado==='PASSED'?' selected':'') + '>\u2713 PASSED</option>';
+  h += '<option value="NEXT"' + (estado==='NEXT'?' selected':'') + '>\u25b6 NEXT</option>';
+  h += '<option value="PENDING"' + (estado==='PENDING'?' selected':'') + '>\u23f3 PENDING</option>';
+  h += '<option value="FAILED"' + (estado==='FAILED'?' selected':'') + '>\u2717 FAILED</option>';
+  h += '</select></div>';
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">';
+  h += '<div><label style="font-size:10px;color:#8b8f98;">Semana</label><input type="number" id="modal-quality-semana" value="' + (gate.semana||'') + '" style="width:100%;margin-top:4px;padding:6px 10px;background:#22262e;border:1px solid #333840;border-radius:6px;color:#e8e9ed;font-size:13px;outline:none;" /></div>';
+  h += '<div><label style="font-size:10px;color:#8b8f98;">Responsable QA</label><input type="text" id="modal-quality-qa" value="' + (gate.responsable_qa||'').replace(/"/g,'&quot;') + '" style="width:100%;margin-top:4px;padding:6px 10px;background:#22262e;border:1px solid #333840;border-radius:6px;color:#e8e9ed;font-size:13px;outline:none;" /></div>';
+  h += '</div>';
+  if (checklist.length > 0) {
+    h += '<div style="font-size:11px;font-weight:600;color:#8b8f98;text-transform:uppercase;margin-bottom:8px;">Checklist (' + checklist.length + ' criterios)</div>';
+    checklist.forEach(function(c, ci) {
+      var clean = c.replace('\u2713','').replace('\u25cb','').trim();
+      var isDone = c.indexOf('\u2713') >= 0;
+      h += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;">';
+      h += '<input type="checkbox" id="modal-quality-chk-' + ci + '"' + (isDone?' checked':'') + ' style="width:16px;height:16px;accent-color:#22c55e;" />';
+      h += '<input type="text" id="modal-quality-txt-' + ci + '" value="' + clean.replace(/"/g,'&quot;') + '" style="flex:1;padding:6px 10px;background:#22262e;border:1px solid #333840;border-radius:6px;color:#e8e9ed;font-size:12px;outline:none;" />';
+      h += '</div>';
+    });
+  }
+  h += '<div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">';
+  h += '<button id="modal-quality-save" style="padding:8px 20px;background:#8b5cf6;color:white;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">\ud83d\udcbe Guardar</button>';
+  h += '<button id="modal-quality-cancel" style="padding:8px 20px;background:#333840;color:#8b8f98;border:none;border-radius:6px;font-size:12px;cursor:pointer;">Cerrar</button>';
+  h += '</div>';
+  modal.innerHTML = h;
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  document.getElementById('modal-quality-close').onclick = function() { overlay.remove(); };
+  document.getElementById('modal-quality-cancel').onclick = function() { overlay.remove(); };
+  document.getElementById('modal-quality-save').onclick = function() {
+    gate.estado = document.getElementById('modal-quality-estado').value;
+    gate.semana = parseInt(document.getElementById('modal-quality-semana').value) || gate.semana;
+    gate.responsable_qa = document.getElementById('modal-quality-qa').value;
+    var newChecklist = [];
+    for (var ci = 0; ci < checklist.length; ci++) {
+      var chk = document.getElementById('modal-quality-chk-' + ci);
+      var txt = document.getElementById('modal-quality-txt-' + ci);
+      if (chk && txt) { newChecklist.push((chk.checked ? '\u2713 ' : '\u25cb ') + txt.value); }
+    }
+    gate.checklist = newChecklist;
+    gate.criterios = newChecklist;
+    overlay.remove();
+    if (typeof showToast === 'function') showToast('Gate ' + (gate.fase||gate.gate||'') + ' actualizado \u2014 ' + gate.estado);
+  };
 }
 
 function showBuildFinalScreen(pipelineData) {
@@ -10323,7 +10514,7 @@ function showBuildFinalScreen(pipelineData) {
   // ═══ TAB 1: PRESUPUESTO ═══
   var budgetSec = document.createElement('div');
   budgetSec.style.cssText = 'background:#1a1d24;border:1px solid #333840;border-radius:0 10px 10px 10px;padding:14px;margin-bottom:10px;';
-  var budgetHtml = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;"><span style="font-size:14px;font-weight:600;color:#10b981;">AG-016 Cost Analyzer — Presupuesto</span><span style="font-size:9px;padding:2px 8px;border-radius:4px;background:rgba(234,179,8,0.15);color:#eab308;font-weight:600;">Generado por IA</span></div>';
+  var budgetHtml = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;"><span style="font-size:14px;font-weight:600;color:#10b981;">AG-016 Cost Analyzer — Presupuesto</span><span style="font-size:9px;padding:2px 8px;border-radius:4px;background:rgba(234,179,8,0.15);color:#eab308;font-weight:600;">Generado por IA</span><button onclick="showBudgetDetailModal(costP, pipelineData)" style="margin-left:auto;padding:4px 12px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:4px;color:#10b981;font-size:10px;cursor:pointer;">\u270f Editar</button></div>';
   // BAC prominent box
   budgetHtml += '<div style="background:linear-gradient(135deg,rgba(34,197,94,0.08),rgba(59,130,246,0.08));border:1px solid rgba(34,197,94,0.2);border-radius:12px;padding:20px;text-align:center;margin-bottom:16px;"><div style="font-size:12px;color:#8b8f98;">BAC (Budget at Completion)</div><div style="font-size:36px;font-weight:700;color:#22c55e;">'+(bacTotal>0?Number(bacTotal).toLocaleString()+'\u20ac':'Pendiente')+'</div></div>';
 
@@ -10396,7 +10587,7 @@ function showBuildFinalScreen(pipelineData) {
 
   // ═══ TAB 2: GANTT + CPM ═══
   var ganttSec = document.createElement('div');
-  ganttSec.style.cssText = 'background:#1a1d24;border:1px solid #333840;border-radius:0 10px 10px 10px;padding:14px;margin-bottom:10px;';
+  ganttSec.style.cssText = 'background:#1a1d24;border:1px solid #333840;border-radius:0 10px 10px 10px;padding:14px;margin-bottom:10px;overflow-x:auto;';
   var ganttHtml = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;"><span style="font-size:14px;font-weight:600;color:#ec4899;">AG-007 — Gantt + Ruta cr\u00edtica</span><span style="font-size:9px;padding:2px 8px;border-radius:4px;background:rgba(234,179,8,0.15);color:#eab308;font-weight:600;">Planificado por IA</span></div>';
 
   var rutaCritica = (planP && planP.ruta_critica) || {};
@@ -10427,6 +10618,15 @@ function showBuildFinalScreen(pipelineData) {
   }
 
   ganttSec.innerHTML = ganttHtml;
+  // Wire Gantt bar clicks (P55)
+  ganttSec.querySelectorAll('[title^="Sprint "]').forEach(function(bar) {
+    bar.onclick = function() {
+      var txt = bar.getAttribute('title') || '';
+      var num = parseInt(txt.replace('Sprint ',''));
+      var sp = (sprints||[]).find(function(s){ return s.numero === num; });
+      if (sp) showGanttDetailModal(sp, planP, pipelineData);
+    };
+  });
   tabContents[2].appendChild(ganttSec);
 
   // ═══ TAB 3: QUALITY GATES ═══
@@ -10537,6 +10737,10 @@ function showBuildFinalScreen(pipelineData) {
   }
 
   qualSec.innerHTML = qualHtml;
+  // Wire Quality Gate clicks (P57)
+  qualSec.querySelectorAll('[onmouseenter*="scale"]').forEach(function(pill, gi) {
+    pill.onclick = function() { if (gates[gi]) showQualityGateModal(gates[gi], gates, qualP, pipelineData); };
+  });
   tabContents[3].appendChild(qualSec);
 
   // Append tabs
@@ -10674,6 +10878,7 @@ function showBuildFinalScreen(pipelineData) {
       target.style.background='#22262e';target.style.borderColor='#3a3f4a';target.style.color='#e8e9ed';
       var ml = tb2.parentNode.querySelector('div[style*="grid-template-columns"]');
       if(ml && ml.children[0]) Array.from(ml.children[0].children).forEach(function(tc,ti){tc.style.display=ti===idx?'block':'none';});
+      if(ml){if(idx===2){ml.style.gridTemplateColumns='1fr';if(ml.children[1])ml.children[1].style.display='none';}else{ml.style.gridTemplateColumns='1fr 280px';if(ml.children[1])ml.children[1].style.display='block';}}
     };
   }, 50);
 }
@@ -15454,6 +15659,122 @@ async function doChangeFirstPassword() {
 // ── INIT ── apply saved language + check existing session
 setLang(LANG);
 checkExistingSession();
+
+// ═══ AUTO-LAUNCH DESDE GOV-RUN / GOV-BUILD ═══
+(function() {
+  var hash = window.location.hash;
+  if (!hash) return;
+  var mode = null;
+  if (hash === '#auto-run') mode = 'run';
+  else if (hash === '#auto-build') mode = 'build';
+  if (!mode) return;
+
+  // ── MODO GOBERNADOR: ocultar todo, pipeline a pantalla completa ──
+  var style = document.createElement('style');
+  style.textContent = 'body.gov-mode .topbar { display:none!important; }' +
+    'body.gov-mode .pipeline-sidebar { display:none!important; }' +
+    'body.gov-mode .side-panel { display:none!important; }' +
+    'body.gov-mode .run-status-bar { display:none!important; }' +
+    'body.gov-mode #login-overlay { display:none!important; }' +
+    'body.gov-mode footer, body.gov-mode [class*="footer"] { display:none!important; }' +
+    'body.gov-mode .pipeline-main > .panel:first-child { display:none!important; }' +
+    'body.gov-mode .pipeline-main > .panel:nth-child(4) { display:none!important; }' +
+    'body.gov-mode .pipeline-main > .panel:nth-child(5) { display:none!important; }' +
+    'body.gov-mode { background:#0d1117!important; margin:0!important; padding:0!important; overflow:auto!important; }' +
+    'body.gov-mode .pipeline-layout { display:block!important; width:100%!important; }' +
+    'body.gov-mode .pipeline-main { width:100%!important; max-width:100%!important; margin:0!important; padding:8px!important; }' +
+    'body.gov-mode .pipeline-main > .panel:nth-child(2) { width:100%!important; }' +
+    'body.gov-mode .pipeline-main > .panel:nth-child(3) { width:100%!important; }';
+  document.head.appendChild(style);
+  // Leer token del padre si viene en la URL
+  var urlParams = new URLSearchParams(window.location.search);
+  var parentToken = urlParams.get('token');
+  if (parentToken) {
+    AUTH_TOKEN = parentToken;
+    localStorage.setItem('cpm_token', parentToken);
+    var loginOv = document.getElementById('login-overlay');
+    if (loginOv) loginOv.style.display = 'none';
+    var appEl = document.getElementById('app');
+    if (appEl) appEl.style.display = 'block';
+  }
+
+  document.body.classList.add('gov-mode');
+  function hideGovPanels() {
+    document.body.classList.add('gov-mode');
+    // Ocultar panel del formulario ITSM (contiene #run-exec-btn)
+    var runBtn = document.getElementById('run-exec-btn');
+    if (runBtn) { var p = runBtn.closest('.panel'); if (p) p.style.display = 'none'; }
+    // Ocultar panel de Incidencias Registradas (contiene #run-buffer-list)
+    var bufList = document.getElementById('run-buffer-list');
+    if (bufList) { var p = bufList.closest('.panel'); if (p) p.style.display = 'none'; }
+    // Ocultar barra de estado RUN
+    var statusBar = document.querySelector('.run-status-bar');
+    if (statusBar) statusBar.style.display = 'none';
+    // BUILD: ocultar formulario (contiene #build-exec-btn o #bf-nombre)
+    var buildBtn = document.getElementById('build-exec-btn') || document.getElementById('bf-nombre');
+    if (buildBtn) { var p = buildBtn.closest('.panel'); if (p) p.style.display = 'none'; }
+    // BUILD: ocultar buffer/registradas si existe
+    var buildBuf = document.getElementById('build-buffer-list');
+    if (buildBuf) { var p = buildBuf.closest('.panel'); if (p) p.style.display = 'none'; }
+  }
+  hideGovPanels();
+  document.addEventListener('DOMContentLoaded', hideGovPanels);
+  setTimeout(hideGovPanels, 100);
+  setTimeout(hideGovPanels, 500);
+  setTimeout(hideGovPanels, 1500);
+  setTimeout(hideGovPanels, 3000);
+
+  // ── LANZAR PIPELINE ──
+  var data = localStorage.getItem('cpm_pipeline_data') || '';
+  setTimeout(function() {
+    if (mode === 'run') {
+      var runTab = document.querySelector('[data-tab="run"]') || document.querySelector('[onclick*="showTab"][onclick*="run"]');
+      if (runTab) runTab.click();
+      setTimeout(function() {
+        var input = document.getElementById('run-input');
+        if (input) input.value = data;
+        if (typeof executePipeline === 'function') executePipeline('run');
+      }, 500);
+    } else if (mode === 'build') {
+      var buildTab = document.querySelector('[data-tab="build"]') || document.querySelector('[onclick*="showTab"][onclick*="build"]');
+      if (buildTab) buildTab.click();
+      setTimeout(function() {
+        var parts = data.split(' | ');
+        var nombreEl = document.getElementById('bf-nombre');
+        var resumenEl = document.getElementById('bf-resumen');
+        if (nombreEl && parts[0]) nombreEl.value = parts[0];
+        if (resumenEl && parts[1]) resumenEl.value = parts[1];
+        else if (resumenEl) resumenEl.value = data;
+        if (typeof buildSubmitAndPipeline === 'function') buildSubmitAndPipeline();
+      }, 500);
+    }
+    history.replaceState(null, '', window.location.pathname);
+  }, 2000);
+
+  // ── OBSERVADOR: detectar cuando el pipeline termina y avisar al padre ──
+  var checkInterval = setInterval(function() {
+    var done = false;
+    if (mode === 'run') {
+      var statusEl = document.getElementById('run-status-val');
+      if (statusEl && statusEl.textContent === 'Idle') done = true;
+      var completedEl = document.querySelector('[class*="pipeline-complete"], [class*="chain-complete"]');
+      if (completedEl) done = true;
+    } else if (mode === 'build') {
+      var statusEl = document.getElementById('build-status-val');
+      if (statusEl && statusEl.textContent === 'Idle') done = true;
+      var launchBtn = document.querySelector('[class*="launch"], button[onclick*="launch"]');
+      if (launchBtn && launchBtn.textContent.indexOf('lanzado') >= 0) done = true;
+    }
+    if (done) {
+      clearInterval(checkInterval);
+      setTimeout(function() {
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({type: 'pipeline-complete', mode: mode}, '*');
+        }
+      }, 3000);
+    }
+  }, 2000);
+})();
 </script>
 </body>
 </html>

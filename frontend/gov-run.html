@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cognitive PMO — Gobernanza RUN</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+[data-theme="dark"]{--bg-primary:#0d1117;--bg-secondary:#161b22;--bg-card:#1c2128;--bg-elevated:#21262d;--border:#30363d;--text-primary:#e6edf3;--text-secondary:#8b949e;--text-muted:#6e7681;--accent-blue:#58a6ff;--accent-green:#3fb950;--accent-red:#f85149;--accent-orange:#d29922;--accent-purple:#bc8cff;--accent-cyan:#39d2c0;--accent-yellow:#d29922;--shadow:0 2px 8px rgba(0,0,0,0.3);--bg2:#22262e;--bg3:#2a2e37;--mono:'JetBrains Mono',monospace;}
+[data-theme="light"]{--bg-primary:#f6f8fa;--bg-secondary:#ffffff;--bg-card:#ffffff;--bg-elevated:#f0f3f6;--border:#d1d9e0;--text-primary:#1f2328;--text-secondary:#656d76;--text-muted:#8b949e;--accent-blue:#0969da;--accent-green:#1a7f37;--accent-red:#cf222e;--accent-orange:#9a6700;--accent-purple:#8250df;--accent-cyan:#0891b2;--accent-yellow:#9a6700;--shadow:0 1px 4px rgba(0,0,0,0.08);--bg2:#f0f3f6;--bg3:#e8ecf0;--mono:'JetBrains Mono',monospace;}
+:root{--run-grd:linear-gradient(135deg,#f85149,#d29922);--font-body:'DM Sans',-apple-system,sans-serif;--font-mono:'JetBrains Mono',monospace;--r:8px;--rl:12px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:var(--font-body);background:var(--bg-primary);color:var(--text-primary);min-height:100vh;transition:background .3s,color .3s;}
+
+/* Login */
+#login-overlay{position:fixed;inset:0;background:var(--bg-primary);display:flex;align-items:center;justify-content:center;z-index:9999;}
+.lc{background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--rl);padding:44px 36px;width:390px;box-shadow:var(--shadow);}
+.lc h1{font-size:21px;font-weight:700;margin-bottom:3px;}.lc .sub{color:var(--text-secondary);font-size:13px;margin-bottom:26px;}
+.lc-badge{display:inline-flex;align-items:center;gap:5px;background:var(--run-grd);color:#fff;font-size:10px;font-weight:700;padding:3px 11px;border-radius:20px;letter-spacing:.8px;text-transform:uppercase;margin-bottom:7px;}
+.lc input{width:100%;padding:10px 13px;margin-bottom:12px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg-elevated);color:var(--text-primary);font-size:14px;font-family:var(--font-body);outline:none;}.lc input:focus{border-color:var(--accent-blue);}
+.lc button{width:100%;padding:11px;border:none;border-radius:var(--r);background:var(--accent-red);color:#fff;font-weight:600;font-size:14px;cursor:pointer;}.lc button:hover{opacity:.9;}
+.lerr{color:var(--accent-red);font-size:12px;margin-bottom:8px;display:none;}
+
+/* Header */
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:13px 22px;border-bottom:1px solid var(--border);background:var(--bg-secondary);}
+.hdr-l{display:flex;align-items:center;gap:11px;}
+.hdr-logo{width:36px;height:36px;border-radius:10px;background:var(--run-grd);display:flex;align-items:center;justify-content:center;}
+.hdr-logo svg{width:20px;height:20px;}
+.hdr-t{font-size:16px;font-weight:700;}.hdr-s{font-size:11px;color:var(--text-secondary);}
+.hdr-r{display:flex;align-items:center;gap:12px;}
+.hdr-u{font-size:11px;color:var(--text-secondary);text-align:right;}.hdr-u strong{color:var(--text-primary);display:block;}
+.pdot{width:7px;height:7px;border-radius:50%;background:var(--accent-green);animation:p 2s ease-in-out infinite;}@keyframes p{0%,100%{opacity:1;}50%{opacity:.4;}}
+.thm{display:flex;align-items:center;gap:3px;font-size:11px;color:var(--text-muted);}
+.thm-btn{width:34px;height:18px;border-radius:9px;background:var(--bg-elevated);border:1px solid var(--border);cursor:pointer;position:relative;}.thm-btn::after{content:'';position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:var(--text-secondary);transition:transform .3s;}
+[data-theme="light"] .thm-btn::after{transform:translateX(16px);background:var(--accent-orange);}
+.btn-out{padding:5px 12px;border-radius:var(--r);border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:11px;cursor:pointer;font-family:var(--font-body);}
+
+/* Tabs */
+.tabs{display:flex;padding:0 22px;background:var(--bg-secondary);border-bottom:1px solid var(--border);overflow-x:auto;}
+.tb{padding:11px 18px;font-size:13px;font-weight:600;color:var(--text-secondary);border:none;background:transparent;cursor:pointer;position:relative;font-family:var(--font-body);display:flex;align-items:center;gap:7px;white-space:nowrap;}
+.tb:hover{color:var(--text-primary);}.tb.a{color:var(--accent-red);}
+.tb.a::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:2px;background:var(--accent-red);}
+.tb svg{width:20px;height:20px;flex-shrink:0;}
+
+.cnt{padding:18px 22px;}.tp{display:none;animation:fi .25s;}.tp.a{display:block;}@keyframes fi{from{opacity:0;transform:translateY(3px);}to{opacity:1;transform:translateY(0);}}
+
+/* ITSM Form - matching mother */
+.itsm-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:16px;}
+.itsm-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.itsm-header-title{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;}
+.itsm-body{padding:12px 14px;}
+.sap-field{margin:0 0 8px;}
+.sap-label{font-size:10px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:3px;}
+.sap-input,.sap-textarea{width:100%;padding:8px 10px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:13px;font-family:var(--font-body);outline:none;transition:border .2s;}
+.sap-input:focus,.sap-textarea:focus{border-color:var(--accent-blue);}
+.sap-textarea{resize:vertical;min-height:52px;font-size:12px;}
+.sap-input.mono{font-family:var(--font-mono);}
+.mode-badge{font-size:9px;font-weight:700;padding:3px 10px;border-radius:4px;letter-spacing:0.5px;}
+.mode-run{background:rgba(59,130,246,.15);color:var(--accent-blue);}
+.btn-exec{flex:1;padding:10px 16px;background:linear-gradient(135deg,#3b82f6,#2563eb);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;}
+.btn-exec:hover{opacity:.9;}.btn-exec:disabled{opacity:.5;}
+.btn-reset{padding:8px 14px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--text-secondary);font-size:12px;cursor:pointer;white-space:nowrap;}
+
+/* Stats, Tables, Kanban - same as before */
+.sr{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:11px;margin-bottom:18px;}
+.sc{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--rl);padding:15px 16px;position:relative;overflow:hidden;}.sc::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.sc.red::before{background:var(--accent-red);}.sc.org::before{background:var(--accent-orange);}.sc.grn::before{background:var(--accent-green);}.sc.blu::before{background:var(--accent-blue);}
+.sl{font-size:10px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}.sv{font-size:24px;font-weight:700;font-family:var(--font-mono);}
+.tc{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;}
+.th{padding:13px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}.th h3{font-size:13px;font-weight:700;}.tcnt{font-size:11px;color:var(--text-muted);font-family:var(--font-mono);}
+.ts{overflow-x:auto;}table{width:100%;border-collapse:collapse;min-width:780px;}
+thead th{padding:8px 13px;text-align:left;font-size:10px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.4px;background:var(--bg-elevated);border-bottom:1px solid var(--border);white-space:nowrap;}
+tbody td{padding:8px 13px;font-size:12px;border-bottom:1px solid var(--border);}tbody tr:hover{background:rgba(88,166,255,.04);}tbody tr:last-child td{border-bottom:none;}
+.badge{display:inline-block;padding:2px 7px;border-radius:11px;font-size:10px;font-weight:600;}
+.badge-p1{background:rgba(248,81,73,.15);color:var(--accent-red);}.badge-p2{background:rgba(210,153,34,.15);color:var(--accent-orange);}.badge-p3{background:rgba(88,166,255,.15);color:var(--accent-blue);}.badge-p4{background:rgba(139,148,158,.15);color:var(--text-secondary);}
+.badge-n1{background:rgba(139,148,158,.12);color:var(--text-secondary);}.badge-n2{background:rgba(88,166,255,.12);color:var(--accent-blue);}.badge-n3{background:rgba(210,153,34,.12);color:var(--accent-orange);}.badge-n4{background:rgba(248,81,73,.12);color:var(--accent-red);}
+.si{display:inline-flex;align-items:center;gap:5px;font-size:11px;}.sd{width:7px;height:7px;border-radius:50%;flex-shrink:0;}.sd-a{background:var(--accent-green);}.sd-b{background:var(--accent-blue);}.sd-i{background:var(--accent-red);animation:p 1.5s ease-in-out infinite;}
+.ub{width:52px;height:5px;border-radius:3px;background:var(--bg-elevated);display:inline-block;vertical-align:middle;margin-right:4px;overflow:hidden;}.uf{height:100%;border-radius:3px;}
+.kb{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;}
+.kc{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--rl);min-height:320px;display:flex;flex-direction:column;}
+.kch{padding:11px 13px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.kct{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;}.kcn{font-size:10px;font-family:var(--font-mono);padding:2px 6px;background:var(--bg-elevated);border-radius:9px;color:var(--text-muted);}
+.kcb{padding:7px;flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;max-height:460px;}
+.kk{background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--r);padding:9px 11px;}.kk:hover{border-color:var(--accent-blue);}
+.kk-t{font-size:12px;font-weight:600;margin-bottom:4px;line-height:1.3;}.kk-m{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-muted);flex-wrap:wrap;}
+.kk-sla{font-family:var(--font-mono);font-size:9px;padding:1px 5px;border-radius:7px;background:rgba(248,81,73,.1);color:var(--accent-red);}
+.toast{position:fixed;bottom:18px;right:18px;padding:11px 18px;border-radius:var(--r);font-size:13px;font-weight:500;z-index:10000;transform:translateY(80px);opacity:0;transition:all .3s;box-shadow:var(--shadow);}.toast.show{transform:translateY(0);opacity:1;}.toast.ok{background:var(--accent-green);color:#fff;}.toast.err{background:var(--accent-red);color:#fff;}
+@media(max-width:900px){.kb{grid-template-columns:1fr 1fr;}table{min-width:600px;}.sr{grid-template-columns:1fr 1fr;}}
+@media(max-width:600px){.kb{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div id="login-overlay"><div class="lc">
+  <div class="lc-badge">GOB. RUN</div>
+  <h1>Cognitive PMO</h1><div class="sub">Panel del Coordinador de Operaciones</div>
+  <div class="lerr" id="lerr">Credenciales incorrectas</div>
+  <input type="email" id="le" placeholder="Email" autocomplete="email">
+  <input type="password" id="lp" placeholder="Contrase&ntilde;a" autocomplete="current-password">
+  <button onclick="doLogin()">Acceder</button>
+</div></div>
+
+<div id="app" style="display:none;">
+<div class="hdr"><div class="hdr-l">
+  <div class="hdr-logo"><svg viewBox="0 0 40 40" fill="none"><path d="M20 4L35 12V28L20 36L5 28V12L20 4Z" fill="rgba(255,255,255,.15)" stroke="rgba(255,255,255,.4)" stroke-width="1.5"/><circle cx="20" cy="17" r="5" stroke="#fff" stroke-width="1.5" fill="none"/><path d="M14 30c0-4 2.7-6 6-6s6 2 6 6" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg></div>
+  <div><div class="hdr-t">Gobernanza RUN</div><div class="hdr-s">Coordinaci&oacute;n de Operaciones &middot; ITSM</div></div>
+</div><div class="hdr-r">
+  <div class="thm"><span>&#9790;</span><div class="thm-btn" onclick="toggleTheme()"></div><span>&#9728;</span></div>
+  <div class="pdot"></div><div class="hdr-u"><strong id="un">Coordinador</strong><span id="ur">Gobernanza RUN</span></div>
+  <button class="btn-out" onclick="doLogout()">Salir</button>
+</div></div>
+
+<div class="tabs">
+  <button class="tb a" data-t="incidencias" onclick="sw('incidencias')"><svg viewBox="0 0 40 40" fill="none"><path d="M20 4L35 12V28L20 36L5 28V12L20 4Z" fill="rgba(248,81,73,.12)" stroke="var(--accent-red)" stroke-width="1.2"/><path d="M20 13v7M20 24v1" stroke="var(--accent-red)" stroke-width="2.5" stroke-linecap="round"/></svg>Incidencias</button>
+  <button class="tb" data-t="tecnicos" onclick="sw('tecnicos')"><svg viewBox="0 0 40 40" fill="none"><path d="M20 4L35 12V28L20 36L5 28V12L20 4Z" fill="rgba(188,140,255,.12)" stroke="var(--accent-purple)" stroke-width="1.2"/><circle cx="16" cy="16" r="3.5" stroke="var(--accent-purple)" stroke-width="1.2" fill="none"/><circle cx="26" cy="16" r="3.5" stroke="var(--accent-purple)" stroke-width="1.2" fill="none"/></svg>T&eacute;cnicos</button>
+  <button class="tb" data-t="kanban" onclick="sw('kanban')"><svg viewBox="0 0 40 40" fill="none"><path d="M20 4L35 12V28L20 36L5 28V12L20 4Z" fill="rgba(57,210,192,.12)" stroke="var(--accent-cyan)" stroke-width="1.2"/><rect x="10" y="12" width="5" height="16" rx="1" stroke="var(--accent-cyan)" stroke-width="1" fill="none"/><rect x="17.5" y="12" width="5" height="10" rx="1" stroke="var(--accent-cyan)" stroke-width="1" fill="none"/><rect x="25" y="12" width="5" height="13" rx="1" stroke="var(--accent-cyan)" stroke-width="1" fill="none"/></svg>Kanban</button>
+</div>
+
+<div class="cnt">
+  <!-- TAB 1: INCIDENCIAS con formulario ITSM real -->
+  <div class="tp a" id="p-incidencias">
+    <div class="sr" id="is"></div>
+    <div class="itsm-panel">
+      <div class="itsm-header">
+        <div class="itsm-header-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-blue)" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+          Registro de Incidencia ITSM
+        </div>
+        <span class="mode-badge mode-run">ITIL 4</span>
+      </div>
+      <div class="itsm-body">
+        <!-- Row 1: Catálogo + Canal -->
+        <div style="display:grid;grid-template-columns:3fr 1fr;gap:8px;margin-bottom:8px;">
+          <div class="sap-field" style="margin:0;">
+            <label class="sap-label">&#128203; Tipo de Incidencia (Cat&aacute;logo ITSM)</label>
+            <select class="sap-input" id="itsm-catalogo" onchange="itsmCatalogoChanged()"><option value="">— Seleccionar del cat&aacute;logo —</option></select>
+          </div>
+          <div class="sap-field" style="margin:0;">
+            <label class="sap-label">&#128225; Canal de Entrada</label>
+            <select class="sap-input" id="itsm-canal"><option value="Portal ITSM">Portal ITSM</option><option value="Tel&eacute;fono">Tel&eacute;fono</option><option value="Email">Email</option><option value="Chat">Chat</option><option value="Monitorizaci&oacute;n">Monitorizaci&oacute;n</option><option value="Presencial">Presencial</option></select>
+          </div>
+        </div>
+        <!-- Row 2: Auto-populated info bar -->
+        <div id="itsm-info-bar" style="display:none;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:8px;">
+          <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+            <div><span style="font-size:9px;color:var(--text-muted);text-transform:uppercase;">Complejidad</span><div style="font-size:12px;font-weight:700;" id="itsm-complejidad">—</div></div>
+            <div><span style="font-size:9px;color:var(--text-muted);text-transform:uppercase;">&Aacute;rea</span><div style="font-size:12px;font-weight:700;" id="itsm-area-auto">—</div></div>
+            <div><span style="font-size:9px;color:var(--text-muted);text-transform:uppercase;">SLA Objetivo</span><div style="font-size:12px;font-weight:700;font-family:var(--font-mono);" id="itsm-sla-obj">—</div></div>
+            <div><span style="font-size:9px;color:var(--text-muted);text-transform:uppercase;">Nivel M&iacute;nimo</span><div style="font-size:12px;font-weight:700;" id="itsm-nivel-min">—</div></div>
+            <div><span style="font-size:9px;color:var(--text-muted);text-transform:uppercase;">Skills Req.</span><div style="font-size:12px;font-weight:700;font-family:var(--font-mono);" id="itsm-skills-count">—</div></div>
+            <div style="margin-left:auto;"><span style="font-size:9px;color:var(--text-muted);text-transform:uppercase;">Prioridad Sugerida</span><div style="font-size:16px;font-weight:800;font-family:var(--font-mono);" id="itsm-prio-sugerida">—</div></div>
+          </div>
+        </div>
+        <!-- Row 3: Impact × Urgency Matrix -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:8px;">
+          <div class="sap-field" style="margin:0;"><label class="sap-label">&#128165; Impacto</label><select class="sap-input" id="itsm-impacto" onchange="itsmCalcPriority()"><option value="Cr&iacute;tico">1 — Cr&iacute;tico (Organizaci&oacute;n)</option><option value="Alto">2 — Alto (Departamento)</option><option value="Medio" selected>3 — Medio (Grupo)</option><option value="Bajo">4 — Bajo (Individual)</option></select></div>
+          <div class="sap-field" style="margin:0;"><label class="sap-label">&#9201; Urgencia</label><select class="sap-input" id="itsm-urgencia" onchange="itsmCalcPriority()"><option value="Cr&iacute;tica">1 — Cr&iacute;tica (Inmediata)</option><option value="Alta">2 — Alta (&lt;2h)</option><option value="Media" selected>3 — Media (&lt;8h)</option><option value="Baja">4 — Baja (Planificable)</option></select></div>
+          <div class="sap-field" style="margin:0;"><label class="sap-label">&#127919; Prioridad Calculada</label><div id="itsm-prio-calc" style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-family:var(--font-mono);font-size:16px;font-weight:800;text-align:center;color:var(--accent-yellow);">P3</div></div>
+          <div class="sap-field" style="margin:0;"><label class="sap-label">&#9200; SLA (horas)</label><input class="sap-input mono" id="itsm-sla" type="number" min="0.5" step="0.5" value="24" style="text-align:center;font-weight:700;font-family:var(--font-mono);"></div>
+        </div>
+        <!-- Row 4: Description + Service + CI -->
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;margin-bottom:8px;">
+          <div class="sap-field" style="margin:0;"><label class="sap-label">&#128221; Descripci&oacute;n Detallada</label><textarea class="sap-textarea" id="run-input" placeholder="Describe el s&iacute;ntoma, contexto y cualquier detalle relevante..."></textarea></div>
+          <div>
+            <div class="sap-field" style="margin:0 0 8px;"><label class="sap-label">&#128421; Servicio Afectado</label><select class="sap-input" id="itsm-servicio"><option value="">— Seleccionar —</option><option>Banca Online</option><option>App M&oacute;vil</option><option>Bizum / Pagos</option><option>SWIFT Alliance</option><option>Red Oficinas</option><option>Cajeros ATM</option><option>Core Bancario</option><option>Email / Ofim&aacute;tica</option><option>VPN Corporativa</option><option>Base de Datos</option><option>Infraestructura</option><option>Seguridad Perimetral</option></select></div>
+            <div class="sap-field" style="margin:0;"><label class="sap-label">&#128100; Reportado por</label><input class="sap-input" id="itsm-reporter" placeholder="Nombre del reportante"></div>
+          </div>
+          <div>
+            <div class="sap-field" style="margin:0 0 8px;"><label class="sap-label">&#128295; CI Afectado (CMDB)</label><select class="sap-input" id="itsm-ci"><option value="">Cargando activos CMDB...</option></select></div>
+            <div class="sap-field" style="margin:0;"><label class="sap-label">&#128188; Impacto de Negocio</label><select class="sap-input" id="itsm-impacto-neg"><option value="">— Evaluar —</option><option>P&eacute;rdida financiera directa</option><option>Interrupci&oacute;n servicio cliente</option><option>Riesgo regulatorio (BCE/CNMV)</option><option>Degradaci&oacute;n rendimiento</option><option>Impacto interno operativo</option><option>Impacto cosm&eacute;tico / menor</option></select></div>
+          </div>
+        </div>
+        <!-- Buttons -->
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="btn-exec" id="run-exec-btn" onclick="itsmSubmitAndPipeline()" style="flex:1;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Registrar Incidencia + Ejecutar Pipeline IA
+          </button>
+          <button class="btn-reset" onclick="resetForm()">&#8634; Reset</button>
+        </div>
+      </div>
+    </div>
+    <!-- Incidents table -->
+    <div class="tc"><div class="th"><h3>Incidencias recientes</h3><span class="tcnt" id="ic">0</span></div><div class="ts" id="ib"><div style="padding:35px;text-align:center;color:var(--text-muted);">Cargando...</div></div></div>
+  </div>
+
+  <!-- TAB 2: TÉCNICOS -->
+  <div class="tp" id="p-tecnicos"><div class="sr" id="ts2"></div>
+    <div class="tc"><div class="th"><h3>Estado de t&eacute;cnicos</h3><span class="tcnt" id="tc2">0</span></div><div class="ts" id="tb2"><div style="padding:35px;text-align:center;color:var(--text-muted);">Cargando...</div></div></div>
+  </div>
+
+  <!-- TAB 3: KANBAN -->
+  <div class="tp" id="p-kanban"><div class="sr" id="ks"></div><div class="kb" id="kbb"><div style="grid-column:1/-1;padding:35px;text-align:center;color:var(--text-muted);">Cargando...</div></div></div>
+</div>
+</div>
+
+<!-- Pipeline iframe overlay -->
+<div id="pipeline-overlay" style="display:none;position:fixed;inset:0;z-index:9998;background:var(--bg-primary);flex-direction:column;">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 20px;background:var(--bg-secondary);border-bottom:1px solid var(--border);">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="width:28px;height:28px;border-radius:8px;background:var(--run-grd);display:flex;align-items:center;justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></div>
+      <span style="font-size:14px;font-weight:700;">Pipeline RUN — Motor Cognitivo</span>
+      <span style="font-size:11px;color:var(--text-muted);">Ejecutando en index.html</span>
+    </div>
+    <button onclick="closePipeline()" style="padding:6px 14px;border-radius:var(--r);border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:12px;cursor:pointer;">&#10005; Cerrar pipeline</button>
+  </div>
+  <iframe id="pipeline-frame" style="flex:1;width:100%;border:none;" src="about:blank"></iframe>
+</div>
+
+<div class="toast" id="tst"></div>
+
+<script>
+var AB=window.location.origin,TK=localStorage.getItem('cpm_token')||'';
+var CATALOGO_DATA=[];
+
+function toggleTheme(){var h=document.documentElement,n=h.getAttribute('data-theme')==='dark'?'light':'dark';h.setAttribute('data-theme',n);localStorage.setItem('cpm_theme',n);}
+(function(){var t=localStorage.getItem('cpm_theme');if(t)document.documentElement.setAttribute('data-theme',t);})();
+
+function af(u,o){o=o||{};o.headers=o.headers||{};if(TK)o.headers['Authorization']='Bearer '+TK;if(o.body&&typeof o.body==='string')o.headers['Content-Type']='application/json';return fetch(AB+u,o).then(function(r){return r.text().then(function(t){try{return JSON.parse(t);}catch(e){return t;}});});}
+function doLogin(){var e=document.getElementById('le').value,p=document.getElementById('lp').value;fetch(AB+'/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})}).then(function(r){return r.text().then(function(t){try{return JSON.parse(t);}catch(x){return{};}});}).then(function(d){if(d.token){TK=d.token;localStorage.setItem('cpm_token',d.token);var u=d.user||d;document.getElementById('login-overlay').style.display='none';document.getElementById('app').style.display='block';document.getElementById('un').textContent=u.nombre_completo||e;document.getElementById('ur').textContent=u.rol||'Coordinador RUN';init();}else{document.getElementById('lerr').style.display='block';}}).catch(function(){document.getElementById('lerr').style.display='block';});}
+function doLogout(){localStorage.removeItem('cpm_token');TK='';location.reload();}
+if(TK){af('/health').then(function(d){if(d&&d.status==='ok'){document.getElementById('login-overlay').style.display='none';document.getElementById('app').style.display='block';init();}}).catch(function(){});}
+document.getElementById('lp').addEventListener('keypress',function(e){if(e.key==='Enter')doLogin();});
+function sw(n){document.querySelectorAll('.tb').forEach(function(b){b.classList.remove('a');});document.querySelector('.tb[data-t="'+n+'"]').classList.add('a');document.querySelectorAll('.tp').forEach(function(p){p.classList.remove('a');});document.getElementById('p-'+n).classList.add('a');}
+function toast(m,t){var e=document.getElementById('tst');e.textContent=m;e.className='toast '+(t||'ok')+' show';setTimeout(function(){e.classList.remove('show');},3000);}
+
+function init(){loadCatalogo();loadCMDB();loadInc();loadTec();loadKan();}
+
+// ═══ ITSM CATALOGO — exact logic from mother ═══
+function loadCatalogo(){
+  af('/catalogo/incidencias').then(function(d){
+    var items=Array.isArray(d)?d:(d.catalogo||[]);
+    CATALOGO_DATA=items;
+    var sel=document.getElementById('itsm-catalogo');
+    sel.innerHTML='<option value="">— Seleccionar del cat\u00e1logo —</option>';
+    var seen={};
+    items.forEach(function(c){
+      var nm=c.incidencia||c.nombre||'';
+      if(!nm||seen[nm])return;
+      seen[nm]=true;
+      var o=document.createElement('option');
+      o.value=c.id_catalogo||'';
+      o.textContent=nm;
+      o.dataset.prio=c.prioridad_sugerida||'P3';
+      o.dataset.comp=c.complejidad||'';
+      o.dataset.area=c.area_afectada||'';
+      o.dataset.sla=c.sla_objetivo_horas||'24';
+      o.dataset.nivel=c.nivel_minimo||'';
+      o.dataset.skills=c.total_skills_requeridas||'';
+      sel.appendChild(o);
+    });
+  });
+}
+
+function itsmCatalogoChanged(){
+  var sel=document.getElementById('itsm-catalogo');
+  var opt=sel.selectedOptions[0];
+  var bar=document.getElementById('itsm-info-bar');
+  if(!opt||!opt.value){bar.style.display='none';return;}
+  bar.style.display='block';
+  var prio=opt.dataset.prio||'P3';
+  var prioColors={P1:'var(--accent-red)',P2:'var(--accent-orange)',P3:'var(--accent-yellow)',P4:'var(--accent-green)'};
+  document.getElementById('itsm-complejidad').textContent=opt.dataset.comp||'\u2014';
+  document.getElementById('itsm-complejidad').style.color=opt.dataset.comp==='Compleja'?'var(--accent-red)':opt.dataset.comp==='Media'?'var(--accent-yellow)':'var(--accent-green)';
+  document.getElementById('itsm-area-auto').textContent=opt.dataset.area||'\u2014';
+  document.getElementById('itsm-sla-obj').textContent=(opt.dataset.sla||'\u2014')+'h';
+  document.getElementById('itsm-sla-obj').style.color=parseFloat(opt.dataset.sla)<=4?'var(--accent-red)':'var(--text-primary)';
+  document.getElementById('itsm-nivel-min').textContent=opt.dataset.nivel||'\u2014';
+  document.getElementById('itsm-skills-count').textContent=opt.dataset.skills||'\u2014';
+  document.getElementById('itsm-prio-sugerida').textContent=prio;
+  document.getElementById('itsm-prio-sugerida').style.color=prioColors[prio]||'var(--text-primary)';
+  document.getElementById('itsm-sla').value=opt.dataset.sla||24;
+  var pmap={P1:['Cr\u00edtico','Cr\u00edtica'],P2:['Alto','Alta'],P3:['Medio','Media'],P4:['Bajo','Baja']};
+  var pair=pmap[prio]||['Medio','Media'];
+  document.getElementById('itsm-impacto').value=pair[0];
+  document.getElementById('itsm-urgencia').value=pair[1];
+  itsmCalcPriority();
+  var desc=document.getElementById('run-input');
+  if(!desc.value.trim())desc.value=opt.textContent;
+}
+
+function itsmCalcPriority(){
+  var impMap={'\u0043r\u00edtico':1,'Alto':2,'Medio':3,'Bajo':4};
+  var urgMap={'\u0043r\u00edtica':1,'Alta':2,'Media':3,'Baja':4};
+  var imp=impMap[document.getElementById('itsm-impacto').value]||3;
+  var urg=urgMap[document.getElementById('itsm-urgencia').value]||3;
+  var matrix={'1,1':'P1','1,2':'P1','1,3':'P2','1,4':'P3','2,1':'P1','2,2':'P2','2,3':'P3','2,4':'P3','3,1':'P2','3,2':'P3','3,3':'P3','3,4':'P4','4,1':'P3','4,2':'P3','4,3':'P4','4,4':'P4'};
+  var prio=matrix[imp+','+urg]||'P3';
+  var el=document.getElementById('itsm-prio-calc');
+  el.textContent=prio;
+  var colors={P1:'var(--accent-red)',P2:'var(--accent-orange)',P3:'var(--accent-yellow)',P4:'var(--accent-green)'};
+  el.style.color=colors[prio];el.style.borderColor=colors[prio];
+  var slaMap={P1:4,P2:8,P3:24,P4:72};
+  var slaEl=document.getElementById('itsm-sla');
+  if(slaEl&&!document.getElementById('itsm-catalogo').value)slaEl.value=slaMap[prio];
+}
+
+function loadCMDB(){
+  af('/cmdb/activos').then(function(d){
+    var items=Array.isArray(d)?d:(d.activos||d.data||[]);
+    var sel=document.getElementById('itsm-ci');
+    sel.innerHTML='<option value="">— Seleccionar activo CMDB —</option>';
+    items.forEach(function(a){
+      var o=document.createElement('option');
+      o.value=a.id_activo||a.id||'';
+      o.textContent=(a.nombre||a.hostname||'')+(a.tipo?' ['+a.tipo+']':'');
+      sel.appendChild(o);
+    });
+  }).catch(function(){
+    document.getElementById('itsm-ci').innerHTML='<option value="">Sin datos CMDB</option>';
+  });
+}
+
+function itsmSubmitAndPipeline(){
+  var desc=document.getElementById('run-input').value.trim();
+  if(!desc){document.getElementById('run-input').focus();toast('Describe la incidencia','err');return;}
+  var prio=document.getElementById('itsm-prio-calc').textContent||'P3';
+  var catOpt=document.getElementById('itsm-catalogo').selectedOptions[0];
+  var data=desc+' ['+prio+'] '+(catOpt&&catOpt.value?catOpt.textContent:'');
+  // Register via API
+  var payload={descripcion:desc,prioridad:prio,area_afectada:document.getElementById('itsm-area-auto').textContent||'',urgencia:document.getElementById('itsm-urgencia').value,canal:document.getElementById('itsm-canal').value,servicio:document.getElementById('itsm-servicio').value,ci_afectado:document.getElementById('itsm-ci').value,impacto_negocio:document.getElementById('itsm-impacto-neg').value,reportado_por:document.getElementById('itsm-reporter').value,sla_horas:parseFloat(document.getElementById('itsm-sla').value)||24};
+  if(catOpt&&catOpt.value)payload.id_catalogo=parseInt(catOpt.value);
+  af('/incidencias',{method:'POST',body:JSON.stringify(payload)}).then(function(){
+    toast('Incidencia registrada');
+    loadInc();
+    openPipeline('run',data);
+  }).catch(function(){
+    toast('Error registrando','err');
+    openPipeline('run',data);
+  });
+}
+
+function resetForm(){
+  document.getElementById('itsm-catalogo').value='';
+  document.getElementById('run-input').value='';
+  document.getElementById('itsm-reporter').value='';
+  document.getElementById('itsm-info-bar').style.display='none';
+  document.getElementById('itsm-impacto').value='Medio';
+  document.getElementById('itsm-urgencia').value='Media';
+  itsmCalcPriority();
+}
+
+// ═══ Pipeline iframe ═══
+function openPipeline(mode,data){var ov=document.getElementById('pipeline-overlay');var fr=document.getElementById('pipeline-frame');if(!ov||!fr)return;localStorage.setItem('cpm_pipeline_mode',mode);localStorage.setItem('cpm_pipeline_data',data||'');ov.style.display='flex';fr.src='/index.html?token='+encodeURIComponent(TK)+'#auto-'+mode;}
+window.addEventListener('message',function(e){if(e.data&&e.data.type==='pipeline-complete'){closePipeline();loadInc();loadTec();loadKan();toast('Pipeline RUN completado');}});
+function closePipeline(){var ov=document.getElementById('pipeline-overlay');var fr=document.getElementById('pipeline-frame');if(ov)ov.style.display='none';if(fr)fr.src='about:blank';localStorage.removeItem('cpm_pipeline_mode');localStorage.removeItem('cpm_pipeline_data');}
+
+// ═══ Incidencias table ═══
+function loadInc(){af('/incidencias').then(function(d){var i=Array.isArray(d)?d:(d.incidencias||[]);var p1=0,p2=0,p3=0;i.forEach(function(x){if(x.prioridad==='P1')p1++;else if(x.prioridad==='P2')p2++;else if(x.prioridad==='P3')p3++;});
+document.getElementById('is').innerHTML='<div class="sc red"><div class="sl">P1 Cr\u00edticas</div><div class="sv" style="color:var(--accent-red)">'+p1+'</div></div><div class="sc org"><div class="sl">P2 Altas</div><div class="sv" style="color:var(--accent-orange)">'+p2+'</div></div><div class="sc blu"><div class="sl">P3 Medias</div><div class="sv" style="color:var(--accent-blue)">'+p3+'</div></div><div class="sc grn"><div class="sl">Total</div><div class="sv">'+i.length+'</div></div>';
+document.getElementById('ic').textContent=i.length;
+if(!i.length){document.getElementById('ib').innerHTML='<div style="padding:35px;text-align:center;color:var(--text-muted);">Sin incidencias</div>';return;}
+var h='<table><thead><tr><th>Ticket</th><th>Prioridad</th><th>Tipo</th><th>\u00c1rea</th><th>Estado</th><th>SLA</th><th>Creada</th></tr></thead><tbody>';
+i.slice(0,50).forEach(function(x){h+='<tr><td style="font-family:var(--font-mono);font-size:11px;">'+(x.ticket_id||x.id||'\u2014')+'</td><td><span class="badge badge-'+(x.prioridad||'p3').toLowerCase()+'">'+(x.prioridad||'\u2014')+'</span></td><td>'+(x.tipo||x.nombre||x.descripcion||'\u2014').substring(0,40)+'</td><td>'+(x.area||x.area_afectada||x.silo||'\u2014')+'</td><td>'+(x.estado||'Abierta')+'</td><td style="font-family:var(--font-mono);font-size:10px;">'+(x.sla_horas?x.sla_horas+'h':'\u2014')+'</td><td style="color:var(--text-muted);font-size:10px;">'+(x.created_at?new Date(x.created_at).toLocaleDateString('es-ES'):'\u2014')+'</td></tr>';});
+h+='</tbody></table>';document.getElementById('ib').innerHTML=h;}).catch(function(){document.getElementById('ib').innerHTML='<div style="padding:35px;text-align:center;color:var(--text-muted);">Error</div>';});}
+
+// ═══ Técnicos ═══
+function loadTec(){af('/team/tecnicos').then(function(d){var i=Array.isArray(d)?d:(d.tecnicos||[]);var di=0,as=0,ic=0;i.forEach(function(t){var e=(t.estado||t.status||'disponible').toLowerCase();if(e.indexOf('incidencia')>=0||e.indexOf('run')>=0)ic++;else if(e.indexOf('asignado')>=0||e.indexOf('build')>=0||e.indexOf('ocupado')>=0)as++;else di++;});
+document.getElementById('ts2').innerHTML='<div class="sc grn"><div class="sl">Disponibles</div><div class="sv" style="color:var(--accent-green)">'+di+'</div></div><div class="sc blu"><div class="sl">En Proyecto</div><div class="sv" style="color:var(--accent-blue)">'+as+'</div></div><div class="sc red"><div class="sl">En Incidencia</div><div class="sv" style="color:var(--accent-red)">'+ic+'</div></div><div class="sc blu"><div class="sl">Plantilla</div><div class="sv">'+i.length+'</div></div>';
+document.getElementById('tc2').textContent=i.length;
+if(!i.length){document.getElementById('tb2').innerHTML='<div style="padding:35px;text-align:center;color:var(--text-muted);">Sin datos</div>';return;}
+var h='<table><thead><tr><th>ID</th><th>Nombre</th><th>Nivel</th><th>Silo</th><th>Skill</th><th>Estado</th><th>Tarea actual</th><th>Carga</th></tr></thead><tbody>';
+i.forEach(function(t){var nv=t.nivel||t.nivel_experiencia||'N1';var e=t.estado||t.status||'Disponible';var el=e.toLowerCase();var dc=el.indexOf('incidencia')>=0||el.indexOf('run')>=0?'sd-i':el.indexOf('asignado')>=0||el.indexOf('build')>=0||el.indexOf('ocupado')>=0?'sd-b':'sd-a';var c=t.carga_trabajo||t.utilizacion||t.carga||0;if(typeof c==='string')c=parseInt(c)||0;var fc=c>80?'var(--accent-red)':c>50?'var(--accent-orange)':'var(--accent-green)';var sk=t.skills||t.skill_principal||t.especialidad||'';if(Array.isArray(sk))sk=sk[0]||'';
+h+='<tr><td style="font-family:var(--font-mono);font-size:10px;">'+(t.id_recurso||t.id||'')+'</td><td style="font-weight:500;">'+(t.nombre||'')+'</td><td><span class="badge badge-'+nv.toLowerCase()+'">'+nv+'</span></td><td style="font-size:10px;color:var(--text-secondary);">'+(t.silo||t.departamento||'')+'</td><td>'+sk+'</td><td><span class="si"><span class="sd '+dc+'"></span>'+e+'</span></td><td style="font-size:10px;color:var(--text-secondary);">'+(t.tarea_actual||t.proyecto_actual||'Sin asignar')+'</td><td><div class="ub"><div class="uf" style="width:'+Math.min(c,100)+'%;background:'+fc+'"></div></div><span style="font-family:var(--font-mono);font-size:9px;">'+c+'%</span></td></tr>';});
+h+='</tbody></table>';document.getElementById('tb2').innerHTML=h;}).catch(function(){document.getElementById('tb2').innerHTML='<div style="padding:35px;text-align:center;color:var(--text-muted);">Error</div>';});}
+
+// ═══ Kanban ═══
+function loadKan(){af('/kanban/tareas').then(function(d){var i=Array.isArray(d)?d:(d.tareas||[]);var cols={'Backlog':[],'En Progreso':[],'Review':[],'Done':[]};
+i.forEach(function(t){var c=t.columna||t.estado||'Backlog';var cl=c.toLowerCase();if(cl.indexOf('progreso')>=0||cl.indexOf('progress')>=0)c='En Progreso';else if(cl.indexOf('review')>=0)c='Review';else if(cl.indexOf('done')>=0||cl.indexOf('completad')>=0)c='Done';else c='Backlog';if(!cols[c])cols[c]=[];cols[c].push(t);});
+var tot=i.length,prog=(cols['En Progreso']||[]).length,done=(cols['Done']||[]).length;
+document.getElementById('ks').innerHTML='<div class="sc blu"><div class="sl">Total</div><div class="sv">'+tot+'</div></div><div class="sc org"><div class="sl">En progreso</div><div class="sv" style="color:var(--accent-orange)">'+prog+'</div></div><div class="sc grn"><div class="sl">Completadas</div><div class="sv" style="color:var(--accent-green)">'+done+'</div></div><div class="sc blu"><div class="sl">Throughput</div><div class="sv" style="color:var(--accent-cyan)">'+(tot?Math.round(done/tot*100):0)+'%</div></div>';
+var cc={'Backlog':'var(--text-muted)','En Progreso':'var(--accent-blue)','Review':'var(--accent-orange)','Done':'var(--accent-green)'};var bh='';
+['Backlog','En Progreso','Review','Done'].forEach(function(cn){var ts=cols[cn]||[];bh+='<div class="kc"><div class="kch"><span class="kct" style="color:'+cc[cn]+'">'+cn+'</span><span class="kcn">'+ts.length+'</span></div><div class="kcb">';
+ts.slice(0,25).forEach(function(t){var pc=(t.prioridad==='P1')?'var(--accent-red)':(t.prioridad==='P2')?'var(--accent-orange)':'var(--accent-blue)';bh+='<div class="kk" style="border-left:3px solid '+pc+'"><div class="kk-t">'+(t.titulo||t.nombre||t.descripcion||'Tarea').substring(0,50)+'</div><div class="kk-m">';if(t.prioridad)bh+='<span class="badge badge-'+t.prioridad.toLowerCase()+'">'+t.prioridad+'</span>';if(t.asignado||t.id_recurso)bh+='<span>'+(t.asignado||t.id_recurso)+'</span>';if(t.sla_horas)bh+='<span class="kk-sla">SLA '+t.sla_horas+'h</span>';bh+='</div></div>';});
+if(!ts.length)bh+='<div style="padding:18px;text-align:center;color:var(--text-muted);font-size:11px;">Vac\u00edo</div>';bh+='</div></div>';});
+document.getElementById('kbb').innerHTML=bh;}).catch(function(){document.getElementById('kbb').innerHTML='<div style="grid-column:1/-1;padding:35px;text-align:center;color:var(--text-muted);">Error</div>';});}
+</script>
+</body>
+</html>

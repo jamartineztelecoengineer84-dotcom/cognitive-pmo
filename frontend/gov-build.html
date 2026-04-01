@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cognitive PMO — Gobernanza BUILD</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+[data-theme="dark"]{--bg-primary:#0d1117;--bg-secondary:#161b22;--bg-card:#1c2128;--bg-elevated:#21262d;--border:#30363d;--text-primary:#e6edf3;--text-secondary:#8b949e;--text-muted:#6e7681;--accent-blue:#58a6ff;--accent-green:#3fb950;--accent-red:#f85149;--accent-orange:#d29922;--accent-purple:#bc8cff;--accent-cyan:#39d2c0;--accent-pink:#f778ba;--accent-yellow:#d29922;--shadow:0 2px 8px rgba(0,0,0,0.3);--bg2:#22262e;--bg3:#2a2e37;}
+[data-theme="light"]{--bg-primary:#f6f8fa;--bg-secondary:#ffffff;--bg-card:#ffffff;--bg-elevated:#f0f3f6;--border:#d1d9e0;--text-primary:#1f2328;--text-secondary:#656d76;--text-muted:#8b949e;--accent-blue:#0969da;--accent-green:#1a7f37;--accent-red:#cf222e;--accent-orange:#9a6700;--accent-purple:#8250df;--accent-cyan:#0891b2;--accent-pink:#bf3989;--accent-yellow:#9a6700;--shadow:0 1px 4px rgba(0,0,0,0.08);--bg2:#f0f3f6;--bg3:#e8ecf0;}
+:root{--bld-grd:linear-gradient(135deg,#58a6ff,#bc8cff);--font-body:'DM Sans',-apple-system,sans-serif;--font-mono:'JetBrains Mono',monospace;--r:8px;--rl:12px;}
+*{margin:0;padding:0;box-sizing:border-box;}body{font-family:var(--font-body);background:var(--bg-primary);color:var(--text-primary);min-height:100vh;transition:background .3s,color .3s;}
+
+#login-overlay{position:fixed;inset:0;background:var(--bg-primary);display:flex;align-items:center;justify-content:center;z-index:9999;}
+.lc{background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--rl);padding:44px 36px;width:390px;box-shadow:var(--shadow);}
+.lc h1{font-size:21px;font-weight:700;margin-bottom:3px;}.lc .sub{color:var(--text-secondary);font-size:13px;margin-bottom:26px;}
+.lc-badge{display:inline-flex;align-items:center;gap:5px;background:var(--bld-grd);color:#fff;font-size:10px;font-weight:700;padding:3px 11px;border-radius:20px;letter-spacing:.8px;text-transform:uppercase;margin-bottom:7px;}
+.lc input{width:100%;padding:10px 13px;margin-bottom:12px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg-elevated);color:var(--text-primary);font-size:14px;font-family:var(--font-body);outline:none;}.lc input:focus{border-color:var(--accent-purple);}
+.lc button{width:100%;padding:11px;border:none;border-radius:var(--r);background:var(--accent-purple);color:#fff;font-weight:600;font-size:14px;cursor:pointer;}.lc button:hover{opacity:.9;}
+.lerr{color:var(--accent-red);font-size:12px;margin-bottom:8px;display:none;}
+
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:13px 22px;border-bottom:1px solid var(--border);background:var(--bg-secondary);}
+.hdr-l{display:flex;align-items:center;gap:11px;}.hdr-logo{width:36px;height:36px;border-radius:10px;background:var(--bld-grd);display:flex;align-items:center;justify-content:center;}.hdr-logo svg{width:20px;height:20px;}
+.hdr-t{font-size:16px;font-weight:700;}.hdr-s{font-size:11px;color:var(--text-secondary);}
+.hdr-r{display:flex;align-items:center;gap:12px;}.hdr-u{font-size:11px;color:var(--text-secondary);text-align:right;}.hdr-u strong{color:var(--text-primary);display:block;}
+.pdot{width:7px;height:7px;border-radius:50%;background:var(--accent-green);animation:p 2s ease-in-out infinite;}@keyframes p{0%,100%{opacity:1;}50%{opacity:.4;}}
+.thm{display:flex;align-items:center;gap:3px;font-size:11px;color:var(--text-muted);}.thm-btn{width:34px;height:18px;border-radius:9px;background:var(--bg-elevated);border:1px solid var(--border);cursor:pointer;position:relative;}.thm-btn::after{content:'';position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:var(--text-secondary);transition:transform .3s;}
+[data-theme="light"] .thm-btn::after{transform:translateX(16px);background:var(--accent-orange);}
+.btn-out{padding:5px 12px;border-radius:var(--r);border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:11px;cursor:pointer;font-family:var(--font-body);}
+
+.tabs{display:flex;padding:0 22px;background:var(--bg-secondary);border-bottom:1px solid var(--border);overflow-x:auto;}
+.tb{padding:11px 18px;font-size:13px;font-weight:600;color:var(--text-secondary);border:none;background:transparent;cursor:pointer;position:relative;font-family:var(--font-body);display:flex;align-items:center;gap:7px;white-space:nowrap;}
+.tb:hover{color:var(--text-primary);}.tb.a{color:var(--accent-purple);}.tb.a::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:2px;background:var(--accent-purple);}
+.tb svg{width:20px;height:20px;flex-shrink:0;}
+
+.cnt{padding:18px 22px;}.tp{display:none;animation:fi .25s;}.tp.a{display:block;}@keyframes fi{from{opacity:0;transform:translateY(3px);}to{opacity:1;transform:translateY(0);}}
+
+/* BUILD form panel */
+.build-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:16px;}
+.build-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.build-header-title{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;}
+.build-body{padding:14px 16px;}
+.bf-label{font-size:10px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;display:flex;align-items:center;gap:4px;margin-bottom:4px;}
+.bf-input{width:100%;padding:10px 12px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:13px;font-family:var(--font-body);outline:none;}.bf-input:focus{border-color:var(--accent-purple);}
+.bf-textarea{width:100%;padding:10px 12px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:12px;font-family:var(--font-body);resize:vertical;outline:none;}.bf-textarea:focus{border-color:var(--accent-purple);}
+.bf-hint{font-size:9px;color:var(--text-muted);margin-top:2px;}
+.bf-info-box{background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.15);border-radius:8px;padding:10px 14px;margin-bottom:14px;}
+.btn-build-exec{flex:1;padding:12px;background:linear-gradient(135deg,#10b981,#059669);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;}.btn-build-exec:hover{opacity:.9;}
+
+/* Stats, tables, scrum */
+.sr{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:11px;margin-bottom:18px;}
+.sc{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--rl);padding:15px 16px;position:relative;overflow:hidden;}.sc::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.sc.pur::before{background:var(--accent-purple);}.sc.blu::before{background:var(--accent-blue);}.sc.grn::before{background:var(--accent-green);}.sc.org::before{background:var(--accent-orange);}.sc.pnk::before{background:var(--accent-pink);}
+.sl{font-size:10px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}.sv{font-size:24px;font-weight:700;font-family:var(--font-mono);}
+.pg{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-top:14px;}
+.pc{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--rl);padding:18px;transition:border-color .2s;}.pc:hover{border-color:var(--accent-purple);}
+.pc-t{font-size:14px;font-weight:700;margin-bottom:3px;}.pc-id{font-size:10px;font-family:var(--font-mono);color:var(--text-muted);margin-bottom:9px;}
+.pc-r{display:flex;justify-content:space-between;font-size:11px;color:var(--text-secondary);margin-bottom:5px;}.pc-v{color:var(--text-primary);font-weight:500;}
+.pc-pb{height:4px;border-radius:2px;background:var(--bg-elevated);overflow:hidden;margin-top:8px;}.pc-pf{height:100%;border-radius:2px;background:var(--bld-grd);}
+.badge{display:inline-block;padding:2px 7px;border-radius:11px;font-size:10px;font-weight:600;}
+.badge-act{background:rgba(63,185,80,.15);color:var(--accent-green);}.badge-plan{background:rgba(188,140,255,.15);color:var(--accent-purple);}
+.badge-n1{background:rgba(139,148,158,.12);color:var(--text-secondary);}.badge-n2{background:rgba(88,166,255,.12);color:var(--accent-blue);}.badge-n3{background:rgba(210,153,34,.12);color:var(--accent-orange);}.badge-n4{background:rgba(248,81,73,.12);color:var(--accent-red);}
+.tc{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;}
+.th{padding:13px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}.th h3{font-size:13px;font-weight:700;}.tcnt{font-size:11px;color:var(--text-muted);font-family:var(--font-mono);}
+.ts{overflow-x:auto;}table{width:100%;border-collapse:collapse;min-width:780px;}
+thead th{padding:8px 13px;text-align:left;font-size:10px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;background:var(--bg-elevated);border-bottom:1px solid var(--border);white-space:nowrap;}
+tbody td{padding:8px 13px;font-size:12px;border-bottom:1px solid var(--border);}tbody tr:hover{background:rgba(188,140,255,.04);}tbody tr:last-child td{border-bottom:none;}
+.si{display:inline-flex;align-items:center;gap:5px;font-size:11px;}.sd{width:7px;height:7px;border-radius:50%;flex-shrink:0;}.sd-a{background:var(--accent-green);}.sd-b{background:var(--accent-purple);}.sd-i{background:var(--accent-red);animation:p 1.5s ease-in-out infinite;}
+.ub{width:52px;height:5px;border-radius:3px;background:var(--bg-elevated);display:inline-block;vertical-align:middle;margin-right:4px;overflow:hidden;}.uf{height:100%;border-radius:3px;}
+.spc{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:12px;}
+.sph{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;cursor:pointer;}.sph:hover{background:var(--bg-elevated);}
+.spn{font-size:13px;font-weight:700;display:flex;align-items:center;gap:9px;}.spm{display:flex;align-items:center;gap:14px;font-size:11px;color:var(--text-secondary);}
+.sp-bar{width:110px;height:5px;border-radius:3px;background:var(--bg-elevated);overflow:hidden;}.sp-fill{height:100%;border-radius:3px;background:var(--accent-purple);}
+.spb{padding:14px 18px;display:none;}.spb.open{display:block;}
+.spcols{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.spcol-t{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border);}
+.spi{background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--r);padding:9px 10px;margin-bottom:6px;border-left:3px solid var(--accent-purple);}
+.spi-t{font-size:11px;font-weight:600;margin-bottom:3px;}.spi-m{color:var(--text-muted);font-size:10px;display:flex;gap:6px;align-items:center;}
+.spi-sp{background:var(--accent-purple);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:7px;font-family:var(--font-mono);}
+.toast{position:fixed;bottom:18px;right:18px;padding:11px 18px;border-radius:var(--r);font-size:13px;font-weight:500;z-index:10000;transform:translateY(80px);opacity:0;transition:all .3s;box-shadow:var(--shadow);}.toast.show{transform:translateY(0);opacity:1;}.toast.ok{background:var(--accent-green);color:#fff;}.toast.err{background:var(--accent-red);color:#fff;}
+@media(max-width:900px){.spcols{grid-template-columns:1fr 1fr;}.pg{grid-template-columns:1fr;}.sr{grid-template-columns:1fr 1fr;}}
+</style>
+</head>
+<body>
+<div id="login-overlay"><div class="lc">
+  <div class="lc-badge">GOB. BUILD</div>
+  <h1>Cognitive PMO</h1><div class="sub">Panel del Coordinador de Proyectos &middot; PMO</div>
+  <div class="lerr" id="lerr">Credenciales incorrectas</div>
+  <input type="email" id="le" placeholder="Email" autocomplete="email">
+  <input type="password" id="lp" placeholder="Contrase&ntilde;a" autocomplete="current-password">
+  <button onclick="doLogin()">Acceder</button>
+</div></div>
+
+<div id="app" style="display:none;">
+<div class="hdr"><div class="hdr-l">
+  <div class="hdr-logo"><svg viewBox="0 0 40 40" fill="none"><path d="M20 4L35 12V28L20 36L5 28V12L20 4Z" fill="rgba(255,255,255,.15)" stroke="rgba(255,255,255,.4)" stroke-width="1.5"/><rect x="13" y="14" width="14" height="12" rx="2" stroke="#fff" stroke-width="1.3" fill="none"/><path d="M13 18h14M18 14v12M24 14v12" stroke="#fff" stroke-width="1" opacity=".6"/></svg></div>
+  <div><div class="hdr-t">Gobernanza BUILD</div><div class="hdr-s">Coordinaci&oacute;n de Proyectos &middot; PMO</div></div>
+</div><div class="hdr-r">
+  <div class="thm"><span>&#9790;</span><div class="thm-btn" onclick="toggleTheme()"></div><span>&#9728;</span></div>
+  <div class="pdot"></div><div class="hdr-u"><strong id="un">Coordinador</strong><span id="ur">Gobernanza BUILD</span></div>
+  <button class="btn-out" onclick="doLogout()">Salir</button>
+</div></div>
+
+<div class="tabs">
+  <button class="tb a" data-t="proyectos" onclick="sw('proyectos')"><svg viewBox="0 0 40 40" fill="none"><path d="M20 4L35 12V28L20 36L5 28V12L20 4Z" fill="rgba(188,140,255,.12)" stroke="var(--accent-purple)" stroke-width="1.2"/><path d="M15 17l5-5 5 5M15 23l5 5 5-5" stroke="var(--accent-purple)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Proyectos</button>
+  <button class="tb" data-t="tecnicos" onclick="sw('tecnicos')"><svg viewBox="0 0 40 40" fill="none"><path d="M20 4L35 12V28L20 36L5 28V12L20 4Z" fill="rgba(88,166,255,.12)" stroke="var(--accent-blue)" stroke-width="1.2"/><circle cx="16" cy="16" r="3.5" stroke="var(--accent-blue)" stroke-width="1.2" fill="none"/><circle cx="26" cy="16" r="3.5" stroke="var(--accent-blue)" stroke-width="1.2" fill="none"/></svg>T&eacute;cnicos</button>
+  <button class="tb" data-t="scrum" onclick="sw('scrum')"><svg viewBox="0 0 40 40" fill="none"><path d="M20 4L35 12V28L20 36L5 28V12L20 4Z" fill="rgba(247,120,186,.12)" stroke="var(--accent-pink)" stroke-width="1.2"/><rect x="10" y="13" width="20" height="3" rx="1" stroke="var(--accent-pink)" stroke-width="1" fill="none"/><rect x="10" y="19" width="14" height="3" rx="1" stroke="var(--accent-pink)" stroke-width="1" fill="none"/><rect x="10" y="25" width="8" height="3" rx="1" stroke="var(--accent-pink)" stroke-width="1" fill="none"/></svg>Scrum Board</button>
+</div>
+
+<div class="cnt">
+  <!-- TAB 1: PROYECTOS con formulario BUILD real -->
+  <div class="tp a" id="p-proyectos">
+    <div class="sr" id="ps"></div>
+    <div class="build-panel">
+      <div class="build-header">
+        <div class="build-header-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-purple)" stroke-width="1.8"><path d="M2 20h20M5 20V10l7-7 7 7v10"/><rect x="9" y="14" width="6" height="6"/></svg>
+          Solicitud de proyecto
+        </div>
+        <div style="font-size:10px;color:var(--text-muted);">Desde negocio &rarr; PMO eval&uacute;a con 9 agentes IA</div>
+      </div>
+      <div class="build-body">
+        <div style="margin-bottom:12px;">
+          <label class="bf-label">Nombre del proyecto <span style="color:var(--accent-red);font-size:12px;">*</span></label>
+          <input type="text" id="bf-nombre" class="bf-input" placeholder="Ej: Migracion infraestructura RHEL9, Plataforma OpenShift, Modernizacion core banking...">
+        </div>
+        <div style="margin-bottom:12px;">
+          <label class="bf-label">Que necesita negocio y por que <span style="color:var(--accent-red);font-size:12px;">*</span></label>
+          <textarea id="bf-resumen" rows="3" class="bf-textarea" placeholder="Describe que se quiere conseguir, cual es el problema de negocio, que beneficios espera la organizacion..."></textarea>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;">
+          <div>
+            <label class="bf-label">Presupuesto propuesto</label>
+            <input type="text" inputmode="numeric" id="bf-presupuesto" class="bf-input" placeholder="Ej: 650000">
+            <div class="bf-hint">Propuesta de negocio &middot; Opcional</div>
+          </div>
+          <div>
+            <label class="bf-label">Fecha fin deseada</label>
+            <input type="date" id="bf-fecha-fin" class="bf-input" onchange="buildCalcSemanas()">
+            <div class="bf-hint" id="bf-semanas-calc">Propuesta de negocio &middot; Opcional</div>
+          </div>
+          <div>
+            <label class="bf-label">Prioridad estrat&eacute;gica</label>
+            <select id="bf-prioridad" class="bf-input" onchange="buildUpdatePrioInfo()">
+              <option value="">-- Sin definir --</option><option value="Alta">Alta</option><option value="Media">Media</option><option value="Baja">Baja</option>
+            </select>
+            <div class="bf-hint" id="bf-prio-info">Define rigidez del plazo/coste</div>
+          </div>
+        </div>
+        <div style="margin-bottom:14px;">
+          <label class="bf-label">Justificaci&oacute;n / contexto adicional</label>
+          <textarea id="bf-justificacion" rows="2" class="bf-textarea" placeholder="Problema de negocio, riesgo de cumplimiento, obsolescencia tecnol&oacute;gica, presi&oacute;n competitiva... (opcional)"></textarea>
+        </div>
+        <div class="bf-info-box">
+          <div style="font-size:10px;font-weight:600;color:#a78bfa;margin-bottom:4px;">Los agentes IA generar&aacute;n autom&aacute;ticamente:</div>
+          <div style="font-size:10px;color:var(--text-muted);line-height:1.6;">Acta de constituci&oacute;n &middot; Alcance y exclusiones &middot; EDT/WBS con tareas y skills &middot; Subtareas t&eacute;cnicas &middot; An&aacute;lisis de riesgos &middot; Mapa de stakeholders &middot; PM candidatos y equipo &middot; Presupuesto real vs propuesto &middot; Gantt y ruta cr&iacute;tica &middot; Quality gates</div>
+          <div style="font-size:9px;color:var(--text-muted);margin-top:4px;">Todo revisable y editable en las 4 pausas de gobernanza.</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button onclick="buildSubmitAndPipeline()" id="build-exec-btn" class="btn-build-exec">
+            <span>&#9654;</span> Ejecutar Pipeline IA (9 agentes)
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- Projects grid -->
+    <div class="pg" id="pgrid"><div style="grid-column:1/-1;padding:35px;text-align:center;color:var(--text-muted);">Cargando...</div></div>
+  </div>
+
+  <!-- TAB 2: TÉCNICOS -->
+  <div class="tp" id="p-tecnicos"><div class="sr" id="ts2"></div>
+    <div class="tc"><div class="th"><h3>Recursos t&eacute;cnicos</h3><span class="tcnt" id="tc2">0</span></div><div class="ts" id="tb2"><div style="padding:35px;text-align:center;color:var(--text-muted);">Cargando...</div></div></div>
+  </div>
+
+  <!-- TAB 3: SCRUM -->
+  <div class="tp" id="p-scrum"><div class="sr" id="ss"></div><div id="sboard"><div style="padding:35px;text-align:center;color:var(--text-muted);">Cargando...</div></div></div>
+</div>
+</div>
+
+<!-- Pipeline iframe overlay -->
+<div id="pipeline-overlay" style="display:none;position:fixed;inset:0;z-index:9998;background:var(--bg-primary);flex-direction:column;">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 20px;background:var(--bg-secondary);border-bottom:1px solid var(--border);">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="width:28px;height:28px;border-radius:8px;background:var(--bld-grd);display:flex;align-items:center;justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M2 20h20M5 20V10l7-7 7 7v10"/><rect x="9" y="14" width="6" height="6"/></svg></div>
+      <span style="font-size:14px;font-weight:700;">Pipeline BUILD — Motor Cognitivo</span>
+      <span style="font-size:11px;color:var(--text-muted);">9 agentes + 4 pausas</span>
+    </div>
+    <button onclick="closePipeline()" style="padding:6px 14px;border-radius:var(--r);border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:12px;cursor:pointer;">&#10005; Cerrar pipeline</button>
+  </div>
+  <iframe id="pipeline-frame" style="flex:1;width:100%;border:none;" src="about:blank"></iframe>
+</div>
+
+<div class="toast" id="tst"></div>
+
+<script>
+var AB=window.location.origin,TK=localStorage.getItem('cpm_token')||'';
+function toggleTheme(){var h=document.documentElement,n=h.getAttribute('data-theme')==='dark'?'light':'dark';h.setAttribute('data-theme',n);localStorage.setItem('cpm_theme',n);}
+(function(){var t=localStorage.getItem('cpm_theme');if(t)document.documentElement.setAttribute('data-theme',t);})();
+function af(u,o){o=o||{};o.headers=o.headers||{};if(TK)o.headers['Authorization']='Bearer '+TK;if(o.body&&typeof o.body==='string')o.headers['Content-Type']='application/json';return fetch(AB+u,o).then(function(r){return r.text().then(function(t){try{return JSON.parse(t);}catch(e){return t;}});});}
+function doLogin(){var e=document.getElementById('le').value,p=document.getElementById('lp').value;fetch(AB+'/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})}).then(function(r){return r.text().then(function(t){try{return JSON.parse(t);}catch(x){return{};}});}).then(function(d){if(d.token){TK=d.token;localStorage.setItem('cpm_token',d.token);var u=d.user||d;document.getElementById('login-overlay').style.display='none';document.getElementById('app').style.display='block';document.getElementById('un').textContent=u.nombre_completo||e;document.getElementById('ur').textContent=u.rol||'Coordinador BUILD';init();}else{document.getElementById('lerr').style.display='block';}}).catch(function(){document.getElementById('lerr').style.display='block';});}
+function doLogout(){localStorage.removeItem('cpm_token');TK='';location.reload();}
+if(TK){af('/health').then(function(d){if(d&&d.status==='ok'){document.getElementById('login-overlay').style.display='none';document.getElementById('app').style.display='block';init();}}).catch(function(){});}
+document.getElementById('lp').addEventListener('keypress',function(e){if(e.key==='Enter')doLogin();});
+function sw(n){document.querySelectorAll('.tb').forEach(function(b){b.classList.remove('a');});document.querySelector('.tb[data-t="'+n+'"]').classList.add('a');document.querySelectorAll('.tp').forEach(function(p){p.classList.remove('a');});document.getElementById('p-'+n).classList.add('a');}
+function toast(m,t){var e=document.getElementById('tst');e.textContent=m;e.className='toast '+(t||'ok')+' show';setTimeout(function(){e.classList.remove('show');},3000);}
+function init(){loadProy();loadTec();loadScrum();}
+
+// ═══ BUILD FORM — exact logic from mother ═══
+function buildCalcSemanas(){
+  var fechaEl=document.getElementById('bf-fecha-fin');
+  var infoEl=document.getElementById('bf-semanas-calc');
+  if(!fechaEl||!fechaEl.value||!infoEl)return;
+  var hoy=new Date();var fin=new Date(fechaEl.value);
+  var diffMs=fin.getTime()-hoy.getTime();
+  var semanas=Math.ceil(diffMs/(7*24*60*60*1000));
+  if(semanas<=0){infoEl.textContent='Fecha en el pasado';infoEl.style.color='var(--accent-red)';}
+  else{infoEl.textContent='\u2248 '+semanas+' semanas desde hoy';infoEl.style.color='var(--accent-green)';}
+}
+
+function buildUpdatePrioInfo(){
+  var prioEl=document.getElementById('bf-prioridad');
+  var infoEl=document.getElementById('bf-prio-info');
+  if(!prioEl||!infoEl)return;
+  var val=prioEl.value;
+  if(val==='Alta'){infoEl.innerHTML='<span style="color:var(--accent-red);">Agentes intentan cumplir plazo y presupuesto propuestos</span>';}
+  else if(val==='Media'){infoEl.innerHTML='<span style="color:var(--accent-yellow);">Planificacion realista, desviacion es informativa</span>';}
+  else if(val==='Baja'){infoEl.innerHTML='<span style="color:var(--accent-green);">Planificacion optima, propuesta es solo referencia</span>';}
+  else{infoEl.textContent='Los agentes decidiran segun el contexto';}
+}
+
+function buildSubmitAndPipeline(){
+  var nombreEl=document.getElementById('bf-nombre');
+  var nombre=nombreEl?nombreEl.value.trim():'';
+  if(!nombre){if(nombreEl)nombreEl.focus();toast('El nombre del proyecto es obligatorio','err');return;}
+  var resumenEl=document.getElementById('bf-resumen');
+  var resumen=resumenEl?resumenEl.value.trim():'';
+  if(!resumen){if(resumenEl)resumenEl.focus();toast('Describe que necesita negocio','err');return;}
+  var data=nombre+' | '+resumen;
+  openPipeline('build',data);
+}
+
+// ═══ Pipeline iframe ═══
+function openPipeline(mode,data){var ov=document.getElementById('pipeline-overlay');var fr=document.getElementById('pipeline-frame');if(!ov||!fr)return;localStorage.setItem('cpm_pipeline_mode',mode);localStorage.setItem('cpm_pipeline_data',data||'');ov.style.display='flex';fr.src='/index.html?token='+encodeURIComponent(TK)+'#auto-'+mode;}
+window.addEventListener('message',function(e){if(e.data&&e.data.type==='pipeline-complete'){closePipeline();loadProy();loadTec();loadScrum();toast('Pipeline BUILD completado');}});
+function closePipeline(){var ov=document.getElementById('pipeline-overlay');var fr=document.getElementById('pipeline-frame');if(ov)ov.style.display='none';if(fr)fr.src='about:blank';localStorage.removeItem('cpm_pipeline_mode');localStorage.removeItem('cpm_pipeline_data');}
+
+// ═══ Projects ═══
+function loadProy(){af('/cartera/proyectos').then(function(d){var i=Array.isArray(d)?d:(d.proyectos||[]);var act=0,comp=0,bud=0;i.forEach(function(p){var e=(p.estado||'').toLowerCase();if(e.indexOf('completad')>=0||e.indexOf('cerrado')>=0)comp++;else act++;bud+=(p.presupuesto||p.budget||0);});
+document.getElementById('ps').innerHTML='<div class="sc pur"><div class="sl">Activos</div><div class="sv" style="color:var(--accent-purple)">'+act+'</div></div><div class="sc grn"><div class="sl">Completados</div><div class="sv" style="color:var(--accent-green)">'+comp+'</div></div><div class="sc blu"><div class="sl">Total</div><div class="sv">'+i.length+'</div></div><div class="sc org"><div class="sl">Presupuesto</div><div class="sv" style="font-size:18px;color:var(--accent-orange)">'+Number(bud).toLocaleString('es-ES')+'\u20ac</div></div>';
+if(!i.length){document.getElementById('pgrid').innerHTML='<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--text-muted);">Sin proyectos</div>';return;}
+var h='';i.slice(0,30).forEach(function(p){var prog=p.progreso||p.porcentaje_completado||0;var e=p.estado||'Activo';var ec=e.toLowerCase().indexOf('activ')>=0?'badge-act':'badge-plan';
+h+='<div class="pc"><div style="display:flex;justify-content:space-between;align-items:flex-start;"><div><div class="pc-t">'+(p.nombre||p.nombre_proyecto||'Proyecto')+'</div><div class="pc-id">'+(p.id_proyecto||p.id||'')+'</div></div><span class="badge '+ec+'">'+e+'</span></div>';
+h+='<div class="pc-r"><span>PM</span><span class="pc-v">'+(p.pm_asignado||p.id_pm||'Sin asignar')+'</span></div>';
+h+='<div class="pc-r"><span>Presupuesto</span><span class="pc-v">'+Number(p.presupuesto||p.budget||0).toLocaleString('es-ES')+'\u20ac</span></div>';
+h+='<div style="margin-top:8px;"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-bottom:3px;"><span>Progreso</span><span>'+prog+'%</span></div><div class="pc-pb"><div class="pc-pf" style="width:'+prog+'%"></div></div></div></div>';});
+document.getElementById('pgrid').innerHTML=h;}).catch(function(){document.getElementById('pgrid').innerHTML='<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--text-muted);">Error</div>';});}
+
+// ═══ Técnicos ═══
+function loadTec(){af('/team/tecnicos').then(function(d){var i=Array.isArray(d)?d:(d.tecnicos||[]);var di=0,as=0,ic=0;i.forEach(function(t){var e=(t.estado||t.status||'disponible').toLowerCase();if(e.indexOf('incidencia')>=0||e.indexOf('run')>=0)ic++;else if(e.indexOf('asignado')>=0||e.indexOf('build')>=0||e.indexOf('ocupado')>=0)as++;else di++;});
+document.getElementById('ts2').innerHTML='<div class="sc grn"><div class="sl">Disponibles</div><div class="sv" style="color:var(--accent-green)">'+di+'</div></div><div class="sc pur"><div class="sl">En Proyecto</div><div class="sv" style="color:var(--accent-purple)">'+as+'</div></div><div class="sc org"><div class="sl">En Incidencia</div><div class="sv" style="color:var(--accent-red)">'+ic+'</div></div><div class="sc blu"><div class="sl">Plantilla</div><div class="sv">'+i.length+'</div></div>';
+document.getElementById('tc2').textContent=i.length;
+if(!i.length){document.getElementById('tb2').innerHTML='<div style="padding:35px;text-align:center;color:var(--text-muted);">Sin datos</div>';return;}
+var h='<table><thead><tr><th>ID</th><th>Nombre</th><th>Nivel</th><th>Silo</th><th>Skill</th><th>Estado</th><th>Proyecto/Tarea</th><th>Carga</th></tr></thead><tbody>';
+i.forEach(function(t){var nv=t.nivel||t.nivel_experiencia||'N1';var e=t.estado||t.status||'Disponible';var el=e.toLowerCase();var dc=el.indexOf('incidencia')>=0||el.indexOf('run')>=0?'sd-i':el.indexOf('asignado')>=0||el.indexOf('build')>=0||el.indexOf('ocupado')>=0?'sd-b':'sd-a';var c=t.carga_trabajo||t.utilizacion||t.carga||0;if(typeof c==='string')c=parseInt(c)||0;var fc=c>80?'var(--accent-red)':c>50?'var(--accent-orange)':'var(--accent-green)';var sk=t.skills||t.skill_principal||t.especialidad||'';if(Array.isArray(sk))sk=sk[0]||'';
+h+='<tr><td style="font-family:var(--font-mono);font-size:10px;">'+(t.id_recurso||t.id||'')+'</td><td style="font-weight:500;">'+(t.nombre||'')+'</td><td><span class="badge badge-'+nv.toLowerCase()+'">'+nv+'</span></td><td style="font-size:10px;color:var(--text-secondary);">'+(t.silo||t.departamento||'')+'</td><td>'+sk+'</td><td><span class="si"><span class="sd '+dc+'"></span>'+e+'</span></td><td style="font-size:10px;color:var(--text-secondary);">'+(t.tarea_actual||t.proyecto_actual||'Sin asignar')+'</td><td><div class="ub"><div class="uf" style="width:'+Math.min(c,100)+'%;background:'+fc+'"></div></div><span style="font-family:var(--font-mono);font-size:9px;">'+c+'%</span></td></tr>';});
+h+='</tbody></table>';document.getElementById('tb2').innerHTML=h;}).catch(function(){document.getElementById('tb2').innerHTML='<div style="padding:35px;text-align:center;color:var(--text-muted);">Error</div>';});}
+
+// ═══ Scrum ═══
+function loadScrum(){Promise.all([af('/pipeline/sessions'),af('/kanban/tareas')]).then(function(res){
+var sess=Array.isArray(res[0])?res[0]:(res[0].sessions||[]);var tareas=Array.isArray(res[1])?res[1]:(res[1].tareas||[]);
+var tSp=0,tIt=0,tDone=0,html='';
+if(sess.length>0){sess.forEach(function(s,idx){var pd=s.pipeline_data||{};var plan=pd.planResult||pd.plan||null;var sprints=[];if(plan&&typeof plan==='object'){if(plan.sprints)sprints=plan.sprints;else if(plan.plan&&plan.plan.sprints)sprints=plan.plan.sprints;}
+var nm=s.nombre_proyecto||s.id||'Sesi\u00f3n '+(idx+1);var est=s.estado||'EN_PROGRESO';var coste=s.coste_acumulado?Number(s.coste_acumulado).toFixed(2):'0.00';
+if(sprints.length>0){sprints.forEach(function(sp,si){tSp++;var items=sp.items||sp.tareas||sp.tasks||[];var done=items.filter(function(i){var e=(i.estado||'').toLowerCase();return e.indexOf('done')>=0||e.indexOf('completad')>=0;}).length;tIt+=items.length;tDone+=done;var pct=items.length?Math.round(done/items.length*100):0;
+html+='<div class="spc"><div class="sph" onclick="this.nextElementSibling.classList.toggle(\'open\')"><div class="spn"><span style="color:var(--accent-purple);">Sprint '+(si+1)+'</span><span style="font-weight:400;color:var(--text-secondary);font-size:11px;">'+nm+'</span></div><div class="spm"><span>'+done+'/'+items.length+'</span><div class="sp-bar"><div class="sp-fill" style="width:'+pct+'%"></div></div><span style="font-family:var(--font-mono);">'+pct+'%</span></div></div>';
+html+='<div class="spb'+(si===0?' open':'')+'"><div class="spcols">';
+var cols={'To Do':[],'In Progress':[],'Review':[],'Done':[]};items.forEach(function(it){var st=it.estado||it.status||'To Do';var sl=st.toLowerCase();if(sl.indexOf('progress')>=0)cols['In Progress'].push(it);else if(sl.indexOf('review')>=0)cols['Review'].push(it);else if(sl.indexOf('done')>=0||sl.indexOf('completad')>=0)cols['Done'].push(it);else cols['To Do'].push(it);});
+['To Do','In Progress','Review','Done'].forEach(function(cn){html+='<div><div class="spcol-t">'+cn+' ('+cols[cn].length+')</div>';cols[cn].forEach(function(it){html+='<div class="spi"><div class="spi-t">'+(it.nombre||it.titulo||it.tarea||'Item')+'</div><div class="spi-m">';if(it.puntos||it.story_points)html+='<span class="spi-sp">'+(it.puntos||it.story_points)+' SP</span>';if(it.asignado||it.recurso)html+='<span>'+(it.asignado||it.recurso)+'</span>';html+='</div></div>';});if(!cols[cn].length)html+='<div style="padding:10px;text-align:center;color:var(--text-muted);font-size:10px;">Vac\u00edo</div>';html+='</div>';});
+html+='</div></div></div>';});}else{tSp++;html+='<div class="spc"><div class="sph"><div class="spn"><span style="color:var(--accent-purple);">'+nm+'</span><span class="badge badge-'+(est==='COMPLETADO'?'act':'plan')+'">'+est+'</span></div><div class="spm"><span>$'+coste+'</span></div></div></div>';}});}
+else if(tareas.length>0){tIt=tareas.length;tDone=tareas.filter(function(t){return(t.columna||'').toLowerCase().indexOf('done')>=0;}).length;tSp=1;
+html+='<div class="spc"><div class="sph" onclick="this.nextElementSibling.classList.toggle(\'open\')"><div class="spn"><span style="color:var(--accent-purple);">Backlog general</span><span style="font-weight:400;color:var(--text-secondary);font-size:11px;">'+tareas.length+' tareas</span></div></div>';
+html+='<div class="spb open"><div class="spcols">';
+var cols={'To Do':[],'In Progress':[],'Review':[],'Done':[]};tareas.slice(0,60).forEach(function(t){var c=(t.columna||'Backlog').toLowerCase();if(c.indexOf('progreso')>=0||c.indexOf('progress')>=0)cols['In Progress'].push(t);else if(c.indexOf('review')>=0)cols['Review'].push(t);else if(c.indexOf('done')>=0||c.indexOf('completad')>=0)cols['Done'].push(t);else cols['To Do'].push(t);});
+['To Do','In Progress','Review','Done'].forEach(function(cn){html+='<div><div class="spcol-t">'+cn+' ('+cols[cn].length+')</div>';cols[cn].slice(0,15).forEach(function(it){html+='<div class="spi"><div class="spi-t">'+(it.titulo||it.nombre||'Tarea')+'</div><div class="spi-m">';if(it.prioridad)html+='<span class="badge" style="background:rgba(188,140,255,.15);color:var(--accent-purple);">'+it.prioridad+'</span>';html+='</div></div>';});html+='</div>';});
+html+='</div></div></div>';}
+else{html='<div style="padding:40px;text-align:center;color:var(--text-muted);font-size:12px;">Sin datos de sprints. Ejecuta un pipeline BUILD.</div>';}
+document.getElementById('ss').innerHTML='<div class="sc pur"><div class="sl">Sprints</div><div class="sv" style="color:var(--accent-purple)">'+tSp+'</div></div><div class="sc blu"><div class="sl">Items</div><div class="sv">'+tIt+'</div></div><div class="sc grn"><div class="sl">Completados</div><div class="sv" style="color:var(--accent-green)">'+tDone+'</div></div><div class="sc pnk"><div class="sl">Velocidad</div><div class="sv" style="color:var(--accent-pink)">'+(tIt?Math.round(tDone/tIt*100):0)+'%</div></div>';
+document.getElementById('sboard').innerHTML=html;}).catch(function(){document.getElementById('sboard').innerHTML='<div style="padding:40px;text-align:center;color:var(--text-muted);">Error</div>';});}
+</script>
+</body>
+</html>
