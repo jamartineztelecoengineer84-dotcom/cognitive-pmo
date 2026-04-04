@@ -1,0 +1,50 @@
+--
+-- PostgreSQL database dump
+--
+
+\restrict O4pN25n5oQYzJfsnN1A4N1Fa5QO4p4yal518EXZMjMmxdoe22GDzD0uK5ICyrra
+
+-- Dumped from database version 15.16 (Debian 15.16-1.pgdg13+1)
+-- Dumped by pg_dump version 15.17 (Debian 15.17-1.pgdg13+1)
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
+--
+-- Data for Name: compliance_audits; Type: TABLE DATA; Schema: public; Owner: -
+--
+
+SET SESSION AUTHORIZATION DEFAULT;
+
+ALTER TABLE public.compliance_audits DISABLE TRIGGER ALL;
+
+COPY public.compliance_audits (id, audit_type, entity_type, entity_id, severity, finding, recommendation, evidence, status, assignee, due_date, resolved_at, created_by, created_at, updated_at) FROM stdin;
+e211fa98-fc92-471f-93f5-89160d445c74	ITIL4_SLA	INCIDENT	INC-2026-0839	CRITICAL	Incidencia P1 INC-2026-0839 (caída servicio de nóminas) superó el SLA de 4 horas. Tiempo de resolución real: 5h42min. Se detecta que la asignación del técnico se realizó con 47 minutos de retraso respecto al protocolo estándar (<15min para P1). El retraso en la asignación fue causado por falta de disponibilidad de técnicos N3 de Sistemas.	1) Implementar sistema de escalado automático cuando no hay N3 disponible en <10min. 2) Establecer técnico de guardia N3+ en horario extendido. 3) Crear procedimiento de escalado a proveedor externo para P1 sin técnico disponible.	{"sla_target_hours": 4, "breach_penalty_eur": 15000, "assignment_delay_min": 47, "actual_resolution_hours": 5.7}	OPEN	Jose Antonio Martinez Victoria	2026-04-01	\N	AG-008	2026-03-19 21:40:09.838319+00	2026-03-19 21:40:09.838319+00
+82465f6b-5276-457c-ab47-f6a775510799	PMBOK7_DELIVERABLE	PROJECT	PRJ0035	HIGH	El proyecto PRJ0035 'Renovación Plataforma Clearpass NAC' se encuentra en fase de ejecución pero carece de los siguientes entregables obligatorios según PMBOK 7: Risk Register actualizado (último update hace 45 días), Plan de Comunicación ausente, y WBS sin revisión tras el último cambio de alcance aprobado el 2026-02-15.	1) Convocar sesión de revisión de riesgos con el PM y stakeholders. 2) Crear Plan de Comunicación usando la plantilla PMBOK7-COMM-v2. 3) Actualizar WBS y obtener re-baseline del cronograma. Plazo recomendado: 10 días laborables.	{"wbs_last_update": "2026-01-20", "scope_change_date": "2026-02-15", "missing_deliverables": ["Risk Register", "Communication Plan"]}	OPEN	Ana García López	2026-04-05	\N	AG-008	2026-03-19 21:40:09.847286+00	2026-03-19 21:40:09.847286+00
+80c35e0c-7056-4615-920b-495234eba257	DORA_RESILIENCE	INFRASTRUCTURE	CLUST-EXADATA-01	MEDIUM	El clúster Oracle Exadata (CLUST-EXADATA-01), clasificado como infraestructura crítica bajo DORA, no ha completado el test de continuidad de negocio obligatorio del Q1-2026. El último test de failover se realizó el 2025-10-15 (hace 5 meses). DORA exige tests trimestrales para infraestructuras que soportan servicios de pago.	1) Programar test de failover completo del Exadata antes del 2026-03-31. 2) Documentar procedimiento DR actualizado. 3) Notificar al oficial de cumplimiento BCE el estado del test. 4) Incluir en el próximo informe DORA trimestral.	{"days_overdue": 70, "last_test_date": "2025-10-15", "required_frequency": "quarterly", "regulatory_framework": "DORA Art.25"}	OPEN	Carlos Fernández Ruiz	2026-03-31	\N	AG-008	2026-03-19 21:40:09.858584+00	2026-03-19 21:40:09.858584+00
+4ed2455e-15b4-4416-995d-674ca36e50cf	ISO27001_SECURITY	PROCESS	CHG-2026-0156	HIGH	El cambio CHG-2026-0156 (actualización firmware switches Cisco core) se implementó en producción sin completar el proceso de aprobación CAB (Change Advisory Board). El registro muestra que el cambio fue marcado como 'urgente' y se saltó la revisión de seguridad pre-implementación requerida por ISO 27001 A.12.1.2. No se realizó análisis de impacto ni se notificó al equipo de seguridad.	1) Realizar revisión de seguridad post-implementación inmediata. 2) Documentar la justificación de emergencia. 3) Revisar el proceso de cambios urgentes para incluir notificación obligatoria al CISO. 4) Implementar control técnico que bloquee deploys sin aprobación CAB.	{"change_id": "CHG-2026-0156", "iso_clause": "A.12.1.2", "cab_approval": false, "security_review": false}	OPEN	Pedro Sánchez Díaz	2026-03-25	\N	AG-008	2026-03-19 21:40:09.866167+00	2026-03-19 21:40:09.866167+00
+30f50bca-0707-49ef-a825-04c2aa4190a2	GDPR_DATA	SYSTEM	PMO-STAFF-DB	LOW	La tabla pmo_staff_skills contiene datos personales (nombre completo, silo de especialización, nivel) accesibles sin control de acceso granular. Si bien los datos no incluyen categorías especiales, la combinación de nombre + especialización + nivel permite identificación directa del empleado. Según GDPR Art.25 (Protección de datos por diseño), se recomienda implementar control de acceso basado en roles.	1) Implementar RBAC para acceso a datos de personal. 2) Añadir log de auditoría de consultas a pmo_staff_skills. 3) Evaluar pseudonimización del campo nombre en interfaces de consulta masiva.	{"table": "pmo_staff_skills", "gdpr_article": "Art.25", "personal_fields": ["nombre", "silo_especialidad", "nivel"]}	OPEN	Laura Rodríguez Pérez	2026-05-01	\N	AG-008	2026-03-19 21:40:09.87251+00	2026-03-19 21:40:09.87251+00
+f91dcbbf-0fa4-4420-9c30-4f2a4de10c3a	ITIL4_SLA	INCIDENT	INC-2026-0839	CRITICAL	Incidencia P1 INC-2026-0839 (caída servicio de nóminas) superó el SLA de 4 horas. Tiempo de resolución real: 5h42min. Se detecta que la asignación del técnico se realizó con 47 minutos de retraso respecto al protocolo estándar (<15min para P1). El retraso en la asignación fue causado por falta de disponibilidad de técnicos N3 de Sistemas.	1) Implementar sistema de escalado automático cuando no hay N3 disponible en <10min. 2) Establecer técnico de guardia N3+ en horario extendido. 3) Crear procedimiento de escalado a proveedor externo para P1 sin técnico disponible.	{"sla_target_hours": 4, "breach_penalty_eur": 15000, "assignment_delay_min": 47, "actual_resolution_hours": 5.7}	OPEN	Jose Antonio Martinez Victoria	2026-04-01	\N	AG-008	2026-03-19 21:48:15.510455+00	2026-03-19 21:48:15.510455+00
+0750c25c-b779-49d9-9d61-48488bb37d4e	PMBOK7_DELIVERABLE	PROJECT	PRJ0035	HIGH	El proyecto PRJ0035 'Renovación Plataforma Clearpass NAC' se encuentra en fase de ejecución pero carece de los siguientes entregables obligatorios según PMBOK 7: Risk Register actualizado (último update hace 45 días), Plan de Comunicación ausente, y WBS sin revisión tras el último cambio de alcance aprobado el 2026-02-15.	1) Convocar sesión de revisión de riesgos con el PM y stakeholders. 2) Crear Plan de Comunicación usando la plantilla PMBOK7-COMM-v2. 3) Actualizar WBS y obtener re-baseline del cronograma. Plazo recomendado: 10 días laborables.	{"wbs_last_update": "2026-01-20", "scope_change_date": "2026-02-15", "missing_deliverables": ["Risk Register", "Communication Plan"]}	OPEN	Ana García López	2026-04-05	\N	AG-008	2026-03-19 21:48:15.519351+00	2026-03-19 21:48:15.519351+00
+3eb54d1a-f661-42c7-a05f-19097efea65c	DORA_RESILIENCE	INFRASTRUCTURE	CLUST-EXADATA-01	MEDIUM	El clúster Oracle Exadata (CLUST-EXADATA-01), clasificado como infraestructura crítica bajo DORA, no ha completado el test de continuidad de negocio obligatorio del Q1-2026. El último test de failover se realizó el 2025-10-15 (hace 5 meses). DORA exige tests trimestrales para infraestructuras que soportan servicios de pago.	1) Programar test de failover completo del Exadata antes del 2026-03-31. 2) Documentar procedimiento DR actualizado. 3) Notificar al oficial de cumplimiento BCE el estado del test. 4) Incluir en el próximo informe DORA trimestral.	{"days_overdue": 70, "last_test_date": "2025-10-15", "required_frequency": "quarterly", "regulatory_framework": "DORA Art.25"}	OPEN	Carlos Fernández Ruiz	2026-03-31	\N	AG-008	2026-03-19 21:48:15.529367+00	2026-03-19 21:48:15.529367+00
+87c4318c-1c89-416b-b5be-1b9b361dd862	ISO27001_SECURITY	PROCESS	CHG-2026-0156	HIGH	El cambio CHG-2026-0156 (actualización firmware switches Cisco core) se implementó en producción sin completar el proceso de aprobación CAB (Change Advisory Board). El registro muestra que el cambio fue marcado como 'urgente' y se saltó la revisión de seguridad pre-implementación requerida por ISO 27001 A.12.1.2. No se realizó análisis de impacto ni se notificó al equipo de seguridad.	1) Realizar revisión de seguridad post-implementación inmediata. 2) Documentar la justificación de emergencia. 3) Revisar el proceso de cambios urgentes para incluir notificación obligatoria al CISO. 4) Implementar control técnico que bloquee deploys sin aprobación CAB.	{"change_id": "CHG-2026-0156", "iso_clause": "A.12.1.2", "cab_approval": false, "security_review": false}	OPEN	Pedro Sánchez Díaz	2026-03-25	\N	AG-008	2026-03-19 21:48:15.536377+00	2026-03-19 21:48:15.536377+00
+11db935e-ae5a-4957-bce0-a58d4a72d400	GDPR_DATA	SYSTEM	PMO-STAFF-DB	LOW	La tabla pmo_staff_skills contiene datos personales (nombre completo, silo de especialización, nivel) accesibles sin control de acceso granular. Si bien los datos no incluyen categorías especiales, la combinación de nombre + especialización + nivel permite identificación directa del empleado. Según GDPR Art.25 (Protección de datos por diseño), se recomienda implementar control de acceso basado en roles.	1) Implementar RBAC para acceso a datos de personal. 2) Añadir log de auditoría de consultas a pmo_staff_skills. 3) Evaluar pseudonimización del campo nombre en interfaces de consulta masiva.	{"table": "pmo_staff_skills", "gdpr_article": "Art.25", "personal_fields": ["nombre", "silo_especialidad", "nivel"]}	OPEN	Laura Rodríguez Pérez	2026-05-01	\N	AG-008	2026-03-19 21:48:15.546017+00	2026-03-19 21:48:15.546017+00
+\.
+
+
+ALTER TABLE public.compliance_audits ENABLE TRIGGER ALL;
+
+--
+-- PostgreSQL database dump complete
+--
+
+\unrestrict O4pN25n5oQYzJfsnN1A4N1Fa5QO4p4yal518EXZMjMmxdoe22GDzD0uK5ICyrra
+

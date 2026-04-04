@@ -1,0 +1,143 @@
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- FRAGMENTO HTML: Pestaña "Calendario CAB" para gov-build.html     -->
+<!-- INSERTAR: dentro del contenedor de tabs, como un tab-content más  -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+
+<!-- TAB BUTTON: Añadir junto a los otros botones de tab -->
+<!-- <button class="tab-btn" data-tab="cab" onclick="showGovTab('cab')">📅 Calendario CAB</button> -->
+
+<!-- TAB CONTENT: -->
+<div id="tab-cab" class="tab-content" style="display:none;">
+
+  <!-- Sub-navegación CAB -->
+  <div id="cab-subnav" style="display:flex;gap:6px;margin-bottom:14px;">
+    <button class="cab-sub-btn active" data-cabview="calendar" onclick="showCABView('calendar')" style="padding:5px 12px;border-radius:8px;font-size:12px;font-weight:500;background:var(--accent,#7c3aed);color:#fff;border:none;cursor:pointer;">Calendario</button>
+    <button class="cab-sub-btn" data-cabview="proposals" onclick="showCABView('proposals')" style="padding:5px 12px;border-radius:8px;font-size:12px;font-weight:500;background:var(--bg3,#2a2a3e);color:var(--text2,#aaa);border:1px solid var(--border,#333);cursor:pointer;">Propuestas</button>
+    <button class="cab-sub-btn" data-cabview="newform" onclick="showCABView('newform')" style="padding:5px 12px;border-radius:8px;font-size:12px;font-weight:500;background:var(--bg3,#2a2a3e);color:var(--text2,#aaa);border:1px solid var(--border,#333);cursor:pointer;">+ Nueva propuesta</button>
+  </div>
+
+  <!-- ════════ SUB-VISTA 1: CALENDARIO ════════ -->
+  <div id="cab-view-calendar">
+    <div style="display:grid;grid-template-columns:1fr 240px;gap:14px;">
+      <!-- Calendario mensual -->
+      <div style="background:var(--bg2,#1e1e2e);border-radius:12px;padding:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <button onclick="cabChangeMonth(-1)" style="padding:4px 10px;background:var(--bg3,#2a2a3e);color:var(--text1,#fff);border:1px solid var(--border,#333);border-radius:6px;cursor:pointer;font-size:14px;">&#8592;</button>
+          <span id="cab-month-label" style="font-size:14px;font-weight:600;color:var(--text1,#fff);"></span>
+          <button onclick="cabChangeMonth(1)" style="padding:4px 10px;background:var(--bg3,#2a2a3e);color:var(--text1,#fff);border:1px solid var(--border,#333);border-radius:6px;cursor:pointer;font-size:14px;">&#8594;</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px;">
+          <div style="text-align:center;color:var(--text2,#888);font-size:11px;padding:4px;">Lun</div>
+          <div style="text-align:center;color:var(--text2,#888);font-size:11px;padding:4px;">Mar</div>
+          <div style="text-align:center;color:var(--text2,#888);font-size:11px;padding:4px;">Mie</div>
+          <div style="text-align:center;color:var(--text2,#888);font-size:11px;padding:4px;">Jue</div>
+          <div style="text-align:center;color:var(--text2,#888);font-size:11px;padding:4px;">Vie</div>
+          <div style="text-align:center;color:var(--text2,#888);font-size:11px;padding:4px;">Sab</div>
+          <div style="text-align:center;color:var(--text2,#888);font-size:11px;padding:4px;">Dom</div>
+        </div>
+        <div id="cab-cal-days" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;"></div>
+        <div style="display:flex;gap:12px;margin-top:10px;font-size:11px;color:var(--text2,#888);flex-wrap:wrap;">
+          <span><span style="display:inline-block;width:10px;height:10px;background:#ef4444;border-radius:2px;vertical-align:middle;margin-right:3px;opacity:0.7;"></span>Exclusion</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:#f59e0b;border-radius:2px;vertical-align:middle;margin-right:3px;opacity:0.7;"></span>Precaucion</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:#10b981;border-radius:2px;vertical-align:middle;margin-right:3px;opacity:0.7;"></span>Ventana abierta</span>
+        </div>
+      </div>
+      <!-- Sidebar periodos + stats -->
+      <div>
+        <div style="background:var(--bg2,#1e1e2e);border-radius:12px;padding:14px;margin-bottom:10px;">
+          <p style="font-size:13px;font-weight:600;margin:0 0 8px;color:var(--text1,#fff);">Periodos activos</p>
+          <div id="cab-periodos-sidebar" style="font-size:11px;line-height:1.8;color:var(--text2,#aaa);">Cargando...</div>
+        </div>
+        <div style="background:var(--bg2,#1e1e2e);border-radius:12px;padding:14px;text-align:center;">
+          <div style="font-size:22px;font-weight:700;color:#7c3aed;" id="cab-total-activos">--</div>
+          <div style="font-size:11px;color:var(--text2,#aaa);margin-top:2px;">Activos CMDB</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ SUB-VISTA 2: PROPUESTAS ════════ -->
+  <div id="cab-view-proposals" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <p style="font-size:15px;font-weight:600;margin:0;color:var(--text1,#fff);">Propuestas CAB generadas</p>
+      <button onclick="showCABView('newform')" style="padding:6px 16px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">+ Generar nueva</button>
+    </div>
+    <div id="cab-propuestas-list" style="color:var(--text2,#aaa);font-size:13px;">Cargando...</div>
+  </div>
+
+  <!-- ════════ SUB-VISTA 3: NUEVA PROPUESTA (formulario) ════════ -->
+  <div id="cab-view-newform" style="display:none;">
+    <div style="max-width:480px;margin:0 auto;">
+      <div style="background:var(--bg2,#1e1e2e);border-radius:12px;padding:20px;">
+        <p style="font-size:16px;font-weight:600;margin:0 0 16px;color:var(--text1,#fff);">Generar propuesta CAB</p>
+
+        <label style="font-size:12px;color:var(--text2,#aaa);display:block;margin-bottom:4px;">Periodo objetivo</label>
+        <select id="cab-periodo-select" style="width:100%;padding:8px 10px;border-radius:8px;background:var(--bg3,#2a2a3e);color:var(--text1,#fff);border:1px solid var(--border,#333);margin-bottom:14px;font-size:13px;">
+          <option value="">Cargando periodos...</option>
+        </select>
+
+        <label style="font-size:12px;color:var(--text2,#aaa);display:block;margin-bottom:4px;">Filtrar por capa (opcional)</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+          <label style="font-size:11px;color:var(--text2,#aaa);display:flex;align-items:center;gap:3px;cursor:pointer;"><input type="checkbox" checked class="cab-capa-chk" value="INFRAESTRUCTURA"> INFRA</label>
+          <label style="font-size:11px;color:var(--text2,#aaa);display:flex;align-items:center;gap:3px;cursor:pointer;"><input type="checkbox" checked class="cab-capa-chk" value="APLICACION"> APP</label>
+          <label style="font-size:11px;color:var(--text2,#aaa);display:flex;align-items:center;gap:3px;cursor:pointer;"><input type="checkbox" checked class="cab-capa-chk" value="RED"> RED</label>
+          <label style="font-size:11px;color:var(--text2,#aaa);display:flex;align-items:center;gap:3px;cursor:pointer;"><input type="checkbox" checked class="cab-capa-chk" value="SEGURIDAD"> SEG</label>
+          <label style="font-size:11px;color:var(--text2,#aaa);display:flex;align-items:center;gap:3px;cursor:pointer;"><input type="checkbox" class="cab-capa-chk" value="NEGOCIO"> NEG</label>
+          <label style="font-size:11px;color:var(--text2,#aaa);display:flex;align-items:center;gap:3px;cursor:pointer;"><input type="checkbox" class="cab-capa-chk" value="SOPORTE"> SOP</label>
+        </div>
+
+        <label style="font-size:12px;color:var(--text2,#aaa);display:block;margin-bottom:4px;">Criticidad minima</label>
+        <select id="cab-crit-select" style="width:100%;padding:8px 10px;border-radius:8px;background:var(--bg3,#2a2a3e);color:var(--text1,#fff);border:1px solid var(--border,#333);margin-bottom:14px;font-size:13px;">
+          <option value="">Todas (BAJA a CRITICA)</option>
+          <option value="MEDIA">MEDIA o superior</option>
+          <option value="ALTA">ALTA o superior</option>
+          <option value="CRITICA">Solo CRITICA</option>
+        </select>
+
+        <label style="font-size:12px;color:var(--text2,#aaa);display:block;margin-bottom:4px;">Notas para AG-011 (opcional)</label>
+        <textarea id="cab-notas" style="width:100%;height:60px;padding:8px 10px;border-radius:8px;background:var(--bg3,#2a2a3e);color:var(--text1,#fff);border:1px solid var(--border,#333);margin-bottom:14px;font-size:12px;resize:vertical;" placeholder="Ej: Priorizar activos de pasarela de pagos..."></textarea>
+
+        <div style="background:var(--bg3,#2a2a3e);border-radius:8px;padding:10px 12px;margin-bottom:16px;font-size:12px;color:var(--text2,#aaa);">
+          <div style="display:flex;justify-content:space-between;"><span>Activos estimados:</span><span style="font-weight:600;color:var(--text1,#fff);">~112</span></div>
+          <div style="display:flex;justify-content:space-between;margin-top:4px;"><span>Workers paralelos:</span><span style="font-weight:600;color:var(--text1,#fff);">6</span></div>
+          <div style="display:flex;justify-content:space-between;margin-top:4px;"><span>Coste estimado:</span><span style="font-weight:600;color:#7c3aed;">~$0.53 USD</span></div>
+          <div style="display:flex;justify-content:space-between;margin-top:4px;"><span>Tiempo estimado:</span><span style="font-weight:600;color:var(--text1,#fff);">~10 seg</span></div>
+        </div>
+
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button onclick="showCABView('calendar')" style="padding:6px 16px;background:var(--bg3,#2a2a3e);color:var(--text2,#aaa);border:1px solid var(--border,#333);border-radius:8px;font-size:12px;cursor:pointer;">Cancelar</button>
+          <button onclick="generarPropuestaCAB()" id="cab-launch-btn" style="padding:6px 20px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">🤖 Lanzar AG-011</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ SUB-VISTA 4: PROGRESO SSE ════════ -->
+  <div id="cab-view-progress" style="display:none;">
+    <div style="background:var(--bg2,#1e1e2e);border-radius:12px;padding:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <p style="font-size:14px;font-weight:600;margin:0;color:var(--text1,#fff);">⏳ Progreso AG-011</p>
+        <span id="cab-pct-label" style="font-size:12px;color:#10b981;font-weight:600;">0%</span>
+      </div>
+      <div style="background:var(--bg3,#333);border-radius:4px;height:6px;overflow:hidden;margin-bottom:12px;">
+        <div id="cab-progress-bar" style="width:0%;height:100%;background:linear-gradient(90deg,#7c3aed,#06b6d4);transition:width 0.5s;"></div>
+      </div>
+      <div id="cab-progress-log" style="font-family:monospace;font-size:12px;max-height:300px;overflow-y:auto;background:#0d0d1a;border-radius:8px;padding:12px;color:#0f0;"></div>
+    </div>
+    <div id="cab-progress-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px;">
+    </div>
+  </div>
+
+  <!-- ════════ SUB-VISTA 5: DETALLE PROPUESTA ════════ -->
+  <div id="cab-view-detail" style="display:none;">
+    <div id="cab-detail-header" style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;flex-wrap:wrap;gap:8px;"></div>
+    <div id="cab-detail-kpis" style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px;"></div>
+
+    <!-- Sub-tabs dentro del detalle -->
+    <div id="cab-detail-tabs" style="display:flex;gap:4px;margin-bottom:12px;border-bottom:1px solid var(--border,#333);padding-bottom:8px;"></div>
+
+    <!-- Contenido de sub-tabs -->
+    <div id="cab-detail-content"></div>
+  </div>
+
+</div>

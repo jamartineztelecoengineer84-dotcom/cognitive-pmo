@@ -46,6 +46,11 @@ from agents.tools import (
     QUERY_PM_CANDIDATES_SCHEMA, CALC_ROI_SCHEMA,
     CALC_EVM_BASELINE_SCHEMA, DEFINE_QUALITY_GATES_SCHEMA,
     QUERY_SIMILAR_PROJECTS_SCHEMA,
+    # AG-011 CAB tools
+    QUERY_CALENDARIO_PERIODOS_SCHEMA, QUERY_DEMAND_HISTORY_SCHEMA,
+    QUERY_CHANGE_WINDOWS_SCHEMA, QUERY_CAB_CONTEXTO_BUILD_SCHEMA,
+    QUERY_CAB_CONTEXTO_RUN_SCHEMA, CREATE_CHANGE_PROPOSAL_SCHEMA,
+    CREATE_CAB_ALERTS_SCHEMA,
 )
 
 AGENT_CONFIGS["AG-001"] = AgentConfig(
@@ -173,6 +178,19 @@ AGENT_CONFIGS["AG-018"] = AgentConfig(
     max_tokens=1000,
 )
 
+AGENT_CONFIGS["AG-011"] = AgentConfig(
+    agent_id="AG-011",
+    agent_name="CAB Generator (Gabinete de Cambios)",
+    system_prompt=load_prompt("ag011_director.txt"),
+    tools=[
+        QUERY_CALENDARIO_PERIODOS_SCHEMA, QUERY_DEMAND_HISTORY_SCHEMA,
+        QUERY_CHANGE_WINDOWS_SCHEMA, QUERY_CAB_CONTEXTO_BUILD_SCHEMA,
+        QUERY_CAB_CONTEXTO_RUN_SCHEMA, CREATE_CHANGE_PROPOSAL_SCHEMA,
+        CREATE_CAB_ALERTS_SCHEMA,
+    ],
+    max_tokens=2048,
+)
+
 AGENT_CONFIGS["AG-012"] = AgentConfig(
     agent_id="AG-012",
     agent_name="Task Advisor",
@@ -248,4 +266,13 @@ SPAWNABLE_AGENTS["AG-007"] = {
     "worker_max_tokens": 3072,
     "programmatic_merge": True,
     "merge_function": merge_ag007_sprints,
+}
+
+# AG-011: CAB Generator — LLM merger (consolida propuestas de 6 workers)
+SPAWNABLE_AGENTS["AG-011"] = {
+    "director_prompt": load_prompt("ag011_director.txt"),
+    "worker_prompt_template": load_prompt("ag011_worker.txt"),
+    "merger_prompt": load_prompt("ag011_merger.txt"),
+    "max_workers": 6,
+    "worker_max_tokens": 2048,
 }

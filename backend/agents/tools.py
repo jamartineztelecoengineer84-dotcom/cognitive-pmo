@@ -1734,3 +1734,103 @@ async def query_similar_projects(db, keywords: list, skills: list = None):
             d["source"] = "governance"
             results.append(d)
     return results[:10]
+
+
+# ═══════════════════════════════════════════════════════════════
+# TOOL SCHEMAS — AG-011: Gabinete de Cambios (CAB)
+# ═══════════════════════════════════════════════════════════════
+
+QUERY_CALENDARIO_PERIODOS_SCHEMA = {
+    "name": "query_calendario_periodos",
+    "description": "Consulta los periodos de demanda del calendario CAB. Devuelve todos los periodos con fecha inicio/fin, impacto estimado y activos afectados.",
+    "input_schema": {
+        "type": "object",
+        "properties": {}
+    }
+}
+
+QUERY_DEMAND_HISTORY_SCHEMA = {
+    "name": "query_demand_history",
+    "description": "Consulta el histórico de demanda de un activo (carga promedio/máxima/mínima, volatilidad, patrones diarios y horarios). Hasta 12 meses.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "id_activo": {"type": "integer", "description": "ID numérico del activo"},
+            "meses": {"type": "integer", "description": "Meses de histórico (default 12)", "default": 12}
+        },
+        "required": ["id_activo"]
+    }
+}
+
+QUERY_CHANGE_WINDOWS_SCHEMA = {
+    "name": "query_change_windows",
+    "description": "Consulta ventanas de cambio CAB activas. Filtra por activo, periodo o estado.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "id_activo": {"type": "integer", "description": "ID numérico del activo (opcional)"},
+            "periodo": {"type": "string", "description": "Nombre del periodo (opcional)"},
+            "estado": {"type": "string", "description": "Estado de la ventana (default ACTIVA)", "default": "ACTIVA"}
+        }
+    }
+}
+
+QUERY_CAB_CONTEXTO_BUILD_SCHEMA = {
+    "name": "query_cab_contexto_build",
+    "description": "Obtiene contexto BUILD para el CAB: proyectos activos, sprint items pendientes y tareas kanban en curso. Permite detectar solapamientos sprint/ventana.",
+    "input_schema": {
+        "type": "object",
+        "properties": {}
+    }
+}
+
+QUERY_CAB_CONTEXTO_RUN_SCHEMA = {
+    "name": "query_cab_contexto_run",
+    "description": "Obtiene contexto RUN para el CAB: incidencias P1/P2 activas, incidencias live y tareas RUN en kanban. Permite detectar bloqueos por incidencia activa.",
+    "input_schema": {
+        "type": "object",
+        "properties": {}
+    }
+}
+
+CREATE_CHANGE_PROPOSAL_SCHEMA = {
+    "name": "create_change_proposal",
+    "description": "Crea una propuesta CAB en cmdb_change_proposals con el JSON consolidado del merger. Auto-numera por periodo.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "periodo": {"type": "string", "description": "Nombre del periodo objetivo"},
+            "propuesta_json": {"type": "object", "description": "JSON completo de la propuesta CAB"},
+            "tiempo_generacion_segundos": {"type": "integer", "description": "Tiempo que tardó la generación"}
+        },
+        "required": ["periodo", "propuesta_json"]
+    }
+}
+
+CREATE_CAB_ALERTS_SCHEMA = {
+    "name": "create_cab_alerts",
+    "description": "Inserta alertas CAB en intelligent_alerts para que aparezcan en gov-run y gov-build. Tipos: CAB_WINDOW_CONFLICT, CAB_INCIDENT_BLOCKS_CHANGE, CAB_SPRINT_OVERLAP, CAB_PROPOSAL_READY, CAB_WINDOW_EXPIRED.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "periodo": {"type": "string", "description": "Periodo de referencia"},
+            "alerts": {
+                "type": "array",
+                "description": "Lista de alertas CAB",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "alert_type": {"type": "string"},
+                        "severity": {"type": "string", "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]},
+                        "title": {"type": "string"},
+                        "description": {"type": "string"},
+                        "affected_entities": {"type": "object"},
+                        "recommended_actions": {"type": "array", "items": {"type": "string"}}
+                    },
+                    "required": ["alert_type", "severity", "title"]
+                }
+            }
+        },
+        "required": ["alerts"]
+    }
+}

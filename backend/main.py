@@ -8,7 +8,8 @@ from typing import Any, Dict, List, Optional
 import psycopg2
 import httpx
 import psycopg2.extras
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -2530,6 +2531,483 @@ async def start_workers():
     if pool:
         asyncio.create_task(sync_loop(pool))
         asyncio.create_task(task_advisor_loop(pool))
+
+# ============================================================================
+# CAB — Gabinete de Cambios (CRUD Propuestas + Periodos + Ventanas + Alertas)
+# ============================================================================
+
+@app.get("/cab/periodos")
+async def cab_list_periodos():
+    async with get_pool().acquire() as conn:
+        rows = await conn.fetch("SELECT * FROM calendario_periodos_demanda ORDER BY fecha_inicio")
+        results = []
+        for r in rows:
+            d = dict(r)
+            for k, v in d.items():
+                if hasattr(v, 'isoformat'):
+                    d[k] = v.isoformat()
+            results.append(d)
+        return results
+
+
+@app.get("/cab/propuestas")
+async def cab_list_propuestas(periodo: str = None, estado: str = None):
+    query = ("SELECT id,periodo,numero_propuesta,estado,generado_por,fecha_generacion,"
+             "cambios_aplicados,cambios_rechazados,revisado_por "
+             "FROM cmdb_change_proposals")
+    conds, args, idx = [], [], 1
+    if periodo:
+        conds.append(f"periodo=${idx}")
+        args.append(periodo)
+        idx += 1
+    if estado:
+        conds.append(f"estado=${idx}")
+        args.append(estado)
+        idx += 1
+    if conds:
+        query += " WHERE " + " AND ".join(conds)
+    query += " ORDER BY fecha_generacion DESC LIMIT 50"
+    async with get_pool().acquire() as conn:
+        rows = await conn.fetch(query, *args)
+        results = []
+        for r in rows:
+            d = dict(r)
+            for k, v in d.items():
+                if hasattr(v, 'isoformat'):
+                    d[k] = v.isoformat()
+            results.append(d)
+        return results
+
+
+@app.get("/cab/propuestas/{propuesta_id}")
+async def cab_get_propuesta(propuesta_id: str):
+    async with get_pool().acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT * FROM cmdb_change_proposals WHERE id=$1::uuid", propuesta_id)
+        if not row:
+            return JSONResponse({"error": "No encontrada"}, status_code=404)
+        d = dict(row)
+        for k, v in d.items():
+            if hasattr(v, 'isoformat'):
+                d[k] = v.isoformat()
+        return d
+
+
+@app.post("/cab/propuestas/{propuesta_id}/aprobar")
+async def cab_aprobar(propuesta_id: str, request: Request):
+    body = await request.json()
+    revisado_por = body.get("revisado_por", "admin")
+    async with get_pool().acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT * FROM cmdb_change_proposals WHERE id=$1::uuid", propuesta_id)
+        if not row:
+            return JSONResponse({"error": "No encontrada"}, status_code=404)
+        propuesta = (row["propuesta_json"] if isinstance(row["propuesta_json"], dict)
+                     else json.loads(row["propuesta_json"]))
+        cambios = propuesta.get("cambios_propuestos", [])
+        insertados = 0
+        for c in cambios:
+            v = c.get("ventana_final") or c.get("ventana_recomendada", {})
+            if not c.get("id_activo") or not v:
+                continue
+            await conn.execute(
+                "INSERT INTO cmdb_change_windows "
+                "(id_activo,nombre_ventana,periodo,dias_semana,hora_inicio,hora_fin,"
+                "duracion_minutos,tipos_cambio_permitidos,riesgo_estimado,score_confianza,"
+                "valido_hasta,id_propuesta,aprobado_por,fecha_aprobacion) "
+                "VALUES ($1,$2,$3,$4,$5::time,$6::time,$7,$8,$9,$10,"
+                "(CURRENT_DATE+INTERVAL '90 days')::date,$11::uuid,$12,now())",
+                int(c["id_activo"]) if str(c["id_activo"]).isdigit() else 0,
+                c.get("activo_nombre", f"Ventana {c['id_activo']}"),
+                row["periodo"],
+                v.get("dias", ["sabado", "domingo"]),
+                v.get("hora_inicio", "23:00"),
+                v.get("hora_fin", "07:00"),
+                v.get("duracion_horas", 8) * 60 if v.get("duracion_horas") else 480,
+                c.get("tipos_cambio_permitidos", ["Patch", "Mantenimiento"]),
+                c.get("riesgo", "MEDIO"),
+                float(c.get("score_confianza", 0.80)),
+                propuesta_id, revisado_por)
+            insertados += 1
+        await conn.execute(
+            "UPDATE cmdb_change_proposals SET estado='APLICADO',revisado_por=$1,"
+            "fecha_revision=now(),notas_revision=$2,cambios_aplicados=$3,"
+            "updated_at=now() WHERE id=$4::uuid",
+            revisado_por, body.get("notas", ""), insertados, propuesta_id)
+        return {"status": "OK", "propuesta_id": propuesta_id,
+                "ventanas_insertadas": insertados, "estado": "APLICADO"}
+
+
+@app.post("/cab/propuestas/{propuesta_id}/rechazar")
+async def cab_rechazar(propuesta_id: str, request: Request):
+    body = await request.json()
+    async with get_pool().acquire() as conn:
+        await conn.execute(
+            "UPDATE cmdb_change_proposals SET estado='RECHAZADO',revisado_por=$1,"
+            "fecha_revision=now(),notas_revision=$2,updated_at=now() WHERE id=$3::uuid",
+            body.get("revisado_por", "admin"),
+            body.get("motivo_rechazo", ""), propuesta_id)
+    return {"status": "OK", "propuesta_id": propuesta_id, "estado": "RECHAZADO"}
+
+
+@app.get("/cab/ventanas")
+async def cab_list_ventanas(id_activo: int = None, periodo: str = None):
+    query = ("SELECT cw.*,a.codigo,a.nombre as activo_nombre,a.criticidad "
+             "FROM cmdb_change_windows cw "
+             "JOIN cmdb_activos a ON a.id_activo=cw.id_activo "
+             "WHERE cw.estado='ACTIVA'")
+    args, idx = [], 1
+    if id_activo:
+        query += f" AND cw.id_activo=${idx}"
+        args.append(id_activo)
+        idx += 1
+    if periodo:
+        query += f" AND cw.periodo=${idx}"
+        args.append(periodo)
+        idx += 1
+    query += " ORDER BY a.criticidad,a.codigo"
+    async with get_pool().acquire() as conn:
+        rows = await conn.fetch(query, *args)
+        results = []
+        for r in rows:
+            d = dict(r)
+            for k, v in d.items():
+                if hasattr(v, 'isoformat'):
+                    d[k] = v.isoformat()
+            results.append(d)
+        return results
+
+
+@app.get("/cab/alertas")
+async def cab_alertas_activas():
+    """Alertas CAB activas (para mostrar en gov-run y gov-build)"""
+    async with get_pool().acquire() as conn:
+        rows = await conn.fetch(
+            "SELECT * FROM intelligent_alerts "
+            "WHERE source_agent='AG-011' AND status='ACTIVE' "
+            "ORDER BY severity DESC, created_at DESC LIMIT 20")
+        results = []
+        for r in rows:
+            d = dict(r)
+            for k, v in d.items():
+                if hasattr(v, 'isoformat'):
+                    d[k] = v.isoformat()
+            results.append(d)
+        return results
+
+
+# ============================================================================
+# CAB — CRUD Completo para operatividad total
+# ============================================================================
+
+# ── PERIODOS: Crear, Editar, Borrar, Detalle ──
+
+@app.post("/cab/periodos")
+async def cab_crear_periodo(request: Request):
+    body = await request.json()
+    nombre = body.get("nombre_periodo")
+    if not nombre:
+        return JSONResponse({"error": "nombre_periodo requerido"}, status_code=400)
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        exists = await conn.fetchval(
+            "SELECT count(*) FROM calendario_periodos_demanda WHERE nombre_periodo=$1", nombre)
+        if exists > 0:
+            return JSONResponse({"error": f"Periodo {nombre} ya existe"}, status_code=409)
+        row = await conn.fetchrow("""
+            INSERT INTO calendario_periodos_demanda (nombre_periodo, fecha_inicio, fecha_fin,
+                impacto_estimado, carga_pico_esperada_pct, activos_afectados, notas, created_by)
+            VALUES ($1, $2::date, $3::date, $4, $5, $6, $7, $8)
+            RETURNING id, nombre_periodo, fecha_inicio, fecha_fin, impacto_estimado
+        """, nombre, body.get("fecha_inicio"), body.get("fecha_fin"),
+            body.get("impacto_estimado", "ALTO"), int(body.get("carga_pico_esperada_pct", 80)),
+            body.get("activos_afectados", []), body.get("notas", ""),
+            body.get("created_by", "admin"))
+        d = dict(row)
+        for k, v in d.items():
+            if hasattr(v, 'isoformat'):
+                d[k] = v.isoformat()
+        return d
+
+
+@app.get("/cab/periodos/{periodo_id}")
+async def cab_get_periodo(periodo_id: str):
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT * FROM calendario_periodos_demanda WHERE id=$1::uuid", periodo_id)
+        if not row:
+            return JSONResponse({"error": "No encontrado"}, status_code=404)
+        d = dict(row)
+        for k, v in d.items():
+            if hasattr(v, 'isoformat'):
+                d[k] = v.isoformat()
+        return d
+
+
+@app.put("/cab/periodos/{periodo_id}")
+async def cab_editar_periodo(periodo_id: str, request: Request):
+    body = await request.json()
+    sets, args, idx = [], [], 1
+    for field in ["nombre_periodo", "fecha_inicio", "fecha_fin", "impacto_estimado",
+                   "carga_pico_esperada_pct", "activos_afectados", "notas"]:
+        if field in body:
+            sets.append(f"{field}=${idx}")
+            val = body[field]
+            if field == "carga_pico_esperada_pct":
+                val = int(val)
+            args.append(val)
+            idx += 1
+    if not sets:
+        return JSONResponse({"error": "No hay campos para actualizar"}, status_code=400)
+    sets.append("updated_at=now()")
+    args.append(periodo_id)
+    query = f"UPDATE calendario_periodos_demanda SET {','.join(sets)} WHERE id=${idx}::uuid RETURNING id, nombre_periodo"
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(query, *args)
+        if not row:
+            return JSONResponse({"error": "Periodo no encontrado"}, status_code=404)
+        return dict(row)
+
+
+@app.delete("/cab/periodos/{periodo_id}")
+async def cab_borrar_periodo(periodo_id: str):
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        await conn.execute(
+            "DELETE FROM calendario_periodos_demanda WHERE id=$1::uuid", periodo_id)
+        return {"status": "OK", "deleted": periodo_id}
+
+
+# ── VENTANAS: Detalle, Editar, Cancelar ──
+
+@app.get("/cab/ventanas/{ventana_id}")
+async def cab_get_ventana(ventana_id: str):
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow("""
+            SELECT cw.*, a.codigo, a.nombre as activo_nombre, a.criticidad, a.capa,
+                   a.entorno, a.propietario, a.responsable_tecnico, a.estado_ciclo
+            FROM cmdb_change_windows cw
+            JOIN cmdb_activos a ON a.id_activo = cw.id_activo
+            WHERE cw.id = $1::uuid
+        """, ventana_id)
+        if not row:
+            return JSONResponse({"error": "No encontrada"}, status_code=404)
+        result = dict(row)
+        for k, v in result.items():
+            if hasattr(v, 'isoformat'):
+                result[k] = v.isoformat()
+        deps = await conn.fetch("""
+            SELECT a2.codigo, a2.nombre, a2.criticidad, r.tipo_relacion
+            FROM cmdb_relaciones r
+            JOIN cmdb_activos a2 ON a2.id_activo = r.id_activo_destino
+            WHERE r.id_activo_origen = $1
+        """, row["id_activo"])
+        result["dependencias"] = [dict(d) for d in deps]
+        incs = await conn.fetch("""
+            SELECT ticket_id, prioridad_ia, estado, incidencia_detectada
+            FROM incidencias_run
+            WHERE ci_afectado = $1 AND estado IN ('QUEUED','EN_CURSO','ESCALADO')
+        """, row.get("codigo", ""))
+        result["incidencias_activas"] = [dict(i) for i in incs]
+        hist = await conn.fetch("""
+            SELECT mes, carga_promedio_pct, carga_maxima_pct, patron_diario
+            FROM cmdb_demand_history WHERE id_activo = $1 ORDER BY mes DESC LIMIT 3
+        """, row["id_activo"])
+        hist_list = []
+        for h in hist:
+            hd = dict(h)
+            for k, v in hd.items():
+                if hasattr(v, 'isoformat'):
+                    hd[k] = v.isoformat()
+            hist_list.append(hd)
+        result["historico_reciente"] = hist_list
+        return result
+
+
+@app.put("/cab/ventanas/{ventana_id}")
+async def cab_editar_ventana(ventana_id: str, request: Request):
+    body = await request.json()
+    sets, args, idx = [], [], 1
+    for field in ["dias_semana", "hora_inicio", "hora_fin", "duracion_minutos",
+                   "tipos_cambio_permitidos", "restricciones", "riesgo_estimado",
+                   "score_confianza", "estado", "nombre_ventana"]:
+        if field in body:
+            sets.append(f"{field}=${idx}")
+            val = body[field]
+            if field == "score_confianza":
+                val = float(val)
+            if field == "duracion_minutos":
+                val = int(val)
+            args.append(val)
+            idx += 1
+    if not sets:
+        return JSONResponse({"error": "No hay campos"}, status_code=400)
+    sets.append("updated_at=now()")
+    args.append(ventana_id)
+    query = f"UPDATE cmdb_change_windows SET {','.join(sets)} WHERE id=${idx}::uuid RETURNING id, nombre_ventana, estado"
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(query, *args)
+        if not row:
+            return JSONResponse({"error": "Ventana no encontrada"}, status_code=404)
+        return dict(row)
+
+
+@app.delete("/cab/ventanas/{ventana_id}")
+async def cab_borrar_ventana(ventana_id: str):
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        await conn.execute(
+            "UPDATE cmdb_change_windows SET estado='CANCELADA', updated_at=now() WHERE id=$1::uuid",
+            ventana_id)
+        return {"status": "OK", "ventana_id": ventana_id, "estado": "CANCELADA"}
+
+
+# ── PROPUESTAS: Editar, Editar cambio individual ──
+
+@app.put("/cab/propuestas/{propuesta_id}")
+async def cab_editar_propuesta(propuesta_id: str, request: Request):
+    body = await request.json()
+    sets, args, idx = [], [], 1
+    for field in ["notas_revision", "revisado_por", "estado"]:
+        if field in body:
+            sets.append(f"{field}=${idx}")
+            args.append(body[field])
+            idx += 1
+    if not sets:
+        return JSONResponse({"error": "No hay campos"}, status_code=400)
+    sets.append("updated_at=now()")
+    sets.append("fecha_revision=now()")
+    args.append(propuesta_id)
+    query = f"UPDATE cmdb_change_proposals SET {','.join(sets)} WHERE id=${idx}::uuid RETURNING id, estado"
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(query, *args)
+        if not row:
+            return JSONResponse({"error": "No encontrada"}, status_code=404)
+        d = dict(row)
+        for k, v in d.items():
+            if hasattr(v, 'isoformat'):
+                d[k] = v.isoformat()
+        return d
+
+
+@app.post("/cab/propuestas/{propuesta_id}/editar-cambio")
+async def cab_editar_cambio_individual(propuesta_id: str, request: Request):
+    body = await request.json()
+    id_activo = body.get("id_activo")
+    if not id_activo:
+        return JSONResponse({"error": "id_activo requerido"}, status_code=400)
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT propuesta_json FROM cmdb_change_proposals WHERE id=$1::uuid", propuesta_id)
+        if not row:
+            return JSONResponse({"error": "No encontrada"}, status_code=404)
+        prop = (row["propuesta_json"] if isinstance(row["propuesta_json"], dict)
+                else json.loads(row["propuesta_json"]))
+        cambios = prop.get("cambios_propuestos", [])
+        updated = False
+        for c in cambios:
+            if str(c.get("id_activo")) == str(id_activo):
+                if "ventana_editada" in body:
+                    c["ventana_final"] = body["ventana_editada"]
+                if "tipos_cambio_permitidos" in body:
+                    c["tipos_cambio_permitidos"] = body["tipos_cambio_permitidos"]
+                if "riesgo" in body:
+                    c["riesgo"] = body["riesgo"]
+                if "notas" in body:
+                    c["notas_edicion"] = body["notas"]
+                c["editado_por_humano"] = True
+                updated = True
+                break
+        if not updated:
+            return JSONResponse({"error": f"Activo {id_activo} no encontrado en propuesta"},
+                                status_code=404)
+        prop["cambios_propuestos"] = cambios
+        await conn.execute("""
+            UPDATE cmdb_change_proposals SET propuesta_json=$1::jsonb,
+                cambios_editados=cambios_editados+1, updated_at=now()
+            WHERE id=$2::uuid
+        """, json.dumps(prop, default=str), propuesta_id)
+        return {"status": "OK", "activo_editado": id_activo}
+
+
+# ── ALERTAS: Detalle, Reconocer/Resolver ──
+
+@app.get("/cab/alertas/{alerta_id}")
+async def cab_get_alerta(alerta_id: str):
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow("SELECT * FROM intelligent_alerts WHERE id=$1", alerta_id)
+        if not row:
+            return JSONResponse({"error": "No encontrada"}, status_code=404)
+        d = dict(row)
+        for k, v in d.items():
+            if hasattr(v, 'isoformat'):
+                d[k] = v.isoformat()
+        return d
+
+
+@app.put("/cab/alertas/{alerta_id}")
+async def cab_actualizar_alerta(alerta_id: str, request: Request):
+    body = await request.json()
+    nuevo_estado = body.get("status")
+    if nuevo_estado not in ("ACKNOWLEDGED", "RESOLVED", "SUPPRESSED", "ESCALATED"):
+        return JSONResponse({"error": "Estado no valido"}, status_code=400)
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        sets = ["status=$1"]
+        args = [nuevo_estado]
+        idx = 2
+        if nuevo_estado == "ACKNOWLEDGED":
+            sets.append(f"acknowledged_by=${idx}")
+            args.append(body.get("acknowledged_by", "admin"))
+            idx += 1
+            sets.append("acknowledged_at=now()")
+        elif nuevo_estado == "RESOLVED":
+            sets.append("resolved_at=now()")
+            sets.append(f"acknowledged_by=${idx}")
+            args.append(body.get("acknowledged_by", "admin"))
+            idx += 1
+        args.append(alerta_id)
+        query = f"UPDATE intelligent_alerts SET {','.join(sets)} WHERE id=${idx} RETURNING id, status"
+        row = await conn.fetchrow(query, *args)
+        if not row:
+            return JSONResponse({"error": "No encontrada"}, status_code=404)
+        return dict(row)
+
+
+# ── ACTIVOS: Selector agrupado para modales ──
+
+@app.get("/cab/activos-selector")
+async def cab_activos_selector():
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT id_activo, codigo, nombre, criticidad, capa, entorno, estado_ciclo
+            FROM cmdb_activos
+            WHERE estado_ciclo IN ('OPERATIVO','DEGRADADO','MANTENIMIENTO')
+            ORDER BY entorno, capa, criticidad, nombre
+        """)
+        result = {}
+        for r in rows:
+            env = r["entorno"]
+            capa = r["capa"]
+            if env not in result:
+                result[env] = {"total": 0, "capas": {}}
+            if capa not in result[env]["capas"]:
+                result[env]["capas"][capa] = []
+            result[env]["capas"][capa].append({
+                "id": r["id_activo"], "codigo": r["codigo"],
+                "nombre": r["nombre"], "criticidad": r["criticidad"]
+            })
+            result[env]["total"] += 1
+        return result
+
 
 # ── War Room Cognitivo (Sub-App) ───────────────────────────────────────────
 from war_room_api import war_room_app

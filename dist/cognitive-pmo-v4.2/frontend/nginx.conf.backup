@@ -1,0 +1,31 @@
+server {
+    listen 80;
+    server_name localhost;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Flowise proxy (already prefixed with /api/)
+    location /api/ {
+        proxy_pass http://api:8088/api/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_read_timeout 600s;
+        proxy_connect_timeout 10s;
+        proxy_send_timeout 600s;
+    }
+
+    # Backend API routes (no /api/ prefix in the URL)
+    location ~ ^/(health|team|cartera|disponibilidad|kanban|incidencias|asignar|buffer|proyectos|prediccion|presupuestos|cognitive|pmo|catalogo|build|run|dev|documentacion|auth|rbac|directorio|cmdb|agents|pipeline)(/|$) {
+        proxy_pass http://api:8088;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_read_timeout 600s;
+        proxy_connect_timeout 10s;
+        proxy_send_timeout 600s;
+        client_max_body_size 500M;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

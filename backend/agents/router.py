@@ -3,11 +3,11 @@ import json
 import re
 from uuid import uuid4
 from datetime import datetime, timedelta
-from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 from typing import Optional
-from agents.config import AGENT_CONFIGS
+from agents.config import AGENT_CONFIGS, AgentConfig
 from agents.engine import AgentEngine
 from agents.spawner import SpawnableEngine, SPAWNABLE_AGENTS
 from database import get_pool
@@ -486,3 +486,293 @@ async def run_forecast():
         session_id=f"forecast-{__import__('datetime').datetime.now().strftime('%Y%m%d')}"
     )
     return {"agent": "AG-003", "forecast": result}
+
+
+# ============================================================================
+# AG-011: GABINETE DE CAMBIOS AUTOMÁTICO
+# ============================================================================
+
+import uuid as uuid_lib
+
+cab_jobs = {}
+
+
+@router.post("/build/cab-generator")
+async def cab_generator_start(request: Request):
+    body = await request.json()
+    periodo = body.get("periodo")
+    if not periodo:
+        return JSONResponse({"error": "periodo es requerido"}, status_code=400)
+    job_id = str(uuid_lib.uuid4())
+    cab_jobs[job_id] = {"status": "ENQUEUED", "periodo": periodo, "events": [], "result": None}
+    asyncio.create_task(_run_cab_pipeline(job_id, periodo, get_pool()))
+    return JSONResponse({
+        "status": "ENQUEUED", "job_id": job_id, "periodo": periodo,
+        "mensaje": f"Gabinete de Cambios iniciado para {periodo}",
+        "stream_url": f"/agents/build/cab-generator/{job_id}/stream"
+    }, status_code=202)
+
+
+@router.get("/build/cab-generator/{job_id}/stream")
+async def cab_generator_stream(job_id: str):
+    if job_id not in cab_jobs:
+        return JSONResponse({"error": "Job no encontrado"}, status_code=404)
+
+    async def event_generator():
+        last_idx = 0
+        while True:
+            if job_id not in cab_jobs:
+                break
+            job = cab_jobs[job_id]
+            while last_idx < len(job["events"]):
+                evt = job["events"][last_idx]
+                yield f"event: {evt['type']}\ndata: {json.dumps(evt['data'], default=str)}\n\n"
+                last_idx += 1
+            if job["status"] in ("COMPLETE", "ERROR"):
+                break
+            await asyncio.sleep(0.5)
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive"})
+
+
+async def _run_cab_pipeline(job_id: str, periodo: str, pool):
+    job = cab_jobs[job_id]
+
+    def emit(event_type, data):
+        job["events"].append({"type": event_type, "data": data})
+
+    try:
+        job["status"] = "RUNNING"
+        emit("director_start", {"timestamp": datetime.utcnow().isoformat(), "periodo": periodo})
+
+        # ── OBTENER DATOS ──
+        async with pool.acquire() as conn:
+            periodo_row = await conn.fetchrow(
+                "SELECT * FROM calendario_periodos_demanda WHERE nombre_periodo=$1", periodo)
+            if not periodo_row:
+                emit("error", {"mensaje": f"Periodo {periodo} no encontrado"})
+                job["status"] = "ERROR"
+                return
+            activos = await conn.fetch(
+                "SELECT id_activo,codigo,nombre,criticidad,capa,estado_ciclo "
+                "FROM cmdb_activos WHERE estado_ciclo='OPERATIVO' ORDER BY criticidad,id_activo")
+            deps = await conn.fetch(
+                "SELECT r.id_activo_origen,r.id_activo_destino,r.tipo_relacion,"
+                "a1.codigo as origen_codigo,a2.codigo as destino_codigo "
+                "FROM cmdb_relaciones r "
+                "JOIN cmdb_activos a1 ON a1.id_activo=r.id_activo_origen "
+                "JOIN cmdb_activos a2 ON a2.id_activo=r.id_activo_destino")
+            historico = await conn.fetch(
+                "SELECT h.*,a.codigo,a.criticidad FROM cmdb_demand_history h "
+                "JOIN cmdb_activos a ON a.id_activo=h.id_activo ORDER BY h.id_activo,h.mes DESC")
+            # CRUCE BUILD
+            sprints_act = await conn.fetch(
+                "SELECT si.id_proyecto,si.sprint_number,si.titulo,si.estado,"
+                "s.fecha_inicio,s.fecha_fin FROM build_sprint_items si "
+                "JOIN build_sprints s ON s.id_proyecto=si.id_proyecto "
+                "AND s.sprint_number=si.sprint_number "
+                "WHERE si.estado NOT IN ('DONE','COMPLETADO')")
+            build_live = await conn.fetch(
+                "SELECT id_proyecto,nombre,sprint_actual,gate_actual "
+                "FROM build_live WHERE estado!='CERRADO'")
+            # CRUCE RUN
+            inc_activas = await conn.fetch(
+                "SELECT ticket_id,incidencia_detectada,prioridad_ia,estado,ci_afectado "
+                "FROM incidencias_run WHERE estado IN ('QUEUED','EN_CURSO','ESCALADO') "
+                "AND prioridad_ia IN ('P1','P2')")
+            inc_live = await conn.fetch(
+                "SELECT ticket_id,prioridad,estado,tecnico_asignado "
+                "FROM incidencias_live WHERE estado='IN_PROGRESS'")
+
+        activos_list = [dict(a) for a in activos]
+        total_activos = len(activos_list)
+        emit("director_analysis", {"total_activos": total_activos, "periodo": periodo,
+            "incidencias_activas": len(inc_activas), "proyectos_build_activos": len(build_live)})
+
+        # ── PREPARAR CONTEXTO INDEXADO ──
+        hist_by_activo = {}
+        for h in historico:
+            aid = h["id_activo"]
+            if aid not in hist_by_activo:
+                hist_by_activo[aid] = []
+            hd = dict(h)
+            for k, v in hd.items():
+                if hasattr(v, 'isoformat'):
+                    hd[k] = v.isoformat()
+            hist_by_activo[aid].append(hd)
+
+        deps_map = {}
+        for d in deps:
+            o = d["id_activo_origen"]
+            if o not in deps_map:
+                deps_map[o] = []
+            deps_map[o].append(d["destino_codigo"])
+
+        inc_by_ci = {}
+        for i in inc_activas:
+            ci = i.get("ci_afectado", "")
+            if ci:
+                di = dict(i)
+                for k, v in di.items():
+                    if hasattr(v, 'isoformat'):
+                        di[k] = v.isoformat()
+                inc_by_ci.setdefault(ci, []).append(di)
+
+        sprints_by_proj = {}
+        for s in sprints_act:
+            sd = dict(s)
+            for k, v in sd.items():
+                if hasattr(v, 'isoformat'):
+                    sd[k] = v.isoformat()
+            sprints_by_proj.setdefault(s["id_proyecto"], []).append(sd)
+
+        # ── DISTRIBUIR EN 6 BATCHES ──
+        num_workers = min(6, max(1, total_activos // 5))
+        batch_size = (total_activos + num_workers - 1) // num_workers
+        batches = []
+        for i in range(num_workers):
+            batch = activos_list[i * batch_size:(i + 1) * batch_size]
+            if batch:
+                batches.append(batch)
+        emit("workers_spawning", {"workers": len(batches),
+            "activos_por_worker": batch_size, "total_activos": total_activos})
+
+        # ── INVOCAR WORKERS EN PARALELO ──
+        config = AGENT_CONFIGS["AG-011"]
+        worker_tasks = []
+        for w_idx, batch in enumerate(batches):
+            worker_input = {"worker_id": w_idx + 1, "periodo": periodo, "batch_activos": []}
+            for activo in batch:
+                aid = activo["id_activo"]
+                codigo = activo.get("codigo", "")
+                worker_input["batch_activos"].append({
+                    "id_activo": aid, "codigo": codigo,
+                    "nombre": activo.get("nombre", ""),
+                    "criticidad": activo.get("criticidad", "MEDIA"),
+                    "capa": activo.get("capa", ""),
+                    "dependencias": deps_map.get(aid, []),
+                    "historico_demanda": hist_by_activo.get(aid, []),
+                    "incidencias_activas": inc_by_ci.get(codigo, []),
+                    "sprints_activos": sprints_by_proj.get(activo.get("id_proyecto"), []),
+                    "tareas_kanban_activas": 0
+                })
+            engine = AgentEngine(AgentConfig(
+                agent_id="AG-011-W" + str(w_idx + 1),
+                agent_name=f"CAB Worker {w_idx + 1}",
+                system_prompt=SPAWNABLE_AGENTS["AG-011"]["worker_prompt_template"],
+                tools=config.tools,
+                model=config.model,
+                max_tokens=2000,
+                temperature=0.2,
+            ), pool)
+            task = engine.invoke(json.dumps(worker_input, default=str), session_id="")
+            worker_tasks.append(task)
+
+        worker_results = await asyncio.gather(*worker_tasks, return_exceptions=True)
+        all_propuestas = []
+        all_alerts = []
+        for w_idx, result in enumerate(worker_results):
+            if isinstance(result, Exception):
+                emit("worker_error", {"worker_id": w_idx + 1, "error": str(result)})
+                continue
+            emit("worker_complete", {"worker_id": w_idx + 1, "status": "OK"})
+            if isinstance(result, str):
+                try:
+                    result = json.loads(result)
+                except Exception:
+                    pass
+            if isinstance(result, dict):
+                all_propuestas.extend(result.get("propuestas", []))
+                all_alerts.extend(result.get("alertas_para_intelligent_alerts", []))
+
+        emit("workers_complete", {"workers_completados": len(batches),
+            "propuestas_totales": len(all_propuestas)})
+
+        # ── MERGER ──
+        emit("merger_start", {"timestamp": datetime.utcnow().isoformat()})
+        merger_input = {
+            "periodo": periodo,
+            "workers_outputs": [{"propuestas": all_propuestas}],
+            "total_propuestas": len(all_propuestas),
+            "contexto_build": [dict(r) for r in build_live],
+            "contexto_run": [dict(r) for r in inc_activas]
+        }
+        merger_engine = AgentEngine(AgentConfig(
+            agent_id="AG-011-MERGER",
+            agent_name="CAB Merger",
+            system_prompt=SPAWNABLE_AGENTS["AG-011"]["merger_prompt"],
+            tools=config.tools,
+            model=config.model,
+            max_tokens=3000,
+            temperature=0.2,
+        ), pool)
+        merger_result = await merger_engine.invoke(
+            json.dumps(merger_input, default=str), session_id="")
+        if isinstance(merger_result, str):
+            try:
+                merger_result = json.loads(merger_result)
+            except Exception:
+                merger_result = {"cambios_propuestos": all_propuestas}
+
+        merger_alerts = []
+        if isinstance(merger_result, dict):
+            merger_alerts = merger_result.get("alertas_para_gobernadores", [])
+        all_alerts.extend(merger_alerts)
+
+        # ── GUARDAR PROPUESTA EN BD ──
+        async with pool.acquire() as conn:
+            count = await conn.fetchval(
+                "SELECT COALESCE(MAX(numero_propuesta),0) "
+                "FROM cmdb_change_proposals WHERE periodo=$1", periodo)
+            row = await conn.fetchrow(
+                "INSERT INTO cmdb_change_proposals "
+                "(periodo,numero_propuesta,propuesta_json,tiempo_generacion_segundos) "
+                "VALUES ($1,$2,$3::jsonb,$4) RETURNING id,estado",
+                periodo, (count or 0) + 1,
+                json.dumps(merger_result, default=str), 10)
+            propuesta_id = str(row["id"])
+
+            # ── INSERTAR ALERTAS EN intelligent_alerts ──
+            for a in all_alerts:
+                try:
+                    await conn.execute(
+                        "INSERT INTO intelligent_alerts "
+                        "(alert_type,severity,title,description,source_agent,"
+                        "affected_entities,trigger_condition,status) "
+                        "VALUES ($1,$2,$3,$4,'AG-011',$5::jsonb,$6::jsonb,'ACTIVE')",
+                        a.get("alert_type", "CAB_PROPOSAL_READY"),
+                        a.get("severity", "MEDIUM"),
+                        a.get("title", "Alerta CAB"),
+                        a.get("description", ""),
+                        json.dumps(a.get("affected_entities", {})),
+                        json.dumps({"source": "AG-011", "periodo": periodo,
+                                    "propuesta_id": propuesta_id}))
+                except Exception as ae:
+                    print(f"Error insertando alerta CAB: {ae}")
+
+            # Alerta general: propuesta lista
+            await conn.execute(
+                "INSERT INTO intelligent_alerts "
+                "(alert_type,severity,title,description,source_agent,"
+                "affected_entities,trigger_condition,status) "
+                "VALUES ('CAB_PROPOSAL_READY','MEDIUM',$1,$2,'AG-011',$3::jsonb,$4::jsonb,'ACTIVE')",
+                f"Propuesta CAB {periodo} lista para revision",
+                f"AG-011 genero {len(all_propuestas)} ventanas de cambio para "
+                f"el periodo {periodo}. Pendiente aprobacion humana.",
+                json.dumps({"periodo": periodo, "propuesta_id": propuesta_id,
+                            "cambios": len(all_propuestas)}),
+                json.dumps({"source": "AG-011"}))
+
+        emit("merger_complete", {"propuesta_id": propuesta_id,
+            "estado": "PENDING_HUMAN_REVIEW",
+            "cambios_propuestos": len(all_propuestas),
+            "alertas_generadas": len(all_alerts)})
+        emit("complete", {"status": "OK", "propuesta_id": propuesta_id, "periodo": periodo})
+        job["status"] = "COMPLETE"
+        job["result"] = {"propuesta_id": propuesta_id}
+    except Exception as e:
+        emit("error", {"mensaje": str(e)})
+        job["status"] = "ERROR"
+        import traceback
+        traceback.print_exc()

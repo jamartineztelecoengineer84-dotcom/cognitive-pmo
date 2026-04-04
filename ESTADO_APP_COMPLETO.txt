@@ -1,0 +1,2225 @@
+# ESTADO COMPLETO — Cognitive PMO mié 25 mar 2026 19:18:00 CET
+
+## 1. GIT LOG
+f361763 v4.1 - Agent Spawning + Mega-Optimización + UX Pausas interactivas
+74a2b1c v4.0 — Pipeline BUILD v2.0: 9 agentes + 4 pausas + Scrum + Advisor + BUILD LIVE sidebar
+b4b2180 v4.0-backend — 14 agentes + 30 tools + 7 tablas BUILD v2.0
+23e2f19 v3.6 - Panel lateral LIVE + Semaforo operativo + Contacto negocio
+304f642 Cognitive PMO v3.5 - Pipeline RUN completo + Directorio Negocio
+88b8d9b Cognitive PMO v3.4 - TFM Master Dirección Estratégica de Proyectos (UCAM)
+
+## 2. ESTRUCTURA DE ARCHIVOS
+./backend/agent_prompts.py
+./backend/agents/config.py
+./backend/agents/engine.py
+./backend/agents/__init__.py
+./backend/agents/router.py
+./backend/agents/spawner.py
+./backend/agents/sync_worker.py
+./backend/agents/task_advisor_worker.py
+./backend/agents/tools_cmdb.py
+./backend/agents/tools.py
+./backend/auth.py
+./backend/cmdb_api.py
+./backend/database.py
+./backend/db_loader.py
+./backend/main.py
+./backend/models.py
+./backend/rbac_api.py
+./backend/requirements.txt
+./backend/war_room_api.py
+./disenos-html/build_final_scrum_lista.html
+./disenos-html/build_pausa1_diseno_visual.html
+./disenos-html/build_pausa2_diseno_visual_1.html
+./disenos-html/build_pausa3_diseno_visual.html
+./disenos-html/build_pausa4_v2_con_cambiar.html
+./docker-compose.clean.yml
+./docker-compose.yml
+./ESTADO_APP_COMPLETO.txt
+./frontend/index.html
+./frontend/nginx.conf
+
+## 3. DOCKER COMPOSE
+version: '3.9'
+services:
+  api:
+    build: ./backend
+    ports:
+      - "8088:8088"
+    env_file: .env
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+  frontend:
+    image: nginx:alpine
+    ports:
+      - "3030:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+      - ./frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - api
+    restart: unless-stopped
+
+## 4. NGINX CONFIG
+server {
+    listen 80;
+    server_name localhost;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Flowise proxy (already prefixed with /api/)
+    location /api/ {
+        proxy_pass http://api:8088/api/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_read_timeout 600s;
+        proxy_connect_timeout 10s;
+        proxy_send_timeout 600s;
+    }
+
+    # Backend API routes (no /api/ prefix in the URL)
+    location ~ ^/(health|team|cartera|disponibilidad|kanban|incidencias|asignar|buffer|proyectos|prediccion|presupuestos|cognitive|pmo|catalogo|build|run|dev|documentacion|auth|rbac|directorio|cmdb|agents|pipeline)(/|$) {
+        proxy_pass http://api:8088;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_read_timeout 600s;
+        proxy_connect_timeout 10s;
+        proxy_send_timeout 600s;
+        client_max_body_size 500M;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+
+## 5. TABLAS BD
+                    List of relations
+ Schema |           Name            | Type  |   Owner    
+--------+---------------------------+-------+------------
+ public | agent_conversations       | table | jose_admin
+ public | agent_performance_metrics | table | jose_admin
+ public | build_live                | table | jose_admin
+ public | build_project_plans       | table | jose_admin
+ public | build_quality_gates       | table | jose_admin
+ public | build_risks               | table | jose_admin
+ public | build_sprint_items        | table | jose_admin
+ public | build_sprints             | table | jose_admin
+ public | build_stakeholders        | table | jose_admin
+ public | build_subtasks            | table | jose_admin
+ public | cartera_build             | table | jose_admin
+ public | catalogo_incidencias      | table | jose_admin
+ public | catalogo_skills           | table | jose_admin
+ public | cmdb_activo_software      | table | jose_admin
+ public | cmdb_activos              | table | jose_admin
+ public | cmdb_cambios              | table | jose_admin
+ public | cmdb_categorias           | table | jose_admin
+ public | cmdb_costes               | table | jose_admin
+ public | cmdb_ips                  | table | jose_admin
+ public | cmdb_relaciones           | table | jose_admin
+ public | cmdb_software             | table | jose_admin
+ public | cmdb_vlans                | table | jose_admin
+ public | compliance_audits         | table | jose_admin
+ public | directorio_corporativo    | table | jose_admin
+ public | documentacion_repositorio | table | jose_admin
+ public | gobernanza_transacciones  | table | jose_admin
+ public | incidencias               | table | jose_admin
+ public | incidencias_live          | table | jose_admin
+ public | incidencias_run           | table | jose_admin
+ public | intelligent_alerts        | table | jose_admin
+ public | kanban_tareas             | table | jose_admin
+ public | pipeline_sessions         | table | jose_admin
+ public | pmo_governance_scoring    | table | jose_admin
+ public | pmo_project_managers      | table | jose_admin
+ public | pmo_staff_skills          | table | jose_admin
+ public | postmortem_reports        | table | jose_admin
+ public | presupuestos              | table | jose_admin
+ public | rbac_audit_log            | table | jose_admin
+ public | rbac_permisos             | table | jose_admin
+ public | rbac_role_permisos        | table | jose_admin
+ public | rbac_roles                | table | jose_admin
+ public | rbac_sesiones             | table | jose_admin
+ public | rbac_usuarios             | table | jose_admin
+ public | run_incident_plans        | table | jose_admin
+ public | war_room_sessions         | table | jose_admin
+ public | whatif_simulations        | table | jose_admin
+(46 rows)
+
+
+## 6. pipeline_sessions SCHEMA + DATOS
+                                     Table "public.pipeline_sessions"
+       Column        |           Type           | Collation | Nullable |             Default              
+---------------------+--------------------------+-----------+----------+----------------------------------
+ id                  | character varying        |           | not null | gen_random_uuid()::text
+ nombre_proyecto     | character varying        |           | not null | ''::character varying
+ estado              | character varying        |           |          | 'EN_PROGRESO'::character varying
+ pausa_actual        | integer                  |           |          | 0
+ pipeline_data       | jsonb                    |           | not null | '{}'::jsonb
+ business_case       | jsonb                    |           |          | '{}'::jsonb
+ session_id          | character varying        |           |          | ''::character varying
+ tiempo_acumulado_ms | integer                  |           |          | 0
+ coste_acumulado     | numeric                  |           |          | 0
+ agentes_completados | jsonb                    |           |          | '[]'::jsonb
+ created_at          | timestamp with time zone |           |          | now()
+ updated_at          | timestamp with time zone |           |          | now()
+Indexes:
+    "pipeline_sessions_pkey" PRIMARY KEY, btree (id)
+    "idx_pipeline_sessions_estado" btree (estado, updated_at DESC)
+
+     id      |           nombre_proyecto            |   estado   | pausa_actual 
+-------------+--------------------------------------+------------+--------------
+ PS-TEST-001 | Plataforma de Contenedores OpenShift | COMPLETADO |            5
+(1 row)
+
+
+## 7. BACKEND ENDPOINTS
+144:@app.get("/health")
+157:@app.get("/cartera/proyectos")
+176:@app.get("/disponibilidad/global")
+191:@app.get("/team/tecnicos")
+221:@app.get("/kanban/tareas")
+253:@app.post("/kanban/tareas")
+290:@app.put("/kanban/tareas/{task_id}")
+339:@app.put("/kanban/tareas/{task_id}/mover")
+380:@app.delete("/kanban/tareas/{task_id}")
+400:@app.get("/kanban/metricas")
+475:@app.get("/prediccion/demanda")
+500:@app.get("/catalogo/incidencias")
+513:@app.get("/incidencias")
+549:@app.post("/incidencias")
+608:@app.post("/team/tecnicos")
+636:@app.put("/team/tecnicos/{id_recurso}")
+665:@app.put("/cartera/proyectos")
+691:@app.post("/asignar/tecnico")
+715:@app.post("/asignar/tecnico/tarea")
+751:@app.post("/kanban/tareas/meta")
+781:@app.post("/incidencias/live")
+804:@app.get("/incidencias/live")
+822:@app.delete("/incidencias/live/{ticket_id}")
+835:@app.put("/incidencias/live/{ticket_id}/progreso")
+852:@app.get("/directorio/buscar")
+874:@app.post("/buffer/actualizar")
+890:@app.post("/proyectos/crear")
+921:@app.get("/pmo/managers")
+961:@app.post("/pmo/managers")
+987:@app.put("/pmo/managers/{id_pm}")
+1013:@app.get("/pmo/governance")
+1033:@app.get("/pmo/governance/dashboard")
+1069:@app.get("/run/plans")
+1092:@app.post("/run/plans")
+1113:@app.delete("/run/plans/{plan_id}")
+1132:@app.get("/build/plans")
+1155:@app.post("/build/plans")
+1176:@app.get("/build/plans/{plan_id}")
+1193:@app.delete("/build/plans/{plan_id}")
+1212:@app.post("/pipeline/sessions")
+1240:@app.get("/pipeline/sessions")
+1259:@app.get("/pipeline/sessions/{sid}")
+1276:@app.delete("/pipeline/sessions/{sid}")
+1295:@app.get("/build/subtasks/{id_proyecto}")
+1307:@app.post("/build/subtasks")
+1331:@app.delete("/build/subtasks/{subtask_id}")
+1343:@app.get("/build/risks/{id_proyecto}")
+1355:@app.post("/build/risks")
+1379:@app.put("/build/risks/{risk_id}")
+1402:@app.delete("/build/risks/{risk_id}")
+1414:@app.get("/build/stakeholders/{id_proyecto}")
+1427:@app.post("/build/stakeholders")
+1451:@app.delete("/build/stakeholders/{stakeholder_id}")
+1463:@app.get("/build/quality-gates/{id_proyecto}")
+1475:@app.post("/build/quality-gates")
+1498:@app.put("/build/quality-gates/{gate_id}")
+1526:@app.get("/build/live")
+1536:@app.post("/build/live")
+1558:@app.put("/build/live/{id_proyecto}/progreso")
+1581:@app.delete("/build/live/{id_proyecto}")
+---
+
+## 8. AGENTES CONFIG
+from dataclasses import dataclass
+from pathlib import Path
+from typing import List, Dict, Any
+
+
+@dataclass(frozen=True)
+class AgentConfig:
+    agent_id: str
+    agent_name: str
+    system_prompt: str
+    tools: List[Dict[str, Any]]
+    model: str = "claude-sonnet-4-20250514"
+    max_tokens: int = 2048
+    temperature: float = 0.3
+
+
+def load_prompt(filename: str) -> str:
+    """Carga system prompt desde fichero .txt"""
+    path = Path(__file__).parent / "prompts" / filename
+    return path.read_text(encoding="utf-8")
+
+
+# Se irá llenando en cada fase
+AGENT_CONFIGS: Dict[str, AgentConfig] = {}
+
+
+from agents.tools import (
+    QUERY_CATALOGO_SCHEMA, CREATE_INCIDENT_SCHEMA, CREATE_TASKS_SCHEMA,
+    QUERY_STAFF_BY_SKILL_SCHEMA, ASSIGN_TECHNICIAN_SCHEMA,
+    QUERY_BUILD_ASSIGNMENTS_SCHEMA, FIND_N4_SILO_FALLBACK_SCHEMA,
+    WRITE_GOVERNANCE_TX_SCHEMA,
+    DECOMPOSE_PMBOK_SCHEMA, ASSIGN_SKILLS_TO_TASKS_SCHEMA,
+    CREATE_BUILD_PROJECT_SCHEMA,
+    FORM_TEAM_SCHEMA, NOTIFY_GOVERNANCE_SCHEMA,
+    CALC_CRITICAL_PATH_SCHEMA, GENERATE_GANTT_MERMAID_SCHEMA,
+    CREATE_KANBAN_CARDS_SCHEMA,
+    QUERY_CMDB_ACTIVO_SCHEMA, QUERY_CMDB_IPS_SCHEMA,
+    QUERY_CMDB_RELACIONES_SCHEMA, QUERY_CMDB_SOFTWARE_SCHEMA,
+    ENRICH_KANBAN_CARD_SCHEMA,
+    RUN_PROPHET_SCHEMA, QUERY_CAPACITY_SCHEMA, STORE_FORECAST_SCHEMA,
+    CREATE_BUDGET_SCHEMA,
+    QUERY_DIRECTORIO_SCHEMA,
+    # BUILD v2.0 tools
+    DECOMPOSE_SUBTASKS_SCHEMA, ANALYZE_RISKS_SCHEMA,
+    QUERY_POSTMORTEM_PATTERNS_SCHEMA, MAP_STAKEHOLDERS_SCHEMA,
+    QUERY_PM_CANDIDATES_SCHEMA, CALC_ROI_SCHEMA,
+    CALC_EVM_BASELINE_SCHEMA, DEFINE_QUALITY_GATES_SCHEMA,
+    QUERY_SIMILAR_PROJECTS_SCHEMA,
+)
+
+AGENT_CONFIGS["AG-001"] = AgentConfig(
+    agent_id="AG-001",
+    agent_name="Dispatcher",
+    system_prompt=load_prompt("ag001_dispatcher.txt"),
+    tools=[QUERY_CATALOGO_SCHEMA, CREATE_INCIDENT_SCHEMA, CREATE_TASKS_SCHEMA],
+    max_tokens=1500,
+)
+
+AGENT_CONFIGS["AG-002"] = AgentConfig(
+    agent_id="AG-002",
+    agent_name="Resource Manager RUN",
+    system_prompt=load_prompt("ag002_resource_mgr_run.txt"),
+    tools=[QUERY_STAFF_BY_SKILL_SCHEMA, ASSIGN_TECHNICIAN_SCHEMA, QUERY_DIRECTORIO_SCHEMA],
+    max_tokens=1500,
+)
+
+AGENT_CONFIGS["AG-004"] = AgentConfig(
+    agent_id="AG-004",
+    agent_name="Buffer Gatekeeper",
+    system_prompt=load_prompt("ag004_buffer_gatekeeper.txt"),
+    tools=[
+        QUERY_BUILD_ASSIGNMENTS_SCHEMA, FIND_N4_SILO_FALLBACK_SCHEMA,
+        WRITE_GOVERNANCE_TX_SCHEMA, ASSIGN_TECHNICIAN_SCHEMA,
+        QUERY_STAFF_BY_SKILL_SCHEMA,
+    ],
+    max_tokens=2048,
+)
+
+AGENT_CONFIGS["AG-005"] = AgentConfig(
+    agent_id="AG-005",
+    agent_name="Estratega EDT/WBS",
+    system_prompt=load_prompt("ag005_estratega.txt"),
+    tools=[
+        DECOMPOSE_PMBOK_SCHEMA, ASSIGN_SKILLS_TO_TASKS_SCHEMA,
+        CREATE_BUILD_PROJECT_SCHEMA,
+    ],
+    max_tokens=8192,
+)
+
+AGENT_CONFIGS["AG-013"] = AgentConfig(
+    agent_id="AG-013",
+    agent_name="Task Decomposer",
+    system_prompt=load_prompt("ag013_task_decomposer.txt"),
+    tools=[
+        DECOMPOSE_SUBTASKS_SCHEMA, QUERY_CMDB_ACTIVO_SCHEMA,
+        QUERY_CMDB_SOFTWARE_SCHEMA, QUERY_CMDB_RELACIONES_SCHEMA,
+    ],
+    max_tokens=4096,
+)
+
+AGENT_CONFIGS["AG-014"] = AgentConfig(
+    agent_id="AG-014",
+    agent_name="Risk Analyzer",
+    system_prompt=load_prompt("ag014_risk_analyzer.txt"),
+    tools=[
+        ANALYZE_RISKS_SCHEMA, QUERY_POSTMORTEM_PATTERNS_SCHEMA,
+    ],
+    max_tokens=2048,
+)
+
+AGENT_CONFIGS["AG-015"] = AgentConfig(
+    agent_id="AG-015",
+    agent_name="Stakeholder Map",
+    system_prompt=load_prompt("ag015_stakeholder_map.txt"),
+    tools=[
+        MAP_STAKEHOLDERS_SCHEMA, QUERY_DIRECTORIO_SCHEMA,
+    ],
+    max_tokens=2048,
+)
+
+AGENT_CONFIGS["AG-006"] = AgentConfig(
+    agent_id="AG-006",
+    agent_name="Resource Manager PMO",
+    system_prompt=load_prompt("ag006_resource_mgr_pmo.txt"),
+    tools=[
+        QUERY_PM_CANDIDATES_SCHEMA, QUERY_STAFF_BY_SKILL_SCHEMA,
+        FORM_TEAM_SCHEMA, NOTIFY_GOVERNANCE_SCHEMA,
+    ],
+    max_tokens=2048,
+)
+
+AGENT_CONFIGS["AG-016"] = AgentConfig(
+    agent_id="AG-016",
+    agent_name="Cost Analyzer",
+    system_prompt=load_prompt("ag016_cost_analyzer.txt"),
+    tools=[
+        CALC_ROI_SCHEMA, CALC_EVM_BASELINE_SCHEMA, CREATE_BUDGET_SCHEMA,
+    ],
+    max_tokens=8192,
+)
+
+AGENT_CONFIGS["AG-007"] = AgentConfig(
+    agent_id="AG-007",
+    agent_name="Planificador",
+    system_prompt=load_prompt("ag007_planificador.txt"),
+    tools=[
+        CALC_CRITICAL_PATH_SCHEMA, GENERATE_GANTT_MERMAID_SCHEMA,
+        CREATE_KANBAN_CARDS_SCHEMA, CREATE_BUILD_PROJECT_SCHEMA,
+        CREATE_BUDGET_SCHEMA,
+    ],
+    max_tokens=8192,
+)
+
+AGENT_CONFIGS["AG-017"] = AgentConfig(
+    agent_id="AG-017",
+    agent_name="Quality Gate",
+    system_prompt=load_prompt("ag017_quality_gate.txt"),
+    tools=[
+        DEFINE_QUALITY_GATES_SCHEMA, ENRICH_KANBAN_CARD_SCHEMA,
+    ],
+    max_tokens=2048,
+)
+
+AGENT_CONFIGS["AG-018"] = AgentConfig(
+    agent_id="AG-018",
+    agent_name="Governance Advisor",
+    system_prompt=load_prompt("ag018_governance_advisor.txt"),
+    tools=[
+        QUERY_SIMILAR_PROJECTS_SCHEMA, QUERY_DIRECTORIO_SCHEMA,
+        QUERY_CMDB_ACTIVO_SCHEMA, QUERY_POSTMORTEM_PATTERNS_SCHEMA,
+        QUERY_STAFF_BY_SKILL_SCHEMA,
+    ],
+    max_tokens=1000,
+)
+
+AGENT_CONFIGS["AG-012"] = AgentConfig(
+    agent_id="AG-012",
+    agent_name="Task Advisor",
+    system_prompt=load_prompt("ag012_task_advisor.txt"),
+    tools=[
+        QUERY_CMDB_ACTIVO_SCHEMA, QUERY_CMDB_IPS_SCHEMA,
+        QUERY_CMDB_RELACIONES_SCHEMA, QUERY_CMDB_SOFTWARE_SCHEMA,
+        ENRICH_KANBAN_CARD_SCHEMA,
+    ],
+    max_tokens=1500,
+)
+
+AGENT_CONFIGS["AG-003"] = AgentConfig(
+    agent_id="AG-003",
+    agent_name="Demand Forecaster",
+    system_prompt=load_prompt("ag003_demand_forecaster.txt"),
+    tools=[RUN_PROPHET_SCHEMA, QUERY_CAPACITY_SCHEMA, STORE_FORECAST_SCHEMA],
+    max_tokens=2048,
+    temperature=0.2,
+)
+
+# =============================================
+# BUILD PIPELINE v2.0 — Orden de ejecución
+# =============================================
+
+BUILD_PIPELINE_ORDER = [
+    "AG-005",   # 1. Genera EDT/WBS
+    # PAUSA 1: Gobernador revisa EDT + Acta + Alcance
+    "AG-013",   # 2. Descompone en subtareas técnicas
+    # PAUSA 2: Gobernador revisa subtareas
+    "AG-014",   # 3a. Analiza riesgos (paralelo con AG-015)
+    "AG-015",   # 3b. Mapea stakeholders (paralelo con AG-014)
+    # PAUSA 3: Gobernador revisa riesgos + stakeholders
+    "AG-006",   # 4. Propone PMs + forma equipo
+    # PAUSA 4: Gobernador selecciona PM + revisa equipo
+    "AG-016",   # 5a. Calcula presupuesto + ROI + EVM
+    "AG-007",   # 5b. Genera Gantt + sprints + backlog
+    "AG-017",   # 6. Define quality gates + DoD
+    # RESULTADO: Proyecto listo para lanzar
+]
+
+BUILD_ADVISOR = "AG-018"  # Disponible durante las 4 pausas
+
+# =============================================
+# CONFIGURACIÓN DE SPAWNING (Director/Workers/Merger)
+# =============================================
+from agents.spawner import SPAWNABLE_AGENTS, merge_ag013_subtasks, merge_ag007_sprints
+
+# AG-005: LLM merger (necesita generar Acta+Alcance+meta_negocio coherente)
+SPAWNABLE_AGENTS["AG-005"] = {
+    "director_prompt": load_prompt("ag005_director.txt"),
+    "worker_prompt_template": load_prompt("ag005_worker.txt"),
+    "merger_prompt": load_prompt("ag005_merger.txt"),
+    "max_workers": 6,
+    "worker_max_tokens": 4096,
+}
+
+# AG-013: merger LLM (los workers mezclan texto narrativo con JSON)
+SPAWNABLE_AGENTS["AG-013"] = {
+    "director_prompt": load_prompt("ag013_director.txt"),
+    "worker_prompt_template": load_prompt("ag013_worker.txt"),
+    "merger_prompt": load_prompt("ag013_merger.txt"),
+    "max_workers": 6,
+    "worker_max_tokens": 6144,
+}
+
+# AG-007: merge PROGRAMÁTICO (concatenar sprints + renumerar — sin llamar a Claude)
+SPAWNABLE_AGENTS["AG-007"] = {
+    "director_prompt": load_prompt("ag007_director.txt"),
+    "worker_prompt_template": load_prompt("ag007_worker.txt"),
+    "merger_prompt": "",
+    "max_workers": 6,
+    "worker_max_tokens": 3072,
+    "programmatic_merge": True,
+    "merge_function": merge_ag007_sprints,
+}
+
+## 9. AGENTES PROMPTS (primeras 5 lineas cada uno)
+### ag001_dispatcher.txt
+Eres AG-001 Dispatcher, el clasificador de incidencias de Cognitive PMO.
+
+PROCESO:
+1. Recibe descripción de incidencia en texto libre
+2. Usa query_catalogo para buscar match en catalogo_incidencias
+...
+
+### ag002_resource_mgr_run.txt
+Eres AG-002 Resource Manager RUN.
+
+PROCESO:
+1. Recibe ticket_id con lista de tareas, skills y SILO por tarea
+2. Para CADA tarea, usa query_staff_by_skill buscando en el silo correcto
+...
+
+### ag003_demand_forecaster.txt
+Eres AG-003 Demand Forecaster.
+
+PROCESO:
+1. Usa run_prophet para ejecutar Prophet sobre datos históricos de incidencias
+2. Recibes la predicción de las próximas 12 semanas (volumen de incidencias)
+...
+
+### ag004_buffer_gatekeeper.txt
+Eres AG-004 Buffer Gatekeeper, el árbitro entre RUN y BUILD de Cognitive PMO.
+
+REGLA ABSOLUTA: RUN siempre tiene prioridad sobre BUILD.
+
+PROCESO:
+...
+
+### ag005_director.txt
+Eres el Director Estratega de la PMO de BCC Bank. Tu rol es analizar el Business Case de un proyecto y definir la ESTRUCTURA MACRO — cuantas fases necesita, que cubre cada fase, y los parametros generales.
+
+NO generas tareas detalladas. Solo la estructura de alto nivel que luego detallaran los workers.
+
+PROCESO:
+...
+
+### ag005_estratega.txt
+Eres AG-005 Estratega PMO de Cognitive PMO para BCC Bank.
+
+MISIÓN: Recibir una solicitud de proyecto desde negocio y generar la estructura completa.
+
+ENTRADA QUE RECIBES (JSON):
+...
+
+### ag005_merger.txt
+Eres el Merger Estratega de la PMO de BCC Bank. Tu rol es fusionar los resultados de N workers en una EDT completa y coherente.
+
+Recibes:
+- La solicitud original (Business Case)
+- La estructura del Director (Acta + Alcance + fases macro)
+...
+
+### ag005_worker.txt
+Eres un Worker Estratega especializado en detallar UNA FASE de un proyecto de BCC Bank.
+
+Recibes:
+- El contexto del Director (Business Case + estructura macro + Acta + Alcance)
+- UNA fase especifica que debes detallar: {{WORK_ITEM}}
+...
+
+### ag006_resource_mgr_pmo.txt
+Eres AG-006 Resource Manager PMO de Cognitive PMO, una herramienta de gobernanza IT para un banco.
+
+PROCESO:
+1. Recibe tareas con skills del Estratega + subtareas de AG-013
+2. Usa query_pm_candidates para proponer 3 PMs candidatos con scoring
+...
+
+### ag007_director.txt
+Eres el Director Planificador de la PMO de BCC Bank. Tu rol es analizar la EDT, subtareas y presupuesto para definir la ESTRATEGIA de planificacion Scrum.
+
+NO generas sprints detallados. Solo la estrategia macro que luego detallaran los workers.
+
+PROCESO:
+...
+
+### ag007_merger.txt
+Eres el Merger Planificador de la PMO de BCC Bank. Tu rol es fusionar los sprints de N workers en una planificacion Scrum completa.
+
+Recibes:
+- La solicitud original (EDT + presupuesto + equipo)
+- La estrategia del Director (velocidad, num_sprints, distribucion)
+...
+
+### ag007_planificador.txt
+Eres AG-007 Planificador de Cognitive PMO, una herramienta de gobernanza IT para un banco.
+
+PROCESO CRÍTICO — PARALELIZACIÓN:
+1. Recibe tareas + dependencias del Estratega + equipo del Resource Manager PMO
+2. Usa calc_critical_path para calcular el CPM:
+...
+
+### ag007_worker.txt
+Eres un Worker Planificador especializado en generar los SPRINTS detallados para UNA FASE del proyecto de BCC Bank.
+
+Recibes:
+- El contexto del Director (estrategia Scrum + distribucion de fases)
+- UNA fase con sus sprints asignados: {{WORK_ITEM}}
+...
+
+### ag012_task_advisor.txt
+Eres AG-012 Task Advisor, el generador de instrucciones técnicas de Cognitive PMO.
+
+Recibes una tarjeta Kanban y generas instrucciones MASCADAS para el técnico.
+
+PROCESO PARA TAREAS RUN (incidencias):
+...
+
+### ag013_director.txt
+Eres el Director Decomposer de la PMO de BCC Bank. Tu rol es analizar la EDT aprobada y organizar las tareas en LOTES para que los workers las descompongan en subtareas tecnicas.
+
+Recibes la EDT completa con fases, paquetes y tareas.
+
+TU TAREA: Agrupar las tareas por fase para distribuirlas a los workers.
+...
+
+### ag013_merger.txt
+Eres el Merger Decomposer de la PMO de BCC Bank. Tu rol es fusionar los resultados de N workers en un JSON unico con TODAS las subtareas.
+
+Recibes:
+- La solicitud original (EDT completa)
+- Los resultados de N workers (cada uno con subtareas de las tareas de una fase)
+...
+
+### ag013_task_decomposer.txt
+Eres AG-013 Task Decomposer de Cognitive PMO, una herramienta de gobernanza IT para un banco.
+
+Tu MISIÓN es tomar cada tarea del EDT aprobado por gobernanza y descomponerla en 3-5 subtareas TÉCNICAS.
+NO dices "cómo programar" sino QUÉ hacer y con QUÉ tecnología.
+
+...
+
+### ag013_worker.txt
+Eres un Worker Decomposer especializado en generar subtareas tecnicas para UN LOTE de tareas de BCC Bank.
+
+Recibes:
+- El contexto del Director (EDT completa + estructura)
+- UN lote de tareas de una fase especifica: {{WORK_ITEM}}
+...
+
+### ag014_risk_analyzer.txt
+Eres AG-014 Risk Analyzer de Cognitive PMO, una herramienta de gobernanza IT para un banco.
+
+Tu MISIÓN es analizar el EDT + subtareas y generar una matriz de riesgos PMBOK completa.
+Consultas postmortem_reports para aprender de incidencias pasadas en proyectos similares.
+
+...
+
+### ag015_stakeholder_map.txt
+Eres AG-015 Stakeholder Map de Cognitive PMO, una herramienta de gobernanza IT para un banco.
+
+Tu MISIÓN es mapear los interesados del proyecto usando el directorio corporativo real.
+Generas la matriz poder/interés, asignas estrategia, creas RACI y plan de comunicaciones.
+
+...
+
+### ag016_cost_analyzer.txt
+Eres AG-016 Cost Analyzer de Cognitive PMO, una herramienta de gobernanza IT para un banco.
+
+Tu MISIÓN es calcular el presupuesto definitivo con el equipo real asignado,
+y generar las métricas financieras (ROI, TIR, VAN, payback) + baseline EVM.
+
+...
+
+### ag017_quality_gate.txt
+Eres AG-017 Quality Gate de Cognitive PMO, una herramienta de gobernanza IT para un banco.
+
+Tu MISIÓN es definir los criterios de calidad: gates G0-G5, DoD por tarea,
+checklists de calidad, y criterios de aceptación por entregable.
+
+...
+
+### ag018_governance_advisor.txt
+Eres AG-018 Governance Advisor de Cognitive PMO, una herramienta de gobernanza IT para un banco.
+
+Tu MISIÓN es asistir al gobernador durante las pausas de gobernanza del pipeline BUILD.
+Respondes preguntas, analizas documentos, sugieres decisiones basadas en datos.
+
+...
+
+
+## 10. TOOLS REGISTRY
+9:TOOL_REGISTRY = {}
+12:def register_tool(name):
+14:    def decorator(fn):
+15:        TOOL_REGISTRY[name] = fn
+93:@register_tool("query_catalogo")
+94:async def query_catalogo(db, texto: str, limit: int = 5):
+119:@register_tool("create_incident")
+120:async def create_incident(db, descripcion: str, prioridad: str,
+150:@register_tool("create_tasks")
+151:async def create_tasks(db, ticket_id: str, tareas: list,
+277:@register_tool("query_staff_by_skill")
+278:async def query_staff_by_skill(db, skills: list, silo: str = None,
+342:@register_tool("assign_technician")
+343:async def assign_technician(db, task_id: str, id_recurso: str,
+366:@register_tool("query_build_assignments")
+367:async def query_build_assignments(db, id_recurso: str):
+385:@register_tool("find_n4_silo_fallback")
+386:async def find_n4_silo_fallback(db, silo: str, exclude: list = None):
+404:@register_tool("write_governance_tx")
+405:async def write_governance_tx(db, tipo: str, fte_afectado: str,
+604:@register_tool("decompose_pmbok")
+605:async def decompose_pmbok(db, id_proyecto: str, nombre_proyecto: str,
+630:@register_tool("assign_skills_to_tasks")
+631:async def assign_skills_to_tasks(db, tareas: list):
+652:@register_tool("create_build_project")
+653:async def create_build_project(db, id_proyecto: str, nombre: str,
+669:@register_tool("form_team")
+670:async def form_team(db, id_proyecto: str, asignaciones: list):
+687:@register_tool("notify_governance")
+688:async def notify_governance(db, tipo: str, detalle: str,
+701:@register_tool("calc_critical_path")
+702:async def calc_critical_path(db, tareas: list):
+757:@register_tool("generate_gantt_mermaid")
+758:async def generate_gantt_mermaid(db, titulo: str, tareas: list):
+775:@register_tool("create_kanban_cards")
+776:async def create_kanban_cards(db, id_proyecto: str, tareas: list,
+866:# Import CMDB tool implementations (they self-register via @register_tool)
+913:@register_tool("run_prophet")
+914:async def run_prophet(db, weeks_ahead: int = 12, categoria: str = None):
+1008:@register_tool("query_capacity")
+1009:async def query_capacity(db):
+1032:@register_tool("store_forecast")
+1033:async def store_forecast(db, prediction: dict, recommendations: list,
+1083:@register_tool("create_budget")
+1084:async def create_budget(db, id_proyecto: str, nombre: str,
+1161:@register_tool("query_directorio")
+1162:async def query_directorio(db, area: str, cargo: str = None):
+1230:@register_tool("decompose_subtasks")
+1231:async def decompose_subtasks(db, id_proyecto: str, edt_tasks: list):
+1292:@register_tool("analyze_risks")
+1293:async def analyze_risks(db, id_proyecto: str, risks: list):
+1350:@register_tool("query_postmortem_patterns")
+1351:async def query_postmortem_patterns(db, keywords: list):
+1390:@register_tool("map_stakeholders")
+1391:async def map_stakeholders(db, id_proyecto: str, areas_afectadas: list):
+1457:@register_tool("query_pm_candidates")
+1458:async def query_pm_candidates(db, skills_requeridos: list, prioridad: str = "Media"):
+1522:@register_tool("calc_roi")
+1523:async def calc_roi(db, bac: float, beneficio_anual: float, anios: int = 5,
+1583:@register_tool("calc_evm_baseline")
+
+## 11. SPAWNER (primeras 150 lineas)
+"""
+Agent Spawner — Patrón Director/Workers/Merger para agentes que generan
+outputs proporcionales al tamaño del proyecto.
+
+Uso: Los agentes AG-005, AG-013 y AG-007 usan este sistema.
+El endpoint /agents/{agent_id}/invoke detecta si el agente tiene spawning
+configurado y usa SpawnableEngine en vez de AgentEngine normal.
+"""
+import asyncio
+import time
+import json
+import logging
+from typing import List, Dict, Any, Optional
+from agents.config import AgentConfig, load_prompt, AGENT_CONFIGS
+from agents.engine import AgentEngine
+
+log = logging.getLogger("agents.spawner")
+
+
+class SpawnableEngine:
+    """Motor de agente con capacidad de spawning Director/Workers/Merger."""
+
+    def __init__(self, config: AgentConfig, db_pool,
+                 director_prompt: str,
+                 worker_prompt_template: str,
+                 merger_prompt: str,
+                 max_workers: int = 8,
+                 worker_max_tokens: int = 4096,
+                 programmatic_merge: bool = False,
+                 merge_function=None):
+        self.config = config
+        self.db = db_pool
+        self.director_prompt = director_prompt
+        self.worker_prompt_template = worker_prompt_template
+        self.merger_prompt = merger_prompt
+        self.max_workers = max_workers
+        self.worker_max_tokens = worker_max_tokens
+        self.programmatic_merge = programmatic_merge
+        self.merge_function = merge_function
+
+    async def invoke(self, user_msg: str, session_id: str = "",
+                     progress_callback=None) -> dict:
+        """
+        Ejecuta el ciclo Director -> Workers -> Merger.
+
+        progress_callback: async function(event_type, data) para notificar.
+        event_type: 'director_start', 'director_done', 'worker_start',
+                    'worker_done', 'merger_start', 'merger_done'
+
+        Returns: {
+            "response": str (JSON final fusionado),
+            "spawning_info": {
+                "num_workers": int,
+                "worker_results": [...],
+                "director_time_ms": int,
+                "workers_time_ms": int,
+                "merger_time_ms": int,
+                "total_time_ms": int
+            }
+        }
+        """
+        t_total = time.monotonic()
+        spawning_info = {"num_workers": 0, "worker_results": []}
+
+        # === FASE 1: DIRECTOR ===
+        if progress_callback:
+            await progress_callback("director_start", {
+                "agent_id": self.config.agent_id
+            })
+
+        t_dir = time.monotonic()
+        director_config = AgentConfig(
+            agent_id=f"{self.config.agent_id}-DIR",
+            agent_name=f"{self.config.agent_name} Director",
+            system_prompt=self.director_prompt,
+            tools=self.config.tools,
+            model=self.config.model,
+            max_tokens=4096,
+            temperature=self.config.temperature,
+        )
+        director_engine = AgentEngine(director_config, self.db)
+        director_result = await director_engine.invoke(user_msg, session_id + "-DIR")
+
+        work_items = self._parse_director_output(director_result)
+        spawning_info["director_time_ms"] = int((time.monotonic() - t_dir) * 1000)
+
+        if progress_callback:
+            await progress_callback("director_done", {
+                "agent_id": self.config.agent_id,
+                "num_workers": len(work_items),
+                "items": [w.get("nombre", f"Worker {i+1}") for i, w in enumerate(work_items)],
+                "time_ms": spawning_info["director_time_ms"]
+            })
+
+        if not work_items:
+            log.warning(f"[{self.config.agent_id}] Director no genero work items, usando output directo")
+            return {
+                "response": director_result,
+                "spawning_info": spawning_info
+            }
+
+        # === FASE 2: WORKERS EN PARALELO ===
+        num_workers = min(len(work_items), self.max_workers)
+        spawning_info["num_workers"] = num_workers
+
+        if progress_callback:
+            await progress_callback("workers_start", {
+                "agent_id": self.config.agent_id,
+                "num_workers": num_workers
+            })
+
+        t_workers = time.monotonic()
+        worker_tasks = []
+        for i, work_item in enumerate(work_items[:num_workers]):
+            worker_tasks.append(
+                self._run_worker(i, work_item, director_result,
+                                 session_id, progress_callback)
+            )
+
+        worker_results = await asyncio.gather(*worker_tasks, return_exceptions=True)
+
+        valid_results = []
+        for i, result in enumerate(worker_results):
+            if isinstance(result, Exception):
+                log.error(f"[{self.config.agent_id}-W{i+1}] Worker fallo: {result}")
+                spawning_info["worker_results"].append({
+                    "index": i, "status": "error", "error": str(result)
+                })
+            else:
+                valid_results.append({"index": i, "result": result})
+                spawning_info["worker_results"].append({
+                    "index": i, "status": "ok",
+                    "chars": len(result) if isinstance(result, str) else 0
+                })
+
+        spawning_info["workers_time_ms"] = int((time.monotonic() - t_workers) * 1000)
+
+        # === FASE 3: MERGER ===
+        if self.programmatic_merge and self.merge_function:
+            if progress_callback:
+                await progress_callback("merger_start", {
+                    "agent_id": self.config.agent_id,
+                    "valid_workers": len(valid_results),
+                    "total_workers": num_workers,
+                    "mode": "programmatic"
+                })
+            t_merger = time.monotonic()
+            try:
+                final_result = self.merge_function(user_msg, director_result, valid_results)
+                spawning_info["merger_time_ms"] = int((time.monotonic() - t_merger) * 1000)
+
+## 12. ROUTER FUNCIONES
+18:def _sse(payload: dict) -> str:
+29:async def invoke_agent(agent_id: str, body: InvokeRequest):
+71:async def list_agents():
+88:async def _fetch_latest_incident(pool, session_id, dispatcher_text):
+123:async def _fetch_incident_tasks(pool, ticket_id):
+158:async def run_chain(body: InvokeRequest):
+236:async def run_chain_stream(
+244:        async def error_gen():
+251:    async def event_generator():
+364:async def build_chain(body: InvokeRequest):
+474:async def run_forecast():
+
+## 13. FRONTEND TAMAÑO
+15370 frontend/index.html
+
+## 14. FRONTEND FUNCIONES CLAVE (con numero de linea)
+3777:function authFetch(url, options = {}) {
+5439:async function buildSubmitAndPipeline() {
+5595:async function executeRunPipeline(text) {
+6944:function activateBuildAgent(agentId) {
+7251:async function savePipelineState(nombre, pausaActual, pipelineData, businessCase) {
+7290:async function loadBuildLiveSessions() {
+7324:async function resumePipelineSession(sessionId) {
+7366:function renderPipelineStepsHeader(containerParent, pipelineData, maxPausa, activePausa, onClose) {
+7436:function navigateToPipelineStep(pipelineData, stepNum, maxPausa, containerParent, onClose) {
+7450:function showBuildPauseReadOnly(pipelineData, pauseNumber) {
+7475:async function executeBuildPipeline(text) {
+7985:function renderAdvisorChat(containerId, pauseNumber) {
+8517:async function showBuildPause(pauseNumber, data, externalResolve) {
+10116:function showBuildFinalScreen(pipelineData) {
+10898:async function executePipeline(mode) {
+
+## 15. FUNCIONES COMPLETAS
+### --- executeBuildPipeline ---
+7475: async function executeBuildPipeline(text) {
+7476:   var execBtn = document.getElementById('build-exec-btn');
+7477:   var statusEl = document.getElementById('build-status-val');
+7478:   if (execBtn) execBtn.disabled = true;
+7479:   if (statusEl) { statusEl.textContent = 'Running'; statusEl.style.color = 'var(--blue)'; }
+7480: 
+7481:   // Inicializar estado
+7482:   buildPipelineState = {};
+7483:   buildPipelineOrder.forEach(function(id) { buildPipelineState[id] = 'pending'; });
+7484:   buildPipelineStartTime = Date.now();
+7485:   buildPipelineCost = 0;
+7486:   buildAdvisorSessionId = 'BUILD-' + Date.now();
+7487: 
+7488:   // Preparar área de pipeline
+7489:   var area = document.getElementById('build-pipeline-area');
+7490:   var idleEl = document.getElementById('build-pipeline-idle');
+7491:   if (idleEl) idleEl.style.display = 'none';
+7492:   var oldSteps = document.getElementById('build-steps');
+7493:   if (oldSteps) oldSteps.remove();
+7494: 
+7495:   var dashboard = document.createElement('div');
+7496:   dashboard.className = 'build-dashboard';
+7497:   dashboard.id = 'build-steps';
+7498:   area.appendChild(dashboard);
+7499: 
+7500:   // Renderizar pipeline bar v2 + progress bar
+7501:   var pipeBarContainer = document.createElement('div');
+7502:   pipeBarContainer.id = 'build-pipe-container';
+7503:   dashboard.appendChild(pipeBarContainer);
+7504:   renderBuildPipelineBar('build-pipe-container');
+7505: 
+7506:   var progBarContainer = document.createElement('div');
+7507:   progBarContainer.id = 'build-prog-container';
+7508:   dashboard.appendChild(progBarContainer);
+7509:   renderBuildProgressBar('build-prog-container');
+7510: 
+7511:   // Log panel
+7512:   var logContainer = document.createElement('div');
+7513:   var logTitle = document.createElement('div');
+7514:   logTitle.className = 'build-section-title';
+7515:   logTitle.textContent = 'Panel de actividad';
+7516:   var logBox = document.createElement('div');
+7517:   logBox.className = 'build-log';
+7518:   logBox.id = 'build-live-log';
+7519:   logContainer.appendChild(logTitle);
+7520:   logContainer.appendChild(logBox);
+7521:   dashboard.appendChild(logContainer);
+7522: 
+7523:   // Área para pausas y resultados
+7524:   var pauseArea = document.createElement('div');
+7525:   pauseArea.id = 'build-pause-area';
+7526:   dashboard.appendChild(pauseArea);
+7527: 
+7528:   var sessionId = buildAdvisorSessionId;
+7529:   function elapsed() {
+7530:     var s = Math.floor((Date.now() - buildPipelineStartTime) / 1000);
+7531:     var m = Math.floor(s / 60); s = s % 60;
+7532:     return (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s);
+7533:   }
+7534:   function addLog(agent, cls, msg, isTool) {
+7535:     var log = document.getElementById('build-live-log');
+7536:     if (!log) return;
+7537:     var entry = document.createElement('div');
+7538:     entry.className = 'build-log-entry';
+7539:     var timeSpan = document.createElement('span');
+7540:     timeSpan.className = 'build-log-time';
+7541:     timeSpan.textContent = elapsed();
+7542:     var agentSpan = document.createElement('span');
+7543:     agentSpan.className = 'build-log-agent ' + cls;
+7544:     agentSpan.textContent = agent;
+7545:     var msgSpan = document.createElement('span');
+7546:     if (isTool) msgSpan.className = 'build-log-tool';
+7547:     msgSpan.textContent = msg;
+7548:     entry.appendChild(timeSpan);
+7549:     entry.appendChild(agentSpan);
+7550:     entry.appendChild(msgSpan);
+7551:     log.appendChild(entry);
+7552:     log.scrollTop = log.scrollHeight;
+7553:     // Update timer
+7554:     var timeEl = document.getElementById('build-progress-time');
+7555:     if (timeEl) timeEl.textContent = elapsed();
+7556:   }
+7557: 
+7558:   // Acumular datos entre agentes
+7559:   var pipelineData = {
+7560:     formText: text,
+7561:     edtResult: null,
+7562:     subtasksResult: null,
+7563:     risksResult: null,
+7564:     stakeholdersResult: null,
+7565:     resourceResult: null,
+7566:     selectedPM: null,
+7567:     costResult: null,
+7568:     planResult: null,
+7569:     qualityResult: null
+7570:   };
+7571:   pipelineDataRef = pipelineData;
+7572:   currentPauseNumber = 0;
+7573:   maxPauseReached = 0;
+7574: 
+7575:   // Timer para actualizar reloj cada segundo
+7576:   var buildTimer = setInterval(function() {
+7577:     var timeEl = document.getElementById('build-progress-time');
+7578:     if (timeEl) timeEl.textContent = elapsed();
+7579:     var costEl = document.getElementById('build-progress-cost');
+7580:     if (costEl) costEl.textContent = '~' + buildPipelineCost.toFixed(2) + ' USD';
+7581:   }, 1000);
+7582: 
+7583:   try {
+7584:     // ═══ PASO 1: AG-005 Estratega EDT/WBS ═══
+7585:     activateBuildAgent('AG-005');
+7586:     setAgentSpawningState('AG-005', 'spawning', 5);
+7587:     updateBuildProgress(5);
+7588:     addLog('AG-005', 'estratega', 'Spawning Director + 5 Workers...', false);
+7589:     addLog('AG-005', 'estratega', 'tool: decompose_pmbok()', true);
+7590: 
+7591:     // Función helper para serializar datos de agente sin truncar JSON
+7592:     function compressEdtForAgent(edtData, level) {
+7593:       try {
+7594:         var p = typeof edtData === 'string' ? JSON.parse(edtData.match(/\{[\s\S]*\}/)[0]) : edtData;
+7595:         if (!p || !p.edt || !p.edt.fases) return typeof edtData === 'string' ? edtData.substring(0, 3000) : JSON.stringify(edtData).substring(0, 3000);
+7596:         if (level === 'minimal') {
+7597:           return JSON.stringify({
+7598:             proyecto: p.acta_constitucion ? p.acta_constitucion.descripcion_alto_nivel.substring(0, 150) : '',
+7599:             fases: p.edt.fases.map(function(f) {
+7600:               return { nombre: f.nombre, s: f.semana_inicio + '-' + f.semana_fin, h: f.horas,
+7601:                 tareas: (f.paquetes || []).flatMap(function(pq) {
+7602:                   return (pq.tareas || []).map(function(t) { return { id: t.id_tarea, skill: t.skill, h: t.horas }; });
+7603:                 })
+7604:               };
+7605:             }),
+7606:             total_horas: p.edt.fases.reduce(function(s, f) { return s + (f.horas || 0); }, 0),
+7607:             total_tareas: p.edt.fases.reduce(function(s, f) { return s + (f.paquetes || []).reduce(function(s2, pq) { return s2 + (pq.tareas || []).length; }, 0); }, 0)
+7608:           });
+7609:         }
+7610:         if (level === 'medium') {
+7611:           return JSON.stringify({
+7612:             acta: { descripcion: p.acta_constitucion ? p.acta_constitucion.descripcion_alto_nivel.substring(0, 200) : '', hitos: p.acta_constitucion ? p.acta_constitucion.hitos : [] },
+7613:             fases: p.edt.fases.map(function(f) {
+7614:               return { nombre: f.nombre, semana_inicio: f.semana_inicio, semana_fin: f.semana_fin, horas: f.horas,
+7615:                 paquetes: (f.paquetes || []).map(function(pq) {
+7616:                   return { nombre: pq.nombre, tareas: (pq.tareas || []).map(function(t) { return { id_tarea: t.id_tarea, nombre: t.nombre, skill: t.skill, horas: t.horas, dependencias: t.dependencias }; }) };
+7617:                 })
+7618:               };
+7619:             }),
+7620:             meta_negocio: p.meta_negocio || {}
+7621:           });
+7622:         }
+7623:         return typeof edtData === 'string' ? edtData : JSON.stringify(edtData);
+7624:       } catch(e) { return typeof edtData === 'string' ? edtData.substring(0, 5000) : JSON.stringify(edtData).substring(0, 5000); }
+7625:     }
+7626: 
+7627:     function compressSubtasksForAgent(subtData) {
+7628:       try {
+7629:         var p = typeof subtData === 'string' ? JSON.parse(subtData.match(/\{[\s\S]*\}/)[0]) : subtData;
+7630:         if (!p) return '{}';
+7631:         var sbt = p.subtasks_by_task || p.subtasks || {};
+7632:         var mini = { resumen_subtareas: {} };
+7633:         Object.keys(sbt).forEach(function(tid) {
+7634:           var arr = Array.isArray(sbt[tid]) ? sbt[tid] : [];
+7635:           mini.resumen_subtareas[tid] = { count: arr.length, skills: arr.map(function(s) { return s.skill_requerido || s.skill || ''; }).filter(Boolean), pts: arr.reduce(function(s, st) { return s + (st.story_points || 0); }, 0) };
+7636:         });
+7637:         mini.total = Object.keys(mini.resumen_subtareas).length;
+7638:         return JSON.stringify(mini);
+7639:       } catch(e) { return typeof subtData === 'string' ? subtData.substring(0, 2000) : '{}'; }
+7640:     }
+7641: 
+7642:     function serializeAgentData(data, maxLen) {
+7643:       if (!data) return '{}';
+7644:       var str = typeof data === 'string' ? data : JSON.stringify(data);
+7645:       if (str.length <= (maxLen || 6000)) return str;
+7646:       try {
+7647:         var parsed = typeof data === 'string' ? JSON.parse(data) : data;
+7648:         if (parsed.edt && parsed.edt.fases) {
+7649:           var resumen = {
+7650:             acta_constitucion: parsed.acta_constitucion,
+7651:             alcance: parsed.alcance,
+7652:             edt: { fases: parsed.edt.fases.map(function(f) {
+7653:               return { nombre: f.nombre, semana_inicio: f.semana_inicio, semana_fin: f.semana_fin, horas: f.horas,
+7654:                 paquetes: (f.paquetes||[]).map(function(p) {
+7655:                   return { nombre: p.nombre, tareas: (p.tareas||[]).map(function(t) {
+7656:                     return { id_tarea: t.id_tarea, nombre: t.nombre, skill: t.skill, horas: t.horas, dependencias: t.dependencias };
+7657:                   })};
+7658:                 })
+7659:               };
+7660:             })}
+7661:           };
+7662:           return JSON.stringify(resumen);
+7663:         }
+7664:         return str;
+7665:       } catch(e) { return str; }
+7666:     }
+7667: 
+7668:     // Leer solicitud JSON del data attribute
+7669:     var solicitud = {};
+7670:     try {
+7671:       var buildInputEl = document.getElementById('build-input');
+7672:       if (buildInputEl && buildInputEl.dataset.businessCaseJson) {
+7673:         solicitud = JSON.parse(buildInputEl.dataset.businessCaseJson);
+7674:       } else if (typeof text === 'string') {
+7675:         try { solicitud = JSON.parse(text); } catch(e) { solicitud = { nombre: 'Proyecto', resumen: text }; }
+7676:       }
+7677:     } catch(e) {
+7678:       solicitud = { nombre: 'Proyecto', resumen: typeof text === 'string' ? text : JSON.stringify(text) };
+7679:     }
+7680: 
+7681:     var bcJson = JSON.stringify(solicitud, null, 2);
+7682:     var ag005Message = 'SOLICITUD DE PROYECTO DESDE NEGOCIO:\n' + bcJson +
+7683:       '\n\nNOTAS SOBRE LA SOLICITUD:' +
+7684:       '\n- presupuesto_propuesto y fecha_fin_deseada son PROPUESTAS de negocio, no restricciones absolutas.' +
+7685:       '\n- Si la prioridad es Alta, intenta ajustarte al plazo y presupuesto propuestos.' +
+7686:       '\n- Si la prioridad es Media o Baja, planifica de forma realista independientemente de la propuesta.' +
+7687:       '\n- Si un campo es null, estimalo tu basandote en el tipo de proyecto.' +
+7688:       '\n\nINSTRUCCION OBLIGATORIA: Genera el EDT/WBS completo con Acta y Alcance. Usa decompose_pmbok(). Devuelve UNICAMENTE JSON valido sin backticks.';
+7689: 
+7690:     var t0 = Date.now();
+7691:     var resp5 = await authFetch(API_BASE + '/agents/AG-005/invoke', {
+7692:       method: 'POST',
+7693:       headers: {'Content-Type': 'application/json'},
+7694:       body: JSON.stringify({message: ag005Message, session_id: sessionId})
+7695:     });
+7696:     var r5 = await resp5.json();
+7697:     if (!resp5.ok) throw new Error(r5.detail || 'AG-005 error');
+7698:     pipelineData.edtResult = r5.response || r5.result || '';
+7699:     completeBuildAgent('AG-005', Date.now() - t0, 0.04);
+7700:     var ag005workers = (r5 && r5.spawning_info) ? r5.spawning_info.num_workers : 5;
+7701:     setAgentSpawningState('AG-005', 'done', ag005workers);
+7702:     updateBuildProgress(12);
+7703:     addLog('AG-005', 'estratega', 'EDT generada en ' + ((Date.now() - t0)/1000).toFixed(1) + 's' + (r5.spawning_info ? ' ('+ag005workers+' workers)' : ''), false);
+7704: 
+7705:     // PAUSA 1: Gobernador revisa EDT
+7706:     currentPauseNumber = 1; maxPauseReached = Math.max(maxPauseReached, 1);
+7707:     pipelineData.edtResult = await showBuildPause(1, pipelineData);
+7708:     await savePipelineState(pipelineData.solicitud ? pipelineData.solicitud.nombre : '', 1, pipelineData, pipelineData.solicitud);
+7709:     renderPipelineStepsHeader(null, pipelineData, 2, 2, null);
+7710: 
+7711:     // ═══ PASO 2: AG-013 Task Decomposer ═══
+7712:     activateBuildAgent('AG-013');
+7713:     setAgentSpawningState('AG-013', 'spawning', 5);
+7714:     updateBuildProgress(18);
+7715:     addLog('AG-013', 'estratega', 'Descomponiendo subtareas técnicas...', false);
+7716:     addLog('AG-013', 'estratega', 'tool: decompose_subtasks()', true);
+7717: 
+7718:     var t1 = Date.now();
+7719:     var edtText = serializeAgentData(pipelineData.edtResult, 8000);
+7720:     var resp13 = await authFetch(API_BASE + '/agents/AG-013/invoke', {
+7721:       method: 'POST',
+7722:       headers: {'Content-Type': 'application/json'},
+7723:       body: JSON.stringify({
+7724:         message: 'EDT APROBADO POR GOBERNANZA (JSON completo):\n' + edtText + '\n\nINSTRUCCION: Descompon CADA tarea en 3-5 subtareas tecnicas. Usa tools para consultar CMDB. Devuelve SOLO JSON.',
+7725:         session_id: sessionId
+7726:       })
+7727:     });
+7728:     var r13 = await resp13.json();
+7729:     if (!resp13.ok) throw new Error(r13.detail || 'AG-013 error');
+7730:     pipelineData.subtasksResult = r13.response || r13.result || '';
+7731:     completeBuildAgent('AG-013', Date.now() - t1, 0.05);
+7732:     var ag013workers = (r13 && r13.spawning_info) ? r13.spawning_info.num_workers : 5;
+7733:     setAgentSpawningState('AG-013', 'done', ag013workers);
+7734:     updateBuildProgress(25);
+7735:     addLog('AG-013', 'estratega', 'Subtareas generadas en ' + ((Date.now() - t1)/1000).toFixed(1) + 's', false);
+7736: 
+7737:     // Fallback: si AG-013 no devolvió JSON de subtareas, intentar leer de BD
+7738:     var subtCheck = pipelineData.subtasksResult;
+7739:     var hasSubtasks = false;
+7740:     try {
+7741:       var stStr = typeof subtCheck === 'string' ? subtCheck : JSON.stringify(subtCheck);
+7742:       var stClean = stStr.replace(/```json\s*/g,'').replace(/```\s*/g,'').trim();
+7743:       var stMatch = stClean.match(/\{[\s\S]*\}/);
+7744:       if (stMatch) {
+7745:         var stParsed = JSON.parse(stMatch[0]);
+7746:         hasSubtasks = stParsed && (stParsed.subtasks_by_task || stParsed.subtasks || stParsed.items);
+7747:       }
+7748:     } catch(e) {}
+7749: 
+7750:     if (!hasSubtasks) {
+7751:       console.warn('AG-013 no devolvió subtareas en JSON. Intentando leer de BD...');
+7752:       try {
+7753:         var subtResp = await authFetch(API_BASE + '/dev/sql', {
+7754:           method: 'POST',
+7755:           headers: {'Content-Type': 'application/json'},
+7756:           body: JSON.stringify({sql: "SELECT * FROM build_subtasks ORDER BY id_tarea, orden LIMIT 200"})
+7757:         });
+7758:         var subtRows = await subtResp.json();
+7759:         if (subtRows && Array.isArray(subtRows) && subtRows.length > 0) {
+7760:           pipelineData.subtasksResult = JSON.stringify({subtasks: subtRows});
+7761:           addLog('SYSTEM', 'estratega', 'Subtareas recuperadas de BD (' + subtRows.length + ' items)', false);
+7762:         }
+7763:       } catch(e) { console.warn('Fallback BD subtareas falló:', e); }
+7764:     }
+7765: 
+7766:     // PAUSA 2: Gobernador revisa subtareas
+7767:     currentPauseNumber = 2; maxPauseReached = Math.max(maxPauseReached, 2);
+7768:     pipelineData.subtasksResult = await showBuildPause(2, pipelineData);
+7769:     await savePipelineState(pipelineData.solicitud ? pipelineData.solicitud.nombre : '', 2, pipelineData, pipelineData.solicitud);
+7770:     renderPipelineStepsHeader(null, pipelineData, 3, 3, null);
+7771: 
+7772:     // ═══ PASO 3: AG-014 + AG-015 en paralelo ═══
+7773:     activateBuildAgent('AG-014');
+7774:     activateBuildAgent('AG-015');
+7775:     updateBuildProgress(32);
+7776:     addLog('AG-014', 'resource', 'Analizando riesgos...', false);
+7777:     addLog('AG-015', 'resource', 'Mapeando stakeholders...', false);
+7778: 
+7779:     var t2 = Date.now();
+7780:     var subtText = serializeAgentData(pipelineData.subtasksResult, 6000);
+7781:     var edtForRisk = compressEdtForAgent(pipelineData.edtResult, 'medium');
+7782:     var edtMinimal = compressEdtForAgent(pipelineData.edtResult, 'minimal');
+7783:     var contextForRisk = 'BUSINESS CASE:\n' + bcJson + '\n\nEDT DEL PROYECTO:\n' + edtForRisk + '\n\nINSTRUCCION OBLIGATORIA: Debes analizar EXACTAMENTE 10-12 riesgos del proyecto. Usa el tool analyze_risks. Genera una matriz probabilidad (1-5) x impacto (1-5). Categorías obligatorias: Técnico (mínimo 4), Recursos (mínimo 2), Regulatorio (mínimo 1), Externo (mínimo 1). Cada riesgo DEBE tener: id (R1-R12), descripcion, probabilidad, impacto, categoria, plan_mitigacion, plan_contingencia, responsable. Devuelve SOLO JSON con key "risks" conteniendo el array. NO devuelvas texto libre. NO preguntes nada.';
+7784:     var contextForStk = 'BUSINESS CASE:\n' + bcJson + '\n\nEDT (resumen):\n' + edtMinimal + '\n\nINSTRUCCION: Mapea stakeholders. Usa query_directorio. Devuelve SOLO JSON.';
+7785: 
+7786:     var parallelResults = await Promise.all([
+7787:       authFetch(API_BASE + '/agents/AG-014/invoke', {
+7788:         method: 'POST', headers: {'Content-Type': 'application/json'},
+7789:         body: JSON.stringify({message: contextForRisk, session_id: sessionId})
+7790:       }).then(function(r) { return r.json(); }),
+7791:       authFetch(API_BASE + '/agents/AG-015/invoke', {
+7792:         method: 'POST', headers: {'Content-Type': 'application/json'},
+7793:         body: JSON.stringify({message: contextForStk, session_id: sessionId})
+7794:       }).then(function(r) { return r.json(); })
+7795:     ]);
+7796:     pipelineData.risksResult = parallelResults[0].response || parallelResults[0].result || '';
+7797:     pipelineData.stakeholdersResult = parallelResults[1].response || parallelResults[1].result || '';
+7798:     completeBuildAgent('AG-014', Date.now() - t2, 0.04);
+7799:     completeBuildAgent('AG-015', Date.now() - t2, 0.04);
+7800:     updateBuildProgress(50);
+7801:     addLog('AG-014', 'resource', 'Riesgos analizados', false);
+7802:     addLog('AG-015', 'resource', 'Stakeholders mapeados', false);
+7803: 
+7804:     // PAUSA 3: Gobernador revisa riesgos + stakeholders
+7805:     currentPauseNumber = 3; maxPauseReached = Math.max(maxPauseReached, 3);
+7806:     var pause3Data = await showBuildPause(3, pipelineData);
+7807:     if (pause3Data && pause3Data.risks) pipelineData.risksResult = pause3Data.risks;
+7808:     if (pause3Data && pause3Data.stakeholders) pipelineData.stakeholdersResult = pause3Data.stakeholders;
+7809:     await savePipelineState(pipelineData.solicitud ? pipelineData.solicitud.nombre : '', 3, pipelineData, pipelineData.solicitud);
+7810:     renderPipelineStepsHeader(null, pipelineData, 4, 4, null);
+7811: 
+7812:     // ═══ PASO 4: AG-006 Resource Manager PMO ═══
+7813:     activateBuildAgent('AG-006');
+7814:     updateBuildProgress(56);
+7815:     addLog('AG-006', 'resource', 'Buscando PM candidatos y formando equipo...', false);
+7816:     addLog('AG-006', 'resource', 'tool: query_pm_candidates()', true);
+7817: 
+7818:     var t3 = Date.now();
+7819:     var risksText = serializeAgentData(pipelineData.risksResult, 4000);
+7820:     var stkText = serializeAgentData(pipelineData.stakeholdersResult, 4000);
+7821:     var resp6 = await authFetch(API_BASE + '/agents/AG-006/invoke', {
+7822:       method: 'POST',
+7823:       headers: {'Content-Type': 'application/json'},
+7824:       body: JSON.stringify({
+7825:         message: 'BUSINESS CASE:\n' + bcJson +
+7826:           '\n\nEDT (resumen):\n' + compressEdtForAgent(pipelineData.edtResult, 'medium') +
+7827:           '\n\nINSTRUCCION: Propon 3 PMs candidatos con scoring y forma equipo tecnico por silo. Usa tools query_pm_candidates y query_staff_by_skill. Devuelve SOLO JSON.',
+7828:         session_id: sessionId
+7829:       })
+7830:     });
+7831:     var r6 = await resp6.json();
+7832:     if (!resp6.ok) throw new Error(r6.detail || 'AG-006 error');
+7833:     pipelineData.resourceResult = r6.response || r6.result || '';
+7834:     completeBuildAgent('AG-006', Date.now() - t3, 0.04);
+7835:     updateBuildProgress(62);
+7836:     addLog('AG-006', 'resource', 'Equipo propuesto en ' + ((Date.now() - t3)/1000).toFixed(1) + 's', false);
+7837: 
+7838:     // PAUSA 4: Gobernador selecciona PM + revisa equipo
+7839:     currentPauseNumber = 4; maxPauseReached = Math.max(maxPauseReached, 4);
+7840:     pipelineData.selectedPM = await showBuildPause(4, pipelineData);
+7841:     await savePipelineState(pipelineData.solicitud ? pipelineData.solicitud.nombre : '', 4, pipelineData, pipelineData.solicitud);
+7842:     renderPipelineStepsHeader(null, pipelineData, 5, 5, null);
+7843: 
+7844:     // ═══ PASO 5a: AG-016 Cost Analyzer (PRIMERO) ═══
+7845:     activateBuildAgent('AG-016');
+7846:     updateBuildProgress(70);
+7847:     addLog('AG-016', 'planificador', 'Calculando presupuesto + ROI + EVM...', false);
+7848: 
+7849:     var t4 = Date.now();
+7850:     var resText = serializeAgentData(pipelineData.resourceResult, 4000);
+7851:     var pmText = pipelineData.selectedPM ? JSON.stringify(pipelineData.selectedPM) : '{}';
+7852:     var contextForCost = 'BUSINESS CASE:\n' + bcJson +
+7853:       '\n\nEDT (resumen):\n' + compressEdtForAgent(pipelineData.edtResult, 'medium') +
+7854:       '\n\nEQUIPO:\n' + serializeAgentData(pipelineData.resourceResult, 2000) +
+7855:       '\n\nINSTRUCCION: Calcula presupuesto, ROI, payback y EVM. Usa tools calc_roi y calc_evm_baseline. Devuelve SOLO JSON.';
+7856: 
+7857:     try {
+7858:       var resp16 = await authFetch(API_BASE + '/agents/AG-016/invoke', {
+7859:         method: 'POST', headers: {'Content-Type': 'application/json'},
+7860:         body: JSON.stringify({message: contextForCost, session_id: sessionId})
+7861:       });
+7862:       var r16 = await resp16.json();
+7863:       if (!resp16.ok) throw new Error(r16.detail || 'AG-016 error');
+7864:       pipelineData.costResult = r16.response || r16.result || '';
+7865:     } catch(e16) {
+7866:       console.error('AG-016 falló:', e16);
+7867:       addLog('AG-016', 'planificador', 'Error: ' + (e16.message || e16) + ' — usando estimación por defecto', false);
+7868:       var totalHorasEst = 0;
+7869:       try {
+7870:         var edtEst = typeof pipelineData.edtResult === 'string' ? JSON.parse(pipelineData.edtResult.match(/\{[\s\S]*\}/)[0]) : pipelineData.edtResult;
+7871:         if (edtEst && edtEst.edt && edtEst.edt.fases) edtEst.edt.fases.forEach(function(f) { totalHorasEst += (f.horas || 0); });
+7872:       } catch(e) {}
+7873:       var costoRRHH = totalHorasEst * 85;
+7874:       pipelineData.costResult = JSON.stringify({
+7875:         presupuesto: {rrhh: [{silo:'General',horas:totalHorasEst,tarifa:85,total:costoRRHH}], opex:{}, capex:{}, reservas:{contingencia_pct:15,gestion_pct:5}},
+7876:         bac_total: Math.round(costoRRHH * 1.25), roi: 0, payback_meses: 0, tir: 0,
+7877:         nota: 'Estimación automática por fallo de AG-016. Revisar manualmente.'
+7878:       });
+7879:     }
+7880:     completeBuildAgent('AG-016', Date.now() - t4, 0.04);
+7881:     updateBuildProgress(78);
+7882:     addLog('AG-016', 'planificador', 'Presupuesto calculado en ' + ((Date.now() - t4)/1000).toFixed(1) + 's', false);
+7883: 
+7884:     // ═══ PASO 5b: AG-007 Planificador (DESPUÉS, usa costes de AG-016) ═══
+7885:     activateBuildAgent('AG-007');
+7886:     setAgentSpawningState('AG-007', 'spawning', 5);
+7887:     addLog('AG-007', 'planificador', 'Spawning Director + Workers para sprints...', false);
+7888: 
+7889:     var t4b = Date.now();
+7890:     var costText = serializeAgentData(pipelineData.costResult, 4000);
+7891:     var contextForPlan = 'BUSINESS CASE:\n' + bcJson +
+7892:       '\n\nEDT (resumen):\n' + compressEdtForAgent(pipelineData.edtResult, 'minimal') +
+7893:       '\n\nSUBTAREAS (resumen):\n' + compressSubtasksForAgent(pipelineData.subtasksResult) +
+7894:       '\n\nPRESUPUESTO:\n' + serializeAgentData(pipelineData.costResult, 2000) +
+7895:       '\n\nINSTRUCCION: Genera sprints Scrum, Gantt y ruta critica. Devuelve SOLO JSON.';
+7896: 
+7897:     try {
+7898:       var resp7 = await authFetch(API_BASE + '/agents/AG-007/invoke', {
+7899:         method: 'POST', headers: {'Content-Type': 'application/json'},
+7900:         body: JSON.stringify({message: contextForPlan, session_id: sessionId})
+7901:       });
+7902:       var r7 = await resp7.json();
+7903:       if (!resp7.ok) throw new Error(r7.detail || 'AG-007 error');
+7904:       pipelineData.planResult = r7.response || r7.result || '';
+7905:     } catch(e7) {
+7906:       console.error('AG-007 falló:', e7);
+7907:       addLog('AG-007', 'planificador', 'Error: ' + (e7.message || e7) + ' — usando planificación básica', false);
+7908:       pipelineData.planResult = JSON.stringify({
+7909:         sprints: [], gantt_mermaid: '', ruta_critica: {semanas: 0, holgura: 0},
+7910:         total_story_points: 0, velocidad_media: 0,
+7911:         nota: 'Planificación no generada por fallo de AG-007. Revisar manualmente.'
+7912:       });
+7913:     }
+7914:     completeBuildAgent('AG-007', Date.now() - t4b, 0.04);
+7915:     var ag007workers = 5;
+7916:     try { var r7data = typeof pipelineData.planResult === 'string' ? JSON.parse(pipelineData.planResult.match(/\{[\s\S]*\}/)[0]) : pipelineData.planResult; if(r7data && r7data.spawning_info) ag007workers = r7data.spawning_info.num_workers; } catch(e){}
+7917:     setAgentSpawningState('AG-007', 'done', ag007workers);
+7918:     updateBuildProgress(87);
+7919:     addLog('AG-007', 'planificador', 'Planificación completada en ' + ((Date.now() - t4b)/1000).toFixed(1) + 's', false);
+7920: 
+7921:     // ═══ PASO 6: AG-017 Quality Gate ═══
+7922:     activateBuildAgent('AG-017');
+7923:     updateBuildProgress(93);
+7924:     addLog('AG-017', 'estratega', 'Definiendo quality gates + DoD...', false);
+7925:     addLog('AG-017', 'estratega', 'tool: define_quality_gates()', true);
+7926: 
+7927:     var t5 = Date.now();
+7928:     var costTextFull = serializeAgentData(pipelineData.costResult, 4000);
+7929:     var planTextFull = serializeAgentData(pipelineData.planResult, 4000);
+7930:     try {
+7931:       var resp17 = await authFetch(API_BASE + '/agents/AG-017/invoke', {
+7932:         method: 'POST',
+7933:         headers: {'Content-Type': 'application/json'},
+7934:         body: JSON.stringify({
+7935:           message: 'BUSINESS CASE:\n' + bcJson +
+7936:             '\n\nEDT (resumen):\n' + compressEdtForAgent(pipelineData.edtResult, 'minimal') +
+7937:             '\n\nINSTRUCCION: Define quality gates G0-G5 y DoD. Devuelve SOLO JSON.',
+7938:           session_id: sessionId
+7939:         })
+7940:       });
+7941:       var r17 = await resp17.json();
+7942:       if (!resp17.ok) throw new Error(r17.detail || 'AG-017 error');
+7943:       pipelineData.qualityResult = r17.response || r17.result || '';
+7944:     } catch(e17) {
+7945:       console.error('AG-017 falló:', e17);
+7946:       addLog('AG-017', 'estratega', 'Error: ' + (e17.message || e17) + ' — usando gates básicos', false);
+7947:       pipelineData.qualityResult = JSON.stringify({
+7948:         gates: [
+7949:           {gate:'G0',nombre:'Idea',estado:'PASSED',semana:0},
+7950:           {gate:'G1',nombre:'Inicio',estado:'PASSED',semana:1},
+7951:           {gate:'G2',nombre:'Planificacion',estado:'NEXT',semana:8,checklist:['EDT aprobado','Presupuesto aprobado','Kickoff pendiente']}
+7952:         ],
+7953:         nota: 'Quality gates básicos por fallo de AG-017.'
+7954:       });
+7955:     }
+7956:     completeBuildAgent('AG-017', Date.now() - t5, 0.04);
+7957:     updateBuildProgress(100);
+7958:     addLog('AG-017', 'estratega', 'Quality gates definidos', false);
+7959: 
+7960:     clearInterval(buildTimer);
+7961:     var totalTime = ((Date.now() - buildPipelineStartTime) / 1000).toFixed(1);
+7962:     addLog('CHAIN', 'estratega', 'Pipeline BUILD completado en ' + totalTime + 's — ~' + buildPipelineCost.toFixed(2) + ' USD', false);
+7963:     var progLabel = document.getElementById('build-pipe-progress-label');
+7964:     if (progLabel) { progLabel.textContent = '100%'; progLabel.style.color = '#22c55e'; }
+7965:     var progInfo = document.getElementById('build-progress-info');
+7966:     if (progInfo) progInfo.textContent = 'Pipeline completado en ' + totalTime + 's';
+7967: 
+7968:     // Pantalla final
+7969:     currentPauseNumber = 5; maxPauseReached = 5;
+7970:     await savePipelineState(pipelineData.solicitud ? pipelineData.solicitud.nombre : '', 5, pipelineData, pipelineData.solicitud);
+7971:     showBuildFinalScreen(pipelineData);
+7972: 
+7973:   } catch(e) {
+7974:     clearInterval(buildTimer);
+7975:     addLog('ERROR', 'resource', e.message || String(e), false);
+7976:     var progInfo2 = document.getElementById('build-progress-info');
+7977:     if (progInfo2) progInfo2.textContent = 'Error: ' + (e.message || e);
+7978:   }
+7979: 
+7980:   if (execBtn) execBtn.disabled = false;
+7981:   if (statusEl) { statusEl.textContent = 'Idle'; statusEl.style.color = 'var(--yellow)'; }
+7982: }
+
+### --- resumePipelineSession ---
+7324: async function resumePipelineSession(sessionId) {
+7325:   try {
+7326:     var resp = await authFetch(API_BASE + '/pipeline/sessions/' + sessionId);
+7327:     var session = JSON.parse(await resp.text());
+7328:     if (!session || !session.pipeline_data) { showToast('No se pudo cargar la sesion del pipeline'); return; }
+7329: 
+7330:     var savedData = typeof session.pipeline_data === 'string' ? JSON.parse(session.pipeline_data) : session.pipeline_data;
+7331:     if (session.business_case) {
+7332:       var bc = typeof session.business_case === 'string' ? JSON.parse(session.business_case) : session.business_case;
+7333:       savedData.solicitud = bc;
+7334:       savedData.businessCase = bc;
+7335:     }
+7336:     savedData.formText = session.nombre_proyecto || '';
+7337:     var maxPausa = session.pausa_actual || 1;
+7338:     currentPipelineSessionId = session.id;
+7339: 
+7340:     var idleEl = document.getElementById('build-pipeline-idle');
+7341:     if (idleEl) idleEl.style.display = 'none';
+7342: 
+7343:     var pauseArea = document.getElementById('build-pause-area');
+7344:     if (pauseArea) pauseArea.innerHTML = '';
+7345: 
+7346:     var onClose = function() {
+7347:       var nav = document.getElementById('pipeline-steps-nav');
+7348:       if (nav) nav.remove();
+7349:       if (pauseArea) pauseArea.innerHTML = '';
+7350:       if (idleEl) idleEl.style.display = '';
+7351:       if (typeof loadBuildLiveSessions === 'function') loadBuildLiveSessions();
+7352:     };
+7353: 
+7354:     var activeStep = maxPausa >= 5 ? 5 : maxPausa;
+7355:     renderPipelineStepsHeader(null, savedData, maxPausa, activeStep, onClose);
+7356: 
+7357:     if (maxPausa >= 5) {
+7358:       showBuildFinalScreen(savedData);
+7359:     } else {
+7360:       showBuildPauseReadOnly(savedData, maxPausa);
+7361:     }
+7362:   } catch(e) { console.error('Error reanudando sesion:', e); showToast('Error al cargar la sesion: ' + e.message); }
+7363: }
+
+### --- showBuildPause ---
+7450: function showBuildPauseReadOnly(pipelineData, pauseNumber) {
+7451:   var area = document.getElementById('build-pause-area');
+7452:   if (!area) return;
+7453:   area.innerHTML = '';
+7454:   pipelineDataRef = pipelineData;
+7455:   try {
+7456:     showBuildPause(pauseNumber, pipelineData, function() {
+7457:       console.log('Modo lectura: pausa', pauseNumber);
+7458:     });
+7459:     // Ocultar botón Aprobar en modo lectura (aparece después del render)
+7460:     setTimeout(function() {
+7461:       var approveBtn = document.getElementById('build-pause-approve-' + pauseNumber);
+7462:       if (approveBtn) {
+7463:         approveBtn.textContent = '\ud83d\udd12 Modo lectura';
+7464:         approveBtn.disabled = true;
+7465:         approveBtn.style.cssText = 'padding:8px 18px;border-radius:6px;font-size:11px;font-weight:600;cursor:not-allowed;border:none;background:#333840;color:#8b8f98;';
+7466:       }
+7467:     }, 200);
+7468:   } catch(e) {
+7469:     area.innerHTML = '<div style="padding:20px;color:#8b8f98;"><h3 style="color:#e8e9ed;">Pausa ' + pauseNumber + '</h3><p>Datos del pipeline guardados.</p><pre style="font-size:10px;max-height:400px;overflow:auto;background:#0f1724;padding:12px;border-radius:8px;">' + JSON.stringify(pipelineData, null, 2).substring(0, 5000) + '</pre></div>';
+7470:   }
+7471: }
+
+### --- renderPipelineStepsHeader ---
+7366: function renderPipelineStepsHeader(containerParent, pipelineData, maxPausa, activePausa, onClose) {
+7367:   var oldHeader = document.getElementById('pipeline-steps-nav');
+7368:   if (oldHeader) oldHeader.remove();
+7369: 
+7370:   var header = document.createElement('div');
+7371:   header.id = 'pipeline-steps-nav';
+7372:   header.className = 'pipeline-steps-header';
+7373: 
+7374:   var title = document.createElement('span');
+7375:   title.className = 'step-title';
+7376:   var nombre = 'Proyecto';
+7377:   try {
+7378:     if (pipelineData.solicitud && pipelineData.solicitud.nombre) nombre = pipelineData.solicitud.nombre;
+7379:     else if (pipelineData.businessCase && pipelineData.businessCase.nombre) nombre = pipelineData.businessCase.nombre;
+7380:     else if (pipelineData.formText) nombre = pipelineData.formText;
+7381:   } catch(e) {}
+7382:   title.textContent = nombre;
+7383:   header.appendChild(title);
+7384: 
+7385:   var steps = [
+7386:     { num: 1, label: 'EDT+Acta', icon: '\ud83d\udcc4' },
+7387:     { num: 2, label: 'Subtareas', icon: '\ud83d\udd27' },
+7388:     { num: 3, label: 'Riesgos+STK', icon: '\u26a0\ufe0f' },
+7389:     { num: 4, label: 'PM+Equipo', icon: '\ud83d\udc65' },
+7390:     { num: 5, label: 'Final', icon: '\ud83c\udfc1' }
+7391:   ];
+7392: 
+7393:   steps.forEach(function(step, idx) {
+7394:     if (idx > 0) {
+7395:       var arrow = document.createElement('span');
+7396:       arrow.className = 'pipeline-step-arrow';
+7397:       arrow.textContent = '\u2192';
+7398:       header.appendChild(arrow);
+7399:     }
+7400:     var btn = document.createElement('button');
+7401:     btn.className = 'pipeline-step-btn';
+7402:     if (step.num < activePausa || (step.num <= maxPausa && step.num < activePausa)) btn.classList.add('completed');
+7403:     if (step.num === activePausa) btn.classList.add('active');
+7404:     if (step.num > maxPausa && !(step.num === 5 && maxPausa >= 5)) btn.classList.add('disabled');
+7405:     btn.textContent = step.icon + ' ' + step.label;
+7406: 
+7407:     if (step.num <= maxPausa || (step.num === 5 && maxPausa >= 5)) {
+7408:       btn.onclick = function() {
+7409:         navigateToPipelineStep(pipelineData, step.num, maxPausa, containerParent, onClose);
+7410:       };
+7411:     }
+7412:     header.appendChild(btn);
+7413:   });
+7414: 
+7415:   if (onClose) {
+7416:     var closeBtn = document.createElement('button');
+7417:     closeBtn.className = 'step-close';
+7418:     closeBtn.textContent = '\u2715 Cerrar';
+7419:     closeBtn.onclick = function() {
+7420:       onClose();
+7421:     };
+7422:     header.appendChild(closeBtn);
+7423:   }
+7424: 
+7425:   // Insertar ANTES de build-pause-area (como hermano, no dentro)
+7426:   var pauseArea = document.getElementById('build-pause-area');
+7427:   if (pauseArea && pauseArea.parentNode) {
+7428:     pauseArea.parentNode.insertBefore(header, pauseArea);
+7429:   } else if (containerParent) {
+7430:     containerParent.insertBefore(header, containerParent.firstChild);
+7431:   }
+7432:   return header;
+7433: }
+
+### --- loadBuildLiveSessions ---
+7290: async function loadBuildLiveSessions() {
+7291:   try {
+7292:     var resp = await authFetch(API_BASE + '/pipeline/sessions');
+7293:     var sessions = JSON.parse(await resp.text()) || [];
+7294:     var container = document.getElementById('build-live-sessions');
+7295:     if (!container) return;
+7296:     container.innerHTML = '';
+7297:     if (!sessions || sessions.length === 0) {
+7298:       container.innerHTML = '<div style="font-size:11px;color:#8b8f98;text-align:center;padding:12px;">No hay pipelines activos</div>';
+7299:       return;
+7300:     }
+7301:     sessions.forEach(function(s) {
+7302:       var estadoColor = '#8b8f98', estadoText = s.estado || '';
+7303:       if (s.estado === 'COMPLETADO') { estadoColor = '#22c55e'; estadoText = 'Completado'; }
+7304:       else if ((s.estado||'').indexOf('PAUSA') >= 0) { estadoColor = '#eab308'; estadoText = 'Pausa ' + (s.pausa_actual||0) + '/4'; }
+7305:       else if (s.estado === 'EN_PROGRESO') { estadoColor = '#3b82f6'; estadoText = 'Ejecutando...'; }
+7306:       // Step dots (P1-P5)
+7307:       var pausa = s.pausa_actual || 0;
+7308:       var dots = '';
+7309:       for (var di = 1; di <= 5; di++) {
+7310:         var dc = di <= pausa ? '#10b981' : '#2d3748';
+7311:         dots += '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+dc+';margin-right:3px;"></span>';
+7312:       }
+7313:       var card = document.createElement('div');
+7314:       card.style.cssText = 'background:#1a1d24;border:1px solid #333840;border-radius:8px;padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:border-color 0.2s;';
+7315:       card.onmouseenter = function() { card.style.borderColor = '#3b82f6'; };
+7316:       card.onmouseleave = function() { card.style.borderColor = '#333840'; };
+7317:       card.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;"><div style="font-size:12px;font-weight:600;color:#e8e9ed;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;">'+(s.nombre_proyecto||'Sin nombre')+'</div><span style="font-size:9px;padding:2px 6px;border-radius:4px;background:rgba(234,179,8,0.15);color:'+estadoColor+';font-weight:600;">'+estadoText+'</span></div><div style="display:flex;gap:3px;margin-bottom:4px;">'+dots+'</div><div style="display:flex;justify-content:space-between;font-size:9px;color:#8b8f98;"><span>'+Math.round((s.tiempo_acumulado_ms||0)/1000)+'s</span><span>~$'+(s.coste_acumulado||0).toFixed(2)+'</span></div>';
+7318:       card.onclick = function() { resumePipelineSession(s.id); };
+7319:       container.appendChild(card);
+7320:     });
+7321:   } catch(e) { console.warn('Error cargando sesiones:', e); }
+7322: }
+
+### --- savePipelineState ---
+7251: async function savePipelineState(nombre, pausaActual, pipelineData, businessCase) {
+7252:   try {
+7253:     var ser = function(v) { if (!v) return null; return typeof v === 'string' ? v : JSON.stringify(v); };
+7254:     if (!currentPipelineSessionId) currentPipelineSessionId = 'PS-' + Date.now().toString(36).toUpperCase();
+7255:     var body = {
+7256:       id: currentPipelineSessionId,
+7257:       nombre: nombre || '',
+7258:       estado: pausaActual >= 5 ? 'COMPLETADO' : 'PAUSA_' + pausaActual,
+7259:       pausa_actual: pausaActual,
+7260:       pipeline_data: {
+7261:         edtResult: ser(pipelineData.edtResult),
+7262:         subtasksResult: ser(pipelineData.subtasksResult),
+7263:         risksResult: ser(pipelineData.risksResult),
+7264:         stakeholdersResult: ser(pipelineData.stakeholdersResult),
+7265:         resourceResult: ser(pipelineData.resourceResult),
+7266:         selectedPM: pipelineData.selectedPM || null,
+7267:         costResult: ser(pipelineData.costResult),
+7268:         planResult: ser(pipelineData.planResult),
+7269:         qualityResult: ser(pipelineData.qualityResult)
+7270:       },
+7271:       business_case: businessCase || {},
+7272:       session_id: typeof buildAdvisorSessionId !== 'undefined' ? buildAdvisorSessionId : '',
+7273:       tiempo_ms: buildPipelineStartTime ? Date.now() - buildPipelineStartTime : 0,
+7274:       coste: typeof buildPipelineCost !== 'undefined' ? buildPipelineCost : 0,
+7275:       agentes_completados: Object.keys(buildPipelineState || {}).filter(function(k) { return buildPipelineState[k] === 'done'; })
+7276:     };
+7277:     console.log('savePipelineState: pausa=' + pausaActual + ' id=' + currentPipelineSessionId + ' nombre=' + nombre);
+7278:     var resp = await authFetch(API_BASE + '/pipeline/sessions', {
+7279:       method: 'POST', headers: {'Content-Type': 'application/json'},
+7280:       body: JSON.stringify(body)
+7281:     });
+7282:     if (!resp.ok) { console.error('savePipelineState HTTP error:', resp.status, await resp.text()); return; }
+7283:     var result = await resp.json();
+7284:     currentPipelineSessionId = result.id;
+7285:     console.log('savePipelineState OK: id=' + result.id);
+7286:     loadBuildLiveSessions();
+7287:   } catch(e) { console.error('savePipelineState EXCEPTION:', e.message, e); }
+7288: }
+
+### --- showBuildPauseReadOnly ---
+7450: function showBuildPauseReadOnly(pipelineData, pauseNumber) {
+7451:   var area = document.getElementById('build-pause-area');
+7452:   if (!area) return;
+7453:   area.innerHTML = '';
+7454:   pipelineDataRef = pipelineData;
+7455:   try {
+7456:     showBuildPause(pauseNumber, pipelineData, function() {
+7457:       console.log('Modo lectura: pausa', pauseNumber);
+7458:     });
+7459:     // Ocultar botón Aprobar en modo lectura (aparece después del render)
+7460:     setTimeout(function() {
+7461:       var approveBtn = document.getElementById('build-pause-approve-' + pauseNumber);
+7462:       if (approveBtn) {
+7463:         approveBtn.textContent = '\ud83d\udd12 Modo lectura';
+7464:         approveBtn.disabled = true;
+7465:         approveBtn.style.cssText = 'padding:8px 18px;border-radius:6px;font-size:11px;font-weight:600;cursor:not-allowed;border:none;background:#333840;color:#8b8f98;';
+7466:       }
+7467:     }, 200);
+7468:   } catch(e) {
+7469:     area.innerHTML = '<div style="padding:20px;color:#8b8f98;"><h3 style="color:#e8e9ed;">Pausa ' + pauseNumber + '</h3><p>Datos del pipeline guardados.</p><pre style="font-size:10px;max-height:400px;overflow:auto;background:#0f1724;padding:12px;border-radius:8px;">' + JSON.stringify(pipelineData, null, 2).substring(0, 5000) + '</pre></div>';
+7470:   }
+7471: }
+
+### --- navigateToPipelineStep ---
+7436: function navigateToPipelineStep(pipelineData, stepNum, maxPausa, containerParent, onClose) {
+7437:   var pauseArea = document.getElementById('build-pause-area');
+7438:   if (pauseArea) pauseArea.innerHTML = '';
+7439: 
+7440:   renderPipelineStepsHeader(containerParent, pipelineData, maxPausa, stepNum, onClose);
+7441: 
+7442:   if (stepNum >= 5) {
+7443:     showBuildFinalScreen(pipelineData);
+7444:   } else {
+7445:     showBuildPauseReadOnly(pipelineData, stepNum);
+7446:   }
+7447: }
+
+### --- showBuildFinalScreen ---
+10116: function showBuildFinalScreen(pipelineData) {
+10117:   var pauseArea = document.getElementById('build-pause-area');
+10118:   if (!pauseArea) return;
+10119:   pauseArea.innerHTML = '';
+10120: 
+10121:   function safeParsePipelineData(raw) {
+10122:     if (!raw) return null;
+10123:     if (typeof raw === 'object' && !Array.isArray(raw)) return raw;
+10124:     try {
+10125:       var str = typeof raw === 'string' ? raw : JSON.stringify(raw);
+10126:       str = str.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+10127:       var first = str.indexOf('{');
+10128:       var last = str.lastIndexOf('}');
+10129:       if (first >= 0 && last > first) return JSON.parse(str.substring(first, last + 1));
+10130:       return JSON.parse(str);
+10131:     } catch(e) { console.warn('safeParsePipelineData failed:', e.message); return null; }
+10132:   }
+10133: 
+10134:   var costP = safeParsePipelineData(pipelineData.costResult);
+10135:   var planP = safeParsePipelineData(pipelineData.planResult);
+10136:   var qualP = safeParsePipelineData(pipelineData.qualityResult);
+10137:   var edtP = safeParsePipelineData(pipelineData.edtResult);
+10138:   var risksP = safeParsePipelineData(pipelineData.risksResult);
+10139:   var pmData = pipelineData.selectedPM || {};
+10140: 
+10141:   console.log('FINAL SCREEN PARSED — costP:', costP, 'planP:', planP, 'qualP:', qualP);
+10142:   if (!costP) console.error('Tab Presupuesto: costP null. Raw:', typeof pipelineData.costResult, pipelineData.costResult ? String(pipelineData.costResult).substring(0, 200) : 'EMPTY');
+10143:   if (!planP) console.error('Tab Gantt: planP null. Raw:', typeof pipelineData.planResult, pipelineData.planResult ? String(pipelineData.planResult).substring(0, 200) : 'EMPTY');
+10144:   if (!qualP) console.error('Tab Quality: qualP null. Raw:', typeof pipelineData.qualityResult, pipelineData.qualityResult ? String(pipelineData.qualityResult).substring(0, 200) : 'EMPTY');
+10145: 
+10146:   var sprints = (planP && planP.sprints) || [];
+10147:   var totalSP = (planP && planP.total_story_points) || 0;
+10148:   var velMedia = (planP && planP.velocidad_media) || 0;
+10149:   var costPres = (costP && costP.presupuesto) || costP || {};
+10150:   var costFin = (costP && costP.financiero) || costP || {};
+10151:   var bacTotal = (costPres && costPres.bac_total) || (costP && (costP.bac_total || costP.bac)) || 0;
+10152:   var roi = costFin.roi_pct || costFin.roi || (costP && costP.roi) || 0;
+10153:   var riskCount = (risksP && risksP.risks) ? risksP.risks.length : 0;
+10154:   var totalSprints = sprints.length || 0;
+10155: 
+10156:   // Count all sprint items
+10157:   var allItems = [];
+10158:   sprints.forEach(function(sp){(sp.items||[]).forEach(function(it){it._sprint=sp.numero;allItems.push(it);});});
+10159: 
+10160:   var siloC = {'Linux':{bg:'rgba(6,182,212,0.12)',color:'#06b6d4'},'Seguridad':{bg:'rgba(239,68,68,0.12)',color:'#ef4444'},'DevOps':{bg:'rgba(34,197,94,0.12)',color:'#22c55e'},'QA':{bg:'rgba(236,72,153,0.12)',color:'#ec4899'},'Redes':{bg:'rgba(6,182,212,0.12)',color:'#06b6d4'},'BBDD':{bg:'rgba(249,115,22,0.12)',color:'#f97316'},'Backend':{bg:'rgba(249,115,22,0.12)',color:'#f97316'},'Frontend':{bg:'rgba(59,130,246,0.12)',color:'#3b82f6'},'Soporte':{bg:'rgba(139,143,152,0.12)',color:'#8b8f98'}};
+10161:   var defSilo = {bg:'rgba(139,143,152,0.12)',color:'#8b8f98'};
+10162: 
+10163:   var finalDiv = document.createElement('div');
+10164: 
+10165:   // ── Progress bar 100% ──
+10166:   var elapsed = typeof buildPipelineStartTime!=='undefined' ? ((Date.now()-buildPipelineStartTime)/1000).toFixed(1) : '0';
+10167:   var cost = typeof buildPipelineCost!=='undefined' ? buildPipelineCost.toFixed(2) : '0.00';
+10168:   finalDiv.innerHTML = '<div style="display:flex;align-items:center;gap:16px;background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.2);border-radius:10px;padding:10px 16px;margin-bottom:12px;"><div><div style="font-size:28px;font-weight:700;font-family:monospace;letter-spacing:1px;color:#22c55e;">✓</div><div style="font-size:9px;color:#8b8f98;">Completado</div></div><div><div style="font-size:24px;font-weight:700;font-family:monospace;color:#22c55e;">100%</div><div style="font-size:9px;color:#8b8f98;">9 agentes</div></div><div style="flex:1;"><div style="display:flex;justify-content:space-between;font-size:9px;color:#8b8f98;"><span>'+elapsed+'s · 4 pausas</span><span style="color:#22c55e;font-weight:600;">~'+cost+' USD</span></div><div style="height:6px;background:#181b20;border-radius:3px;margin-top:4px;overflow:hidden;"><div style="height:100%;width:100%;background:#22c55e;border-radius:3px;"></div></div></div></div>';
+10169: 
+10170:   // ── TABS ──
+10171:   var tabLabels = ['Scrum / Sprints','Presupuesto','Gantt + CPM','Quality Gates'];
+10172:   var tabBar = document.createElement('div');
+10173:   tabBar.style.cssText = 'display:flex;gap:2px;margin-bottom:0;';
+10174:   var tabContents = [];
+10175:   tabLabels.forEach(function(label,idx) {
+10176:     var tb = document.createElement('div');
+10177:     tb.style.cssText = 'padding:8px 14px;border-radius:8px 8px 0 0;font-size:10px;font-weight:600;cursor:pointer;border:1px solid '+(idx===0?'#3a3f4a':'#333840')+';border-bottom:none;background:'+(idx===0?'#22262e':'#1a1d24')+';color:'+(idx===0?'#e8e9ed':'#8b8f98')+';';
+10178:     tb.textContent = label;
+10179:     tb.onclick = function(){tabBar.querySelectorAll('div').forEach(function(b){b.style.background='#1a1d24';b.style.borderColor='#333840';b.style.color='#8b8f98';});tb.style.background='#22262e';tb.style.borderColor='#3a3f4a';tb.style.color='#e8e9ed';tabContents.forEach(function(tc,ti){tc.style.display=ti===idx?'block':'none';});};
+10180:     tabBar.appendChild(tb);
+10181:   });
+10182:   finalDiv.appendChild(tabBar);
+10183: 
+10184:   var layout = document.createElement('div');
+10185:   layout.style.cssText = 'display:grid;grid-template-columns:1fr 280px;gap:16px;max-width:100%;overflow:hidden;';
+10186:   var mainLeft = document.createElement('div');
+10187:   mainLeft.style.cssText = 'min-width:0;overflow:hidden;';
+10188:   var mainRight = document.createElement('div');
+10189:   mainRight.style.cssText = 'min-width:0;overflow:hidden;';
+10190: 
+10191:   for(var ti=0;ti<4;ti++){var tc=document.createElement('div');tc.style.cssText='display:'+(ti===0?'block':'none')+';overflow:hidden;word-break:break-word;max-width:100%;';tabContents.push(tc);}
+10192: 
+10193:   // ═══ TAB 0: SCRUM / SPRINTS ═══
+10194:   var scrumSec = document.createElement('div');
+10195:   scrumSec.style.cssText = 'background:#1a1d24;border:1px solid #333840;border-radius:0 10px 10px 10px;padding:14px;margin-bottom:10px;';
+10196:   scrumSec.innerHTML = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;"><span style="font-size:11px;font-weight:600;color:#ec4899;">AG-007 — Scrum Framework · '+totalSprints+' sprints</span><span style="font-size:7px;padding:1px 5px;border-radius:3px;background:rgba(234,179,8,0.15);color:#eab308;font-weight:600;">Planificado por IA</span></div>';
+10197: 
+10198:   // Sprint timeline
+10199:   var timeHtml = '<div style="display:flex;gap:3px;margin-bottom:14px;overflow-x:auto;padding-bottom:4px;">';
+10200:   sprints.forEach(function(sp,si) {
+10201:     var isFirst = si===0;
+10202:     var isFuture = si>4;
+10203:     var spColor = si<4?'#3b82f6':si<8?'#a855f7':si<13?'#ef4444':'#22c55e';
+10204:     timeHtml += '<div class="sprint-block" data-sprint-idx="'+si+'" style="border-radius:6px;padding:8px 10px;min-width:80px;cursor:pointer;border:1px solid '+(isFirst?spColor:'transparent')+';background:rgba('+(isFirst?'59,130,246,0.08':'59,130,246,0.03')+');text-align:center;transition:border-color 0.15s,background 0.15s;'+(isFuture?'opacity:0.4;':'')+'">';
+10205:     timeHtml += '<div style="font-size:14px;font-weight:700;font-family:monospace;color:'+spColor+';">S'+(sp.numero||si+1)+'</div>';
+10206:     timeHtml += '<div style="font-size:9px;color:#8b8f98;margin-top:1px;">Sem '+(sp.semana_inicio||'?')+'-'+(sp.semana_fin||'?')+'</div>';
+10207:     timeHtml += '<div style="font-size:12px;font-weight:600;margin-top:2px;color:'+spColor+';">'+(sp.story_points||0)+' pts</div>';
+10208:     if(sp.goal) timeHtml += '<div style="font-size:9px;color:#8b8f98;margin-top:1px;font-style:italic;line-height:1.2;">'+sp.goal.substring(0,25)+'</div>';
+10209:     timeHtml += '</div>';
+10210:   });
+10211:   timeHtml += '</div>';
+10212:   scrumSec.innerHTML += timeHtml;
+10213: 
+10214:   // Filters
+10215:   scrumSec.innerHTML += '<div style="display:flex;gap:6px;margin-bottom:10px;align-items:center;flex-wrap:wrap;"><span style="font-size:8px;color:#8b8f98;margin-right:4px;">Filtrar:</span><button style="font-size:8px;padding:3px 8px;border-radius:4px;border:1px solid #3b82f6;background:rgba(59,130,246,0.1);color:#3b82f6;cursor:pointer;">Todos</button><button style="font-size:8px;padding:3px 8px;border-radius:4px;border:1px solid #333840;background:none;color:#8b8f98;cursor:pointer;">Task</button><button style="font-size:8px;padding:3px 8px;border-radius:4px;border:1px solid #333840;background:none;color:#8b8f98;cursor:pointer;">Story</button><button style="font-size:8px;padding:3px 8px;border-radius:4px;border:1px solid #333840;background:none;color:#8b8f98;cursor:pointer;">Bug</button><button style="font-size:8px;padding:3px 8px;border-radius:4px;border:1px solid #333840;background:none;color:#8b8f98;cursor:pointer;">Spike</button></div>';
+10216: 
+10217:   // List header
+10218:   scrumSec.innerHTML += '<div style="display:grid;grid-template-columns:30px 45px 1fr 75px 65px 55px 45px 65px 55px;gap:0;padding:4px 8px;font-size:9px;font-weight:600;color:#8b8f98;text-transform:uppercase;border-bottom:1px solid #333840;"><div></div><div>Tipo</div><div>Titulo</div><div>Silo</div><div>Estado</div><div>Asignado</div><div>Pts</div><div>Subtareas</div><div>Prioridad</div></div>';
+10219: 
+10220:   // Render sprints with items
+10221:   var showSprints = sprints.slice(0, Math.min(3, sprints.length));
+10222:   var backlogItems = [];
+10223:   sprints.forEach(function(sp,si){if(si>=3)(sp.items||[]).forEach(function(it){it._sprintNum=sp.numero;backlogItems.push(it);});});
+10224: 
+10225:   showSprints.forEach(function(sp, si) {
+10226:     var spColor = si<4?'#3b82f6':'#a855f7';
+10227:     var items = sp.items || [];
+10228:     var secHtml = '<div style="margin-bottom:12px;">';
+10229:     secHtml += '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;margin-bottom:4px;background:rgba(59,130,246,'+(si===0?'0.06':'0.03')+');cursor:pointer;">';
+10230:     secHtml += '<div style="width:8px;height:8px;border-radius:50%;background:'+spColor+';flex-shrink:0;'+(si>0?'opacity:0.5;':'')+'"></div>';
+10231:     secHtml += '<div style="font-size:14px;font-weight:600;color:'+spColor+';'+(si>0?'opacity:0.7;':'')+'">Sprint '+(sp.numero||si+1)+' — '+(sp.goal||'')+'</div>';
+10232:     secHtml += '<div style="font-size:11px;color:#8b8f98;margin-left:auto;display:flex;gap:12px;"><span>'+items.length+' items</span><span>'+(sp.story_points||0)+' pts</span></div>';
+10233:     secHtml += '</div>';
+10234: 
+10235:     items.forEach(function(it) {
+10236:       var tipo = (it.tipo||'TASK').toUpperCase();
+10237:       var tipoColors = {'TASK':'rgba(59,130,246,0.12);color:#3b82f6','STORY':'rgba(34,197,94,0.12);color:#22c55e','BUG':'rgba(239,68,68,0.12);color:#ef4444','SPIKE':'rgba(168,85,247,0.12);color:#a855f7'};
+10238:       var tipoStyle = tipoColors[tipo]||tipoColors['TASK'];
+10239:       var sc = siloC[it.silo]||defSilo;
+10240:       var prioColor = (it.prioridad||'').toLowerCase()==='alta'||it.prioridad==='Crítica'?'#ef4444':(it.prioridad||'').toLowerCase()==='media'?'#eab308':'#8b8f98';
+10241:       var initials = (it.asignado||it.asignado_nombre||'??').substring(0,2).toUpperCase();
+10242: 
+10243:       secHtml += '<div class="final-item-row" data-sprint-idx="'+si+'" data-item-idx="'+items.indexOf(it)+'" style="display:grid;grid-template-columns:30px 45px 1fr 75px 65px 55px 45px 65px 55px;gap:0;padding:6px 8px;border-bottom:1px solid #22262e;font-size:11px;align-items:center;cursor:pointer;transition:background 0.15s;">';
+10244:       secHtml += '<div><div style="width:14px;height:14px;border:1px solid #333840;border-radius:3px;"></div></div>';
+10245:       secHtml += '<div><span style="font-size:9px;padding:2px 6px;border-radius:3px;font-weight:700;text-align:center;background:'+tipoStyle+';">'+tipo+'</span></div>';
+10246:       secHtml += '<div><div style="font-size:10px;font-family:monospace;font-weight:600;color:#3b82f6;">'+(it.id||'')+'</div><div style="font-size:11px;color:#e8e9ed;line-height:1.3;">'+(it.titulo||'')+'</div>'+(it.descripcion?'<div style="font-size:9px;color:#8b8f98;margin-top:1px;">'+it.descripcion.substring(0,60)+'</div>':'')+'</div>';
+10247:       secHtml += '<div><span style="font-size:9px;padding:2px 6px;border-radius:3px;font-weight:600;background:'+sc.bg+';color:'+sc.color+';">'+(it.silo||'')+'</span></div>';
+10248:       secHtml += '<div><span style="font-size:9px;padding:2px 6px;border-radius:3px;font-weight:600;background:rgba(139,143,152,0.12);color:#8b8f98;">Por hacer</span></div>';
+10249:       secHtml += '<div><div style="width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;margin:0 auto;background:'+sc.bg+';color:'+sc.color+';">'+initials+'</div></div>';
+10250:       secHtml += '<div style="font-size:13px;font-weight:700;font-family:monospace;text-align:center;color:#3b82f6;">'+(it.story_points||0)+'</div>';
+10251:       secHtml += '<div><div style="font-size:9px;color:#8b8f98;display:flex;align-items:center;gap:3px;">0/'+(it.subtareas_total||0)+' <div style="width:30px;height:3px;background:#333840;border-radius:2px;overflow:hidden;"><div style="height:100%;width:0%;border-radius:2px;"></div></div></div></div>';
+10252:       secHtml += '<div><div style="width:4px;height:20px;border-radius:2px;margin:0 auto;background:'+prioColor+';"></div></div>';
+10253:       secHtml += '</div>';
+10254:     });
+10255:     secHtml += '</div>';
+10256:     scrumSec.innerHTML += secHtml;
+10257:   });
+10258: 
+10259:   // Backlog divider
+10260:   if(backlogItems.length>0) {
+10261:     scrumSec.innerHTML += '<div style="display:flex;align-items:center;gap:8px;margin:14px 0 8px;padding:0 8px;"><div style="flex:1;height:1px;background:#333840;"></div><div style="font-size:9px;font-weight:600;color:#8b8f98;text-transform:uppercase;">Product Backlog — '+backlogItems.length+' items restantes</div><div style="flex:1;height:1px;background:#333840;"></div></div>';
+10262:     backlogItems.slice(0,3).forEach(function(it){
+10263:       var tipo = (it.tipo||'TASK').toUpperCase();
+10264:       var tipoColors = {'TASK':'rgba(59,130,246,0.12);color:#3b82f6','STORY':'rgba(34,197,94,0.12);color:#22c55e','BUG':'rgba(239,68,68,0.12);color:#ef4444','SPIKE':'rgba(168,85,247,0.12);color:#a855f7'};
+10265:       var tipoStyle = tipoColors[tipo]||tipoColors['TASK'];
+10266:       scrumSec.innerHTML += '<div style="display:grid;grid-template-columns:30px 40px 1fr 70px 60px 55px 45px 60px 55px;gap:0;padding:5px 8px;border-bottom:1px solid #22262e;font-size:9px;align-items:center;opacity:0.6;"><div><div style="width:14px;height:14px;border:1px solid #333840;border-radius:3px;"></div></div><div><span style="font-size:7px;padding:2px 5px;border-radius:3px;font-weight:700;background:'+tipoStyle+';">'+tipo+'</span></div><div><div style="font-size:9px;color:#e8e9ed;">'+(it.titulo||'')+'</div></div><div></div><div><span style="font-size:7px;color:#3b82f6;">Sprint '+(it._sprintNum||'?')+'</span></div><div></div><div style="font-size:10px;font-weight:700;font-family:monospace;text-align:center;">'+(it.story_points||0)+'</div><div></div><div></div></div>';
+10267:     });
+10268:     if(backlogItems.length>3) scrumSec.innerHTML += '<div style="font-size:8px;color:#8b8f98;text-align:center;padding:6px;border:1px dashed #333840;border-radius:4px;margin-top:4px;">... '+(backlogItems.length-3)+' items mas en el backlog</div>';
+10269:   }
+10270: 
+10271:   // Ceremonies
+10272:   scrumSec.innerHTML += '<div style="margin-top:14px;"><div style="font-size:10px;font-weight:600;color:#8b8f98;text-transform:uppercase;margin-bottom:6px;">Ceremonias Scrum</div><div style="display:flex;align-items:center;gap:8px;background:#22262e;border-radius:6px;padding:6px 10px;margin-bottom:4px;"><div style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;background:rgba(59,130,246,0.15);color:#3b82f6;">SP</div><div><div style="font-size:10px;font-weight:600;color:#e8e9ed;">Sprint Planning</div><div style="font-size:8px;color:#8b8f98;">Seleccion stories + compromiso equipo</div></div><div style="font-size:8px;color:#8b8f98;margin-left:auto;text-align:right;">Lunes S1<br><span style="color:#3b82f6;">2h</span></div></div><div style="display:flex;align-items:center;gap:8px;background:#22262e;border-radius:6px;padding:6px 10px;margin-bottom:4px;"><div style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;background:rgba(168,85,247,0.15);color:#a855f7;">DS</div><div><div style="font-size:10px;font-weight:600;color:#e8e9ed;">Daily Standup</div><div style="font-size:8px;color:#8b8f98;">Que hice · Que hare · Bloqueos</div></div><div style="font-size:8px;color:#8b8f98;margin-left:auto;text-align:right;">Diario 9:15<br><span style="color:#a855f7;">15min</span></div></div><div style="display:flex;align-items:center;gap:8px;background:#22262e;border-radius:6px;padding:6px 10px;margin-bottom:4px;"><div style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;background:rgba(34,197,94,0.15);color:#22c55e;">SR</div><div><div style="font-size:10px;font-weight:600;color:#e8e9ed;">Sprint Review</div><div style="font-size:8px;color:#8b8f98;">Demo stakeholders + feedback</div></div><div style="font-size:8px;color:#8b8f98;margin-left:auto;text-align:right;">Viernes S2<br><span style="color:#22c55e;">1h</span></div></div><div style="display:flex;align-items:center;gap:8px;background:#22262e;border-radius:6px;padding:6px 10px;margin-bottom:4px;"><div style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;background:rgba(234,179,8,0.15);color:#eab308;">RT</div><div><div style="font-size:10px;font-weight:600;color:#e8e9ed;">Retrospectiva</div><div style="font-size:8px;color:#8b8f98;">Que mejorar + action items</div></div><div style="font-size:8px;color:#8b8f98;margin-left:auto;text-align:right;">Viernes S2<br><span style="color:#eab308;">1h</span></div></div><div style="display:flex;align-items:center;gap:8px;background:#22262e;border-radius:6px;padding:6px 10px;margin-bottom:4px;"><div style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;background:rgba(236,72,153,0.15);color:#ec4899;">BG</div><div><div style="font-size:10px;font-weight:600;color:#e8e9ed;">Backlog Grooming</div><div style="font-size:8px;color:#8b8f98;">Refinar stories + estimar puntos</div></div><div style="font-size:8px;color:#8b8f98;margin-left:auto;text-align:right;">Miercoles<br><span style="color:#ec4899;">1h</span></div></div></div>';
+10273: 
+10274:   tabContents[0].appendChild(scrumSec);
+10275: 
+10276:   // Wire sprint timeline clicks
+10277:   scrumSec.querySelectorAll('.sprint-block').forEach(function(block) {
+10278:     block.onmouseenter = function() { block.style.borderColor = '#3b82f6'; block.style.background = 'rgba(59,130,246,0.1)'; };
+10279:     block.onmouseleave = function() { block.style.borderColor = 'transparent'; block.style.background = 'rgba(59,130,246,0.03)'; };
+10280:     block.onclick = function() {
+10281:       var idx = parseInt(block.getAttribute('data-sprint-idx'));
+10282:       if (sprints[idx]) showSprintDetailModal(sprints[idx], sprints, pipelineData, function() {});
+10283:     };
+10284:   });
+10285:   // Wire item row clicks
+10286:   scrumSec.querySelectorAll('.final-item-row').forEach(function(row) {
+10287:     row.onmouseenter = function() { row.style.background = '#22262e'; };
+10288:     row.onmouseleave = function() { row.style.background = 'none'; };
+10289:     row.onclick = function() {
+10290:       var si = parseInt(row.getAttribute('data-sprint-idx'));
+10291:       var ii = parseInt(row.getAttribute('data-item-idx'));
+10292:       var sp = showSprints[si];
+10293:       if (sp && sp.items && sp.items[ii]) showSprintItemModal(sp.items[ii], sp, function() {});
+10294:     };
+10295:   });
+10296: 
+10297:   // ═══ TAB 1: PRESUPUESTO ═══
+10298:   var budgetSec = document.createElement('div');
+10299:   budgetSec.style.cssText = 'background:#1a1d24;border:1px solid #333840;border-radius:0 10px 10px 10px;padding:14px;margin-bottom:10px;';
+10300:   var budgetHtml = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;"><span style="font-size:14px;font-weight:600;color:#10b981;">AG-016 Cost Analyzer — Presupuesto</span><span style="font-size:9px;padding:2px 8px;border-radius:4px;background:rgba(234,179,8,0.15);color:#eab308;font-weight:600;">Generado por IA</span></div>';
+10301:   // BAC prominent box
+10302:   budgetHtml += '<div style="background:linear-gradient(135deg,rgba(34,197,94,0.08),rgba(59,130,246,0.08));border:1px solid rgba(34,197,94,0.2);border-radius:12px;padding:20px;text-align:center;margin-bottom:16px;"><div style="font-size:12px;color:#8b8f98;">BAC (Budget at Completion)</div><div style="font-size:36px;font-weight:700;color:#22c55e;">'+(bacTotal>0?Number(bacTotal).toLocaleString()+'\u20ac':'Pendiente')+'</div></div>';
+10303: 
+10304:   // RRHH table — handle both rrhh[] (array) and rrhh.desglose_por_silo[] (object with array)
+10305:   var presup = (costP && costP.presupuesto) || {};
+10306:   var rrhhRaw = presup.rrhh || [];
+10307:   var rrhh = Array.isArray(rrhhRaw) ? rrhhRaw : (rrhhRaw.desglose_por_silo || []);
+10308:   // Also add PM row if exists
+10309:   if(rrhhRaw.pm && rrhhRaw.pm.nombre) rrhh = rrhh.concat([{silo:'PM: '+rrhhRaw.pm.nombre, horas:rrhhRaw.pm.horas||0, tarifa:rrhhRaw.pm.tarifa||85, total:rrhhRaw.pm.total||0}]);
+10310:   if(rrhh.length>0) {
+10311:     budgetHtml += '<div style="font-size:13px;font-weight:600;color:#e8e9ed;margin-bottom:6px;">RRHH por silo</div>';
+10312:     budgetHtml += '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px;"><tr style="background:#22262e;"><th style="padding:6px 10px;text-align:left;color:#8b8f98;border:1px solid #333840;">Silo</th><th style="padding:6px 10px;text-align:right;color:#8b8f98;border:1px solid #333840;">Horas</th><th style="padding:6px 10px;text-align:right;color:#8b8f98;border:1px solid #333840;">Tarifa/h</th><th style="padding:6px 10px;text-align:right;color:#8b8f98;border:1px solid #333840;">Total</th></tr>';
+10313:     rrhh.forEach(function(r){budgetHtml+='<tr style="cursor:pointer;" onmouseenter="this.style.background=\'#22262e\'" onmouseleave="this.style.background=\'none\'"><td style="padding:6px 10px;border:1px solid #333840;color:#e8e9ed;">'+(r.silo||'')+'</td><td style="padding:6px 10px;text-align:right;border:1px solid #333840;font-family:monospace;color:#e8e9ed;">'+(r.horas||0)+'</td><td style="padding:6px 10px;text-align:right;border:1px solid #333840;font-family:monospace;color:#e8e9ed;">'+(r.tarifa||0)+'\u20ac</td><td style="padding:6px 10px;text-align:right;border:1px solid #333840;font-family:monospace;color:#22c55e;font-weight:600;">'+Number(r.total||0).toLocaleString()+'\u20ac</td></tr>';});
+10314:     var totalRrhh = rrhhRaw.total_rrhh || rrhh.reduce(function(s,r){return s+(r.total||0);},0);
+10315:     if(totalRrhh) budgetHtml += '<tr style="background:#22262e;font-weight:700;"><td style="padding:6px 10px;border:1px solid #333840;color:#e8e9ed;" colspan="3">Total RRHH</td><td style="padding:6px 10px;text-align:right;border:1px solid #333840;font-family:monospace;color:#22c55e;">'+Number(totalRrhh).toLocaleString()+'\u20ac</td></tr>';
+10316:     budgetHtml += '</table>';
+10317:   }
+10318: 
+10319:   // OPEX / CAPEX
+10320:   var opex = presup.opex || {};
+10321:   var capex = presup.capex || {};
+10322:   if(Object.keys(opex).length>0 || Object.keys(capex).length>0) {
+10323:     budgetHtml += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">';
+10324:     var opexKeys = Object.keys(opex).filter(function(k){return k.indexOf('total')!==0 && typeof opex[k]==='number';});
+10325:     if(opexKeys.length>0) {
+10326:       budgetHtml += '<div style="background:#22262e;border-radius:6px;padding:10px;"><div style="font-size:12px;font-weight:600;color:#eab308;margin-bottom:6px;">OPEX'+(opex.total_opex?' \u2014 '+Number(opex.total_opex).toLocaleString()+'\u20ac':'')+'</div>';
+10327:       opexKeys.forEach(function(k){budgetHtml+='<div style="display:flex;justify-content:space-between;font-size:11px;color:#8b8f98;margin-bottom:3px;"><span>'+k+'</span><span style="color:#e8e9ed;font-family:monospace;">'+Number(opex[k]||0).toLocaleString()+'\u20ac</span></div>';});
+10328:       budgetHtml += '</div>';
+10329:     }
+10330:     var capexKeys = Object.keys(capex).filter(function(k){return k.indexOf('total')!==0 && typeof capex[k]==='number';});
+10331:     if(capexKeys.length>0) {
+10332:       budgetHtml += '<div style="background:#22262e;border-radius:6px;padding:10px;"><div style="font-size:12px;font-weight:600;color:#3b82f6;margin-bottom:6px;">CAPEX'+(capex.total_capex?' \u2014 '+Number(capex.total_capex).toLocaleString()+'\u20ac':'')+'</div>';
+10333:       capexKeys.forEach(function(k){budgetHtml+='<div style="display:flex;justify-content:space-between;font-size:11px;color:#8b8f98;margin-bottom:3px;"><span>'+k+'</span><span style="color:#e8e9ed;font-family:monospace;">'+Number(capex[k]||0).toLocaleString()+'\u20ac</span></div>';});
+10334:       budgetHtml += '</div>';
+10335:     }
+10336:     budgetHtml += '</div>';
+10337:   }
+10338: 
+10339:   // Financial metrics (4 cards) — handle both costP.roi and costP.financiero.roi_pct
+10340:   var fPayback = costFin.payback_meses || (costP&&costP.payback_meses) || null;
+10341:   var fTir = costFin.tir_pct || costFin.tir || (costP&&costP.tir) || null;
+10342:   var fVan = costFin.van_eur || costFin.van || (costP&&costP.van) || null;
+10343:   if(roi || fPayback || fTir || fVan) {
+10344:     budgetHtml += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px;">';
+10345:     budgetHtml += '<div style="background:#22262e;border-radius:8px;padding:12px;text-align:center;cursor:pointer;transition:border-color 0.15s;border:1px solid transparent;" onmouseenter="this.style.borderColor=\'#22c55e\'" onmouseleave="this.style.borderColor=\'transparent\'"><div style="font-size:22px;font-weight:700;font-family:monospace;color:#22c55e;">'+roi+'%</div><div style="font-size:10px;color:#8b8f98;text-transform:uppercase;margin-top:4px;">ROI</div></div>';
+10346:     budgetHtml += '<div style="background:#22262e;border-radius:8px;padding:12px;text-align:center;cursor:pointer;transition:border-color 0.15s;border:1px solid transparent;" onmouseenter="this.style.borderColor=\'#eab308\'" onmouseleave="this.style.borderColor=\'transparent\'"><div style="font-size:22px;font-weight:700;font-family:monospace;color:#eab308;">'+(fPayback||'?')+'</div><div style="font-size:10px;color:#8b8f98;text-transform:uppercase;margin-top:4px;">Payback (meses)</div></div>';
+10347:     budgetHtml += '<div style="background:#22262e;border-radius:8px;padding:12px;text-align:center;cursor:pointer;transition:border-color 0.15s;border:1px solid transparent;" onmouseenter="this.style.borderColor=\'#3b82f6\'" onmouseleave="this.style.borderColor=\'transparent\'"><div style="font-size:22px;font-weight:700;font-family:monospace;color:#3b82f6;">'+(fTir||'?')+'%</div><div style="font-size:10px;color:#8b8f98;text-transform:uppercase;margin-top:4px;">TIR</div></div>';
+10348:     budgetHtml += '<div style="background:#22262e;border-radius:8px;padding:12px;text-align:center;cursor:pointer;transition:border-color 0.15s;border:1px solid transparent;" onmouseenter="this.style.borderColor=\'#a855f7\'" onmouseleave="this.style.borderColor=\'transparent\'"><div style="font-size:22px;font-weight:700;font-family:monospace;color:#a855f7;">'+(fVan!=null?Number(fVan).toLocaleString()+'\u20ac':'-')+'</div><div style="font-size:10px;color:#8b8f98;text-transform:uppercase;margin-top:4px;">VAN</div></div>';
+10349:     budgetHtml += '</div>';
+10350:   }
+10351: 
+10352:   // Reservas
+10353:   var reservas = presup.reservas || {};
+10354:   if(reservas.total_reservas || reservas.contingencia_eur) {
+10355:     budgetHtml += '<div style="background:rgba(234,179,8,0.06);border:1px solid rgba(234,179,8,0.15);border-radius:8px;padding:12px;margin-top:12px;">';
+10356:     budgetHtml += '<div style="font-size:12px;font-weight:600;color:#eab308;margin-bottom:6px;">Reservas de contingencia</div>';
+10357:     if(reservas.contingencia_pct) budgetHtml += '<div style="display:flex;justify-content:space-between;font-size:11px;color:#8b8f98;margin-bottom:3px;"><span>Contingencia ('+reservas.contingencia_pct+'%)</span><span style="color:#e8e9ed;font-family:monospace;">'+Number(reservas.contingencia_eur||0).toLocaleString()+'\u20ac</span></div>';
+10358:     if(reservas.gestion_pct) budgetHtml += '<div style="display:flex;justify-content:space-between;font-size:11px;color:#8b8f98;margin-bottom:3px;"><span>Gesti\u00f3n ('+reservas.gestion_pct+'%)</span><span style="color:#e8e9ed;font-family:monospace;">'+Number(reservas.gestion_eur||0).toLocaleString()+'\u20ac</span></div>';
+10359:     if(reservas.total_reservas) budgetHtml += '<div style="display:flex;justify-content:space-between;font-size:12px;color:#eab308;font-weight:600;border-top:1px solid rgba(234,179,8,0.2);padding-top:4px;margin-top:4px;"><span>Total reservas</span><span style="font-family:monospace;">'+Number(reservas.total_reservas).toLocaleString()+'\u20ac</span></div>';
+10360:     budgetHtml += '</div>';
+10361:   }
+10362: 
+10363:   // Fallback: if no data at all, show raw
+10364:   if(!rrhh.length && !opexKeys.length && !capexKeys.length && !roi && !fPayback) {
+10365:     budgetHtml += '<div style="background:#22262e;border-radius:8px;padding:12px;font-size:10px;color:#8b8f98;white-space:pre-wrap;max-height:300px;overflow-y:auto;">'+(typeof pipelineData.costResult==='string'?pipelineData.costResult:JSON.stringify(pipelineData.costResult,null,2)||'Sin datos presupuesto')+'</div>';
+10366:   }
+10367: 
+10368:   budgetSec.innerHTML = budgetHtml;
+10369:   tabContents[1].appendChild(budgetSec);
+10370: 
+10371:   // ═══ TAB 2: GANTT + CPM ═══
+10372:   var ganttSec = document.createElement('div');
+10373:   ganttSec.style.cssText = 'background:#1a1d24;border:1px solid #333840;border-radius:0 10px 10px 10px;padding:14px;margin-bottom:10px;';
+10374:   var ganttHtml = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;"><span style="font-size:14px;font-weight:600;color:#ec4899;">AG-007 — Gantt + Ruta cr\u00edtica</span><span style="font-size:9px;padding:2px 8px;border-radius:4px;background:rgba(234,179,8,0.15);color:#eab308;font-weight:600;">Planificado por IA</span></div>';
+10375: 
+10376:   var rutaCritica = (planP && planP.ruta_critica) || {};
+10377:   ganttHtml += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">';
+10378:   ganttHtml += '<div style="background:#22262e;border-radius:8px;padding:14px;text-align:center;"><div style="font-size:28px;font-weight:700;font-family:monospace;color:#ef4444;">'+(rutaCritica.semanas||totalSprints*2||'?')+'</div><div style="font-size:10px;color:#8b8f98;text-transform:uppercase;">Semanas ruta cr\u00edtica</div></div>';
+10379:   ganttHtml += '<div style="background:#22262e;border-radius:8px;padding:14px;text-align:center;"><div style="font-size:28px;font-weight:700;font-family:monospace;color:#22c55e;">'+(rutaCritica.holgura||4)+'</div><div style="font-size:10px;color:#8b8f98;text-transform:uppercase;">Semanas holgura</div></div>';
+10380:   ganttHtml += '<div style="background:#22262e;border-radius:8px;padding:14px;text-align:center;"><div style="font-size:28px;font-weight:700;font-family:monospace;color:#3b82f6;">'+totalSP+'</div><div style="font-size:10px;color:#8b8f98;text-transform:uppercase;">Story points total</div></div>';
+10381:   ganttHtml += '</div>';
+10382: 
+10383:   // Visual timeline bars per sprint/fase
+10384:   if(sprints.length>0) {
+10385:     var maxWeek = 1;
+10386:     sprints.forEach(function(s){if((s.semana_fin||0)>maxWeek)maxWeek=s.semana_fin;});
+10387:     ganttHtml += '<div style="font-size:13px;font-weight:600;color:#e8e9ed;margin-bottom:8px;">Timeline de Sprints</div><div style="margin-bottom:12px;">';
+10388:     var spGanttColors = ['#3b82f6','#22c55e','#eab308','#a855f7','#ec4899','#06b6d4'];
+10389:     sprints.forEach(function(sp,si) {
+10390:       var startPct = ((sp.semana_inicio||1)-1)/maxWeek*100;
+10391:       var widthPct = ((sp.semana_fin||1)-(sp.semana_inicio||1)+1)/maxWeek*100;
+10392:       var c = spGanttColors[si%spGanttColors.length];
+10393:       ganttHtml += '<div style="margin-bottom:4px;"><div style="display:flex;align-items:center;gap:6px;"><span style="font-size:11px;font-weight:600;color:#8b8f98;min-width:30px;">S'+(sp.numero||si+1)+'</span><div style="flex:1;background:#22262e;border-radius:4px;height:22px;position:relative;cursor:pointer;" title="Sprint '+(sp.numero||si+1)+': '+(sp.goal||'')+'"><div style="position:absolute;left:'+startPct+'%;width:'+widthPct+'%;height:100%;background:'+c+'30;border:1px solid '+c+';border-radius:4px;display:flex;align-items:center;padding:0 8px;"><span style="font-size:10px;color:'+c+';font-weight:600;white-space:nowrap;">'+((sp.goal||'').substring(0,25))+' \u00b7 '+(sp.story_points||0)+'pts</span></div></div><span style="font-size:10px;color:#8b8f98;min-width:55px;text-align:right;">'+(sp.story_points||0)+' pts</span></div></div>';
+10394:     });
+10395:     ganttHtml += '</div>';
+10396:   }
+10397: 
+10398:   // Mermaid fallback
+10399:   if(planP && planP.gantt_mermaid) {
+10400:     ganttHtml += '<div style="background:#22262e;border-radius:6px;padding:8px;font-size:9px;color:#8b8f98;font-family:monospace;white-space:pre-wrap;max-height:200px;overflow-y:auto;">'+planP.gantt_mermaid.substring(0,2000)+'</div>';
+10401:   }
+10402: 
+10403:   ganttSec.innerHTML = ganttHtml;
+10404:   tabContents[2].appendChild(ganttSec);
+10405: 
+10406:   // ═══ TAB 3: QUALITY GATES ═══
+10407:   var qualSec = document.createElement('div');
+10408:   qualSec.style.cssText = 'background:#1a1d24;border:1px solid #333840;border-radius:0 10px 10px 10px;padding:14px;margin-bottom:10px;';
+10409:   var qualHtml = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;"><span style="font-size:14px;font-weight:600;color:#8b5cf6;">AG-017 — Quality Gates + Definition of Done</span><span style="font-size:9px;padding:2px 8px;border-radius:4px;background:rgba(139,92,246,0.12);color:#a78bfa;font-weight:600;">Validado por IA</span></div>';
+10410: 
+10411:   var gates = (qualP && qualP.gates) || [];
+10412:   if(gates.length>0) {
+10413:     // Normalize gate keys: handle both gate/nombre and fase/gate_name
+10414:     gates.forEach(function(g) {
+10415:       if(!g.gate && g.fase) g.gate = g.fase;
+10416:       if(!g.nombre && g.gate_name) g.nombre = g.gate_name;
+10417:       // Auto-assign estados if missing: first gate = PASSED, second = NEXT, rest = PENDING
+10418:       if(!g.estado) {
+10419:         // G0 = PASSED (idea approved since pipeline ran), G1 = PASSED, G2 = NEXT
+10420:         var gNum = parseInt((g.gate||'').replace(/\D/g,''));
+10421:         if(gNum <= 1) g.estado = 'PASSED';
+10422:         else if(gNum === 2) g.estado = 'NEXT';
+10423:         else g.estado = 'PENDING';
+10424:       }
+10425:     });
+10426:     qualHtml += '<div style="display:flex;gap:8px;margin-bottom:20px;overflow-x:auto;padding:8px 0;">';
+10427:     gates.forEach(function(g,gi) {
+10428:       var estado = (g.estado||'').toUpperCase();
+10429:       var gc = estado==='PASSED'?'#22c55e':estado==='NEXT'?'#3b82f6':'#333840';
+10430:       var textC = estado==='PASSED'?'#22c55e':estado==='NEXT'?'#3b82f6':'#8b8f98';
+10431:       var bg = estado==='PASSED'?'rgba(34,197,94,0.1)':estado==='NEXT'?'rgba(59,130,246,0.1)':'rgba(51,56,64,0.3)';
+10432:       qualHtml += '<div style="min-width:100px;background:'+bg+';border:2px solid '+gc+';border-radius:10px;padding:12px;text-align:center;cursor:pointer;transition:transform 0.15s;" onmouseenter="this.style.transform=\'scale(1.05)\'" onmouseleave="this.style.transform=\'scale(1)\'">';
+10433:       qualHtml += '<div style="font-size:16px;font-weight:700;color:'+textC+';">'+(estado==='PASSED'?'\u2713':(g.gate||'G'+(gi+1)))+'</div>';
+10434:       qualHtml += '<div style="font-size:11px;color:#8b8f98;">'+(g.nombre||'')+'</div>';
+10435:       qualHtml += '<div style="font-size:10px;color:'+textC+';margin-top:4px;">'+(estado==='PASSED'?'\u2713 Aprobado':estado==='NEXT'?'\u25b6 Siguiente':'Pendiente')+'</div>';
+10436:       if(g.semana) qualHtml += '<div style="font-size:9px;color:#8b8f98;">Sem '+g.semana+'</div>';
+10437:       qualHtml += '</div>';
+10438:       if(gi<gates.length-1) qualHtml += '<div style="display:flex;align-items:center;"><div style="width:24px;height:2px;background:'+gc+';"></div></div>';
+10439:     });
+10440:     qualHtml += '</div>';
+10441: 
+10442:     // Active gate checklist
+10443:     var nextGate = gates.find(function(g){return (g.estado||'').toUpperCase()==='NEXT';});
+10444:     var nextChecklist = nextGate ? (nextGate.checklist || nextGate.criterios || []) : [];
+10445:     if(nextGate && nextChecklist.length > 0) {
+10446:       qualHtml += '<div style="background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.2);border-radius:8px;padding:14px;margin-bottom:14px;"><div style="font-size:13px;font-weight:600;color:#3b82f6;margin-bottom:8px;">'+(nextGate.gate||'')+' '+(nextGate.nombre||'')+' — Checklist</div>';
+10447:       nextChecklist.forEach(function(c){
+10448:         var isDone = c.indexOf('\u2713')>=0;
+10449:         qualHtml += '<div style="font-size:12px;color:'+(isDone?'#22c55e':'#e8e9ed')+';padding:3px 0;">'+(isDone?'\u2705':'\u2b1c')+' '+c.replace('\u2713','').replace('\u25cb','').trim()+'</div>';
+10450:       });
+10451:       if(nextGate.responsable_qa) qualHtml += '<div style="font-size:10px;color:#8b8f98;margin-top:6px;">Responsable QA: <span style="color:#a78bfa;font-weight:600;">'+nextGate.responsable_qa+'</span></div>';
+10452:       qualHtml += '</div>';
+10453:     }
+10454:   }
+10455: 
+10456:   // DoD
+10457:   var dod = (qualP && qualP.dod_por_tarea) || [];
+10458:   if(dod.length>0) {
+10459:     qualHtml += '<div style="font-size:13px;font-weight:600;color:#e8e9ed;margin-bottom:8px;">Definition of Done por tarea</div>';
+10460:     dod.slice(0,8).forEach(function(d){
+10461:       qualHtml += '<div style="background:#22262e;border-radius:6px;padding:10px 12px;margin-bottom:4px;cursor:pointer;border:1px solid transparent;transition:border-color 0.15s;" onmouseenter="this.style.borderColor=\'#a78bfa\'" onmouseleave="this.style.borderColor=\'transparent\'"><div style="font-size:12px;font-weight:600;color:#a78bfa;">'+(d.id_tarea||'')+'</div>';
+10462:       (d.criterios||[]).forEach(function(c){qualHtml+='<div style="font-size:11px;color:#22c55e;padding:2px 0;padding-left:12px;">\u2022 '+c+'</div>';});
+10463:       qualHtml += '</div>';
+10464:     });
+10465:   }
+10466: 
+10467:   if(gates.length===0 && dod.length===0) {
+10468:     qualHtml += '<div style="background:#22262e;border-radius:8px;padding:12px;font-size:10px;color:#8b8f98;white-space:pre-wrap;max-height:300px;overflow-y:auto;">'+(typeof pipelineData.qualityResult==='string'?pipelineData.qualityResult:JSON.stringify(pipelineData.qualityResult,null,2)||'Sin datos quality')+'</div>';
+10469:   }
+10470: 
+10471:   qualSec.innerHTML = qualHtml;
+10472:   tabContents[3].appendChild(qualSec);
+10473: 
+10474:   // Append tabs
+10475:   tabContents.forEach(function(tc){mainLeft.appendChild(tc);});
+10476: 
+10477:   // ═══ SIDEBAR ═══
+10478:   var sideHtml = '';
+10479: 
+10480:   // Sprint 1 metrics
+10481:   var sp1 = sprints[0] || {};
+10482:   var sp1Items = sp1.items || [];
+10483:   sideHtml += '<div style="background:#1a1d24;border:1px solid #333840;border-radius:10px;padding:12px;margin-bottom:10px;"><div style="font-size:11px;font-weight:600;color:#8b8f98;text-transform:uppercase;margin-bottom:8px;">Sprint 1 — Metricas</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;"><div style="background:#22262e;border-radius:6px;padding:10px;text-align:center;"><div style="font-size:28px;font-weight:700;font-family:monospace;color:#3b82f6;">'+(sp1.story_points||0)+'</div><div style="font-size:9px;color:#8b8f98;text-transform:uppercase;margin-top:2px;">Story Points</div></div><div style="background:#22262e;border-radius:6px;padding:10px;text-align:center;"><div style="font-size:28px;font-weight:700;font-family:monospace;color:#e8e9ed;">'+sp1Items.length+'</div><div style="font-size:9px;color:#8b8f98;text-transform:uppercase;margin-top:2px;">Items</div></div></div></div>';
+10484: 
+10485:   // Velocity bars
+10486:   sideHtml += '<div style="background:#1a1d24;border:1px solid #333840;border-radius:10px;padding:12px;margin-bottom:10px;"><div style="font-size:10px;font-weight:600;color:#8b8f98;text-transform:uppercase;margin-bottom:8px;">Velocidad planificada</div><div style="display:flex;align-items:flex-end;gap:3px;height:60px;margin-bottom:4px;">';
+10487:   var maxPts = 1;
+10488:   sprints.slice(0,6).forEach(function(s){if((s.story_points||0)>maxPts)maxPts=s.story_points;});
+10489:   sprints.slice(0,6).forEach(function(sp,si){
+10490:     var hPct = ((sp.story_points||0)/maxPts*100);
+10491:     var c = si<4?'rgba(59,130,246,0.4)':si<8?'rgba(168,85,247,0.3)':'rgba(139,143,152,0.2)';
+10492:     var tc = si<4?'#3b82f6':'#a855f7';
+10493:     sideHtml += '<div style="border-radius:3px 3px 0 0;width:100%;height:'+hPct+'%;background:'+c+';position:relative;min-width:24px;text-align:center;"><div style="position:absolute;top:-12px;font-size:7px;font-weight:600;width:100%;text-align:center;color:'+tc+';">'+(sp.story_points||0)+'</div><div style="position:absolute;bottom:-14px;font-size:7px;color:#8b8f98;width:100%;text-align:center;">S'+(sp.numero||si+1)+'</div></div>';
+10494:   });
+10495:   sideHtml += '</div><div style="font-size:8px;color:#8b8f98;margin-top:16px;">Media: '+(velMedia||'?')+' pts/sprint · Total: '+totalSP+' pts · '+totalSprints+' sprints</div></div>';
+10496: 
+10497:   // Project summary
+10498:   sideHtml += '<div style="background:#1a1d24;border:1px solid rgba(34,197,94,0.3);border-radius:10px;padding:12px;margin-bottom:10px;"><div style="font-size:10px;font-weight:600;color:#22c55e;text-transform:uppercase;margin-bottom:8px;">Proyecto</div><div style="font-size:9px;color:#8b8f98;line-height:1.6;">';
+10499:   sideHtml += '<div style="display:flex;justify-content:space-between;"><span>PM</span><span style="color:#06b6d4;font-weight:600;">'+(pmData.nombre||'Pendiente')+'</span></div>';
+10500:   sideHtml += '<div style="display:flex;justify-content:space-between;"><span>Framework</span><span style="color:#ec4899;font-weight:600;">Scrum</span></div>';
+10501:   sideHtml += '<div style="display:flex;justify-content:space-between;"><span>Sprints</span><span style="color:#e8e9ed;font-weight:600;">'+totalSprints+'</span></div>';
+10502:   sideHtml += '<div style="display:flex;justify-content:space-between;"><span>Story Points</span><span style="color:#e8e9ed;font-weight:600;">'+totalSP+'</span></div>';
+10503:   sideHtml += '<div style="display:flex;justify-content:space-between;"><span>Velocidad</span><span style="color:#3b82f6;font-weight:600;">~'+velMedia+'/sprint</span></div>';
+10504:   sideHtml += '<div style="display:flex;justify-content:space-between;border-top:1px solid #333840;padding-top:4px;margin-top:4px;"><span style="font-weight:600;">BAC</span><span style="color:#22c55e;font-weight:700;font-size:13px;">'+Number(bacTotal).toLocaleString()+'€</span></div>';
+10505:   sideHtml += '</div></div>';
+10506: 
+10507:   mainRight.innerHTML = sideHtml;
+10508: 
+10509:   layout.appendChild(mainLeft);
+10510:   layout.appendChild(mainRight);
+10511:   finalDiv.appendChild(layout);
+10512: 
+10513:   // ═══ LAUNCH SECTION ═══
+10514:   var resourceP = safeParsePipelineData(pipelineData.resourceResult);
+10515:   var equipoCount = resourceP ? ((resourceP.equipo||resourceP.equipo_tecnico||resourceP.team||resourceP.staff||[]).length) : 0;
+10516:   var launchHtml = '<div style="background:rgba(34,197,94,0.06);border:2px solid rgba(34,197,94,0.3);border-radius:12px;padding:16px;margin-top:12px;text-align:center;" id="launch-section-final">';
+10517:   launchHtml += '<div style="font-size:16px;font-weight:700;color:#22c55e;margin-bottom:4px;">Proyecto listo para lanzamiento</div>';
+10518:   launchHtml += '<div style="font-size:10px;color:#8b8f98;margin-bottom:12px;">9 agentes IA · 4 pausas gobernanza · Scrum '+totalSprints+' sprints · '+totalSP+' story points</div>';
+10519:   launchHtml += '<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:14px;">';
+10520:   launchHtml += '<div style="background:#22262e;border-radius:6px;padding:6px;text-align:center;"><div style="font-size:14px;font-weight:700;font-family:monospace;color:#22c55e;">'+Number(bacTotal).toLocaleString()+'€</div><div style="font-size:7px;color:#8b8f98;text-transform:uppercase;">BAC</div></div>';
+10521:   launchHtml += '<div style="background:#22262e;border-radius:6px;padding:6px;text-align:center;"><div style="font-size:14px;font-weight:700;font-family:monospace;color:#ec4899;">'+totalSprints+'</div><div style="font-size:7px;color:#8b8f98;text-transform:uppercase;">Sprints</div></div>';
+10522:   launchHtml += '<div style="background:#22262e;border-radius:6px;padding:6px;text-align:center;"><div style="font-size:14px;font-weight:700;font-family:monospace;color:#06b6d4;">'+equipoCount+'</div><div style="font-size:7px;color:#8b8f98;text-transform:uppercase;">Equipo</div></div>';
+10523:   launchHtml += '<div style="background:#22262e;border-radius:6px;padding:6px;text-align:center;"><div style="font-size:14px;font-weight:700;font-family:monospace;color:#a855f7;">'+totalSP+'</div><div style="font-size:7px;color:#8b8f98;text-transform:uppercase;">Story pts</div></div>';
+10524:   launchHtml += '<div style="background:#22262e;border-radius:6px;padding:6px;text-align:center;"><div style="font-size:14px;font-weight:700;font-family:monospace;color:#eab308;">'+riskCount+'</div><div style="font-size:7px;color:#8b8f98;text-transform:uppercase;">Riesgos</div></div>';
+10525:   launchHtml += '<div style="background:#22262e;border-radius:6px;padding:6px;text-align:center;"><div style="font-size:14px;font-weight:700;font-family:monospace;color:#3b82f6;">'+roi+'%</div><div style="font-size:7px;color:#8b8f98;text-transform:uppercase;">ROI</div></div>';
+10526:   launchHtml += '</div>';
+10527:   launchHtml += '<div style="font-size:8px;color:#8b8f98;margin-top:8px;" id="launch-warning-final">Al lanzar: BUILD LIVE activo · PM notificado · Sprint 1 iniciado · Daily 9:15 · Gate G2 activado</div>';
+10528:   launchHtml += '</div>';
+10529:   finalDiv.innerHTML += launchHtml;
+10530: 
+10531:   // Launch button
+10532:   var launchBtn = document.createElement('button');
+10533:   launchBtn.style.cssText = 'background:#22c55e;color:#fff;border:none;padding:14px 48px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 20px rgba(34,197,94,0.3);margin-top:14px;';
+10534:   launchBtn.textContent = 'Lanzar proyecto';
+10535:   launchBtn.onclick = async function() {
+10536:     launchBtn.disabled = true;
+10537:     launchBtn.textContent = 'Lanzando...';
+10538:     launchBtn.style.background = '#f97316';
+10539:     try {
+10540:       var solicitud = pipelineData.solicitud || {};
+10541:       var launchData = {
+10542:         nombre: solicitud.nombre || pipelineData.formText || 'Nuevo Proyecto',
+10543:         edt: pipelineData.edtResult,
+10544:         subtareas: pipelineData.subtasksResult,
+10545:         riesgos: pipelineData.risksResult,
+10546:         stakeholders: pipelineData.stakeholdersResult,
+10547:         pm: pipelineData.selectedPM,
+10548:         equipo: pipelineData.resourceResult,
+10549:         presupuesto: pipelineData.costResult,
+10550:         plan: pipelineData.planResult,
+10551:         quality: pipelineData.qualityResult
+10552:       };
+10553:       await authFetch(API_BASE + '/proyectos/crear', {
+10554:         method: 'POST',
+10555:         headers: {'Content-Type': 'application/json'},
+10556:         body: JSON.stringify(launchData)
+10557:       });
+10558:     } catch(e) { console.warn('Error creando proyecto:', e); }
+10559: 
+10560:     // Also try /build/live
+10561:     try {
+10562:       var projName = (pipelineData.solicitud&&pipelineData.solicitud.nombre) || pipelineData.formText || 'Proyecto BUILD';
+10563:       var projId = 'PRJ-' + Date.now().toString(36).toUpperCase();
+10564:       await authFetch(API_BASE + '/build/live', {
+10565:         method: 'POST',
+10566:         headers: {'Content-Type': 'application/json'},
+10567:         body: JSON.stringify({
+10568:           id_proyecto: projId, nombre: projName,
+10569:           pm_asignado: (pipelineData.selectedPM && pipelineData.selectedPM.nombre) || 'Pendiente',
+10570:           prioridad: 'Alta', estado: 'EN_EJECUCION',
+10571:           total_sprints: totalSprints, presupuesto_bac: bacTotal, story_points_total: totalSP
+10572:         })
+10573:       });
+10574:     } catch(e) { console.warn('Error build/live:', e); }
+10575: 
+10576:     launchBtn.textContent = '✓ Proyecto lanzado — Sprint 1 activo';
+10577:     launchBtn.style.background = '#22c55e';
+10578:     launchBtn.style.pointerEvents = 'none';
+10579:     var lsec = document.getElementById('launch-section-final');
+10580:     if(lsec) { lsec.style.borderColor = 'rgba(34,197,94,0.6)'; lsec.style.background = 'rgba(34,197,94,0.1)'; }
+10581:     var lwarn = document.getElementById('launch-warning-final');
+10582:     if(lwarn) { lwarn.textContent = '✓ BUILD LIVE · PM '+(pmData.nombre||'')+' notificado · Sprint 1 activo · Daily 9:15 programado · Gate G2'; lwarn.style.color = '#22c55e'; lwarn.style.fontWeight = '600'; }
+10583:     if (typeof loadBuildLive === 'function') loadBuildLive();
+10584:   };
+10585: 
+10586:   // Append launch button into launch section
+10587:   pauseArea.appendChild(finalDiv);
+10588:   var lsecEl = document.getElementById('launch-section-final');
+10589:   if(lsecEl) lsecEl.insertBefore(launchBtn, document.getElementById('launch-warning-final'));
+10590: }
+
+### --- buildSubmitAndPipeline ---
+5439: async function buildSubmitAndPipeline() {
+5440:   var nombreEl = document.getElementById('bf-nombre');
+5441:   var nombre = nombreEl ? nombreEl.value.trim() : '';
+5442:   if (!nombre) { if (nombreEl) nombreEl.focus(); showToast('El nombre del proyecto es obligatorio'); return; }
+5443:   var resumenEl = document.getElementById('bf-resumen');
+5444:   var resumen = resumenEl ? resumenEl.value.trim() : '';
+5445:   if (!resumen) { if (resumenEl) resumenEl.focus(); showToast('Describe que necesita negocio'); return; }
+5446:   var f = function(id) { var el = document.getElementById(id); return el ? (el.value || '').trim() : ''; };
+5447:   var duracionSemanas = null;
+5448:   var fechaFin = f('bf-fecha-fin');
+5449:   if (fechaFin) {
+5450:     var hoy = new Date(); var fin = new Date(fechaFin);
+5451:     var diffMs = fin.getTime() - hoy.getTime();
+5452:     duracionSemanas = Math.ceil(diffMs / (7 * 24 * 60 * 60 * 1000));
+5453:     if (duracionSemanas <= 0) duracionSemanas = null;
+5454:   }
+5455:   var solicitud = {
+5456:     nombre: nombre, resumen: resumen,
+5457:     presupuesto_propuesto: f('bf-presupuesto') ? parseFloat(f('bf-presupuesto')) : null,
+5458:     fecha_fin_deseada: fechaFin || null,
+5459:     duracion_semanas_calculada: duracionSemanas,
+5460:     prioridad: f('bf-prioridad') || null,
+5461:     justificacion: f('bf-justificacion') || null,
+5462:     fecha_solicitud: new Date().toISOString().split('T')[0],
+5463:     origen: 'negocio'
+5464:   };
+5465:   var buildInputEl = document.getElementById('build-input');
+5466:   if (buildInputEl) {
+5467:     buildInputEl.value = JSON.stringify(solicitud);
+5468:     buildInputEl.dataset.businessCaseJson = JSON.stringify(solicitud);
+5469:   }
+5470:   var projIdEl = document.getElementById('build-proj-id');
+5471:   if (projIdEl) projIdEl.textContent = nombre.substring(0, 30);
+5472:   showToast('Solicitud registrada \u2014 ejecutando pipeline IA con 9 agentes...');
+5473:   executePipeline('build');
+5474: }
+
+## 16. ENDPOINTS TEST
+{"status":"ok","db":"conectado"}
+1 sessions
+   PS-TEST-001 Plataforma de Contenedores OpenShift COMPLETADO P5
+
+## 17. PIPELINE SESSION DETALLE (primera)
+ID: PS-TEST-001
+Nombre: Plataforma de Contenedores OpenShift
+Estado: COMPLETADO Pausa: 5
+pipeline_data keys: []
+
+## 18. CSS PIPELINE STEPS
+892:.pipeline-steps-header{display:flex;align-items:center;gap:4px;padding:10px 16px;background:rgba(15,23,42,0.8);border:1px solid rgba(99,102,241,0.2);border-radius:10px;margin-bottom:12px;flex-wrap:wrap;}
+893:.pipeline-steps-header .step-title{font-size:13px;font-weight:700;color:#e8e9ed;margin-right:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px;}
+894:.pipeline-steps-header .step-close{margin-left:auto;padding:4px 10px;border-radius:6px;border:1px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.1);color:#ef4444;cursor:pointer;font-size:11px;font-weight:600;}
+895:.pipeline-steps-header .step-close:hover{background:rgba(239,68,68,0.25);}
+896:.pipeline-step-btn{padding:6px 14px;border-radius:8px;border:1px solid rgba(99,102,241,0.2);background:rgba(30,41,59,0.6);color:#8b8f98;cursor:pointer;font-size:11px;font-weight:600;transition:all 0.2s;white-space:nowrap;}
+897:.pipeline-step-btn:hover{background:rgba(99,102,241,0.15);color:#c7d2fe;border-color:rgba(99,102,241,0.4);}
+898:.pipeline-step-btn.completed{background:rgba(16,185,129,0.15);border-color:rgba(16,185,129,0.3);color:#10b981;}
+899:.pipeline-step-btn.active{background:rgba(99,102,241,0.2);border-color:rgba(99,102,241,0.5);color:#818cf8;box-shadow:0 0 8px rgba(99,102,241,0.2);}
+900:.pipeline-step-btn.disabled{opacity:0.3;cursor:not-allowed;pointer-events:none;}
+7372:  header.className = 'pipeline-steps-header';
+7401:    btn.className = 'pipeline-step-btn';
+7417:    closeBtn.className = 'step-close';
+
+## FIN — mié 25 mar 2026 19:18:02 CET
