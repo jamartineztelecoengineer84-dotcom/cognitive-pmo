@@ -397,6 +397,19 @@ async def mover_kanban_tarea(task_id: str, columna: str = ""):
                 task_id, columna, fe, fc, json.dumps(hist),
             )
             await _sync_tecnico_estado(conn, old['id_tecnico'])
+            # Hook: notificación al técnico cuando cambia estado
+            try:
+                if old['id_tecnico'] and columna != old['columna']:
+                    tech_user = await conn.fetchval(
+                        "SELECT id_usuario FROM rbac_usuarios WHERE id_recurso=$1", old['id_tecnico'])
+                    if tech_user:
+                        await crear_notificacion(
+                            conn, tech_user, 'estado',
+                            f'Tarea movida a {columna}',
+                            f'{old["titulo"][:80]} cambió de {old["columna"]} a {columna}.',
+                            'tarea', task_id)
+            except Exception:
+                pass
             return serialize(row)
     except HTTPException:
         raise
@@ -786,6 +799,19 @@ async def asignar_tecnico_tarea(req: AsignarTecnicoTarea):
                         f"Asignada a {nombre_tecnico or req.id_recurso}.")
             except Exception:
                 pass  # Non-critical
+            # Hook: notificación al técnico asignado
+            try:
+                tech_user = await conn.fetchval(
+                    "SELECT id_usuario FROM rbac_usuarios WHERE id_recurso=$1", req.id_recurso)
+                if tech_user:
+                    tit = tarea_info['titulo'][:100] if tarea_info else req.task_id
+                    await crear_notificacion(
+                        conn, tech_user, 'asignacion',
+                        f'Nueva tarea asignada: {tit}',
+                        f'Se te ha asignado la tarea {req.task_id}.',
+                        'tarea', req.task_id)
+            except Exception:
+                pass
             return {"ok": True, "task_id": req.task_id, "id_recurso": req.id_recurso}
     except HTTPException:
         raise
@@ -3056,6 +3082,66 @@ async def cab_activos_selector():
             })
             result[env]["total"] += 1
         return result
+
+
+# ── Notificaciones ────────────────────────────────────────────────────────
+
+@app.get("/api/notificaciones")
+async def get_notificaciones(leidas: Optional[str] = None, user: Optional[UserInfo] = Depends(get_current_user)):
+    if not user:
+        raise HTTPException(401, "No autenticado")
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(503, "DB no disponible")
+    async with pool.acquire() as conn:
+        if leidas == "false":
+            rows = await conn.fetch(
+                "SELECT * FROM tech_notificaciones WHERE id_usuario=$1 AND leida=FALSE ORDER BY created_at DESC LIMIT 50",
+                user.id_usuario)
+        elif leidas == "true":
+            rows = await conn.fetch(
+                "SELECT * FROM tech_notificaciones WHERE id_usuario=$1 AND leida=TRUE ORDER BY created_at DESC LIMIT 50",
+                user.id_usuario)
+        else:
+            rows = await conn.fetch(
+                "SELECT * FROM tech_notificaciones WHERE id_usuario=$1 ORDER BY created_at DESC LIMIT 50",
+                user.id_usuario)
+        return [dict(r) for r in rows]
+
+
+@app.put("/api/notificaciones/{nid}/leer")
+async def marcar_leida(nid: int, user: Optional[UserInfo] = Depends(get_current_user)):
+    if not user:
+        raise HTTPException(401, "No autenticado")
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(503, "DB no disponible")
+    async with pool.acquire() as conn:
+        await conn.execute(
+            "UPDATE tech_notificaciones SET leida=TRUE WHERE id=$1 AND id_usuario=$2", nid, user.id_usuario)
+        return {"ok": True}
+
+
+@app.put("/api/notificaciones/leer-todas")
+async def marcar_todas_leidas(user: Optional[UserInfo] = Depends(get_current_user)):
+    if not user:
+        raise HTTPException(401, "No autenticado")
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(503, "DB no disponible")
+    async with pool.acquire() as conn:
+        cnt = await conn.execute(
+            "UPDATE tech_notificaciones SET leida=TRUE WHERE id_usuario=$1 AND leida=FALSE", user.id_usuario)
+        return {"ok": True, "actualizadas": cnt.split()[-1] if cnt else 0}
+
+
+async def crear_notificacion(conn, id_usuario: int, tipo: str, titulo: str, mensaje: str,
+                              referencia_tipo: str = None, referencia_id: str = None):
+    """Helper to create a notification for a user."""
+    await conn.execute("""
+        INSERT INTO tech_notificaciones (id_usuario, tipo, titulo, mensaje, referencia_tipo, referencia_id)
+        VALUES ($1, $2, $3, $4, $5, $6)
+    """, id_usuario, tipo, titulo, mensaje, referencia_tipo, referencia_id)
 
 
 # ── War Room Cognitivo (Sub-App) ───────────────────────────────────────────

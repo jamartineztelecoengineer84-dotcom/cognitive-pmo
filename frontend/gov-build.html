@@ -227,6 +227,25 @@ html{--text:var(--text-primary);--text2:var(--text-secondary);--text3:var(--text
 .sh-quadrant{border:1px solid var(--border);border-radius:8px;padding:10px;min-height:100px;}
 .sh-person{display:flex;align-items:center;gap:6px;padding:4px 0;font-size:11px;}
 .gate-card{background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;}
+.notif-bell{position:relative;cursor:pointer;padding:4px 6px;border-radius:6px;transition:background .2s;display:inline-flex;align-items:center;}
+.notif-bell:hover{background:rgba(255,255,255,.08);}
+.notif-bell svg{width:18px;height:18px;stroke:var(--text-secondary,#8b8f98);fill:none;stroke-width:1.8;}
+.notif-badge{position:absolute;top:0;right:0;min-width:14px;height:14px;border-radius:7px;background:#ef4444;color:#fff;font-size:8px;font-weight:800;display:none;align-items:center;justify-content:center;padding:0 3px;line-height:1;}
+.notif-badge.show{display:flex;}
+.notif-panel{position:absolute;top:calc(100% + 8px);right:0;width:320px;max-height:380px;background:var(--bg-card,#1e2128);border:1px solid var(--border,#333840);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.5);z-index:9100;display:none;overflow:hidden;}
+.notif-panel.open{display:block;}
+.notif-panel-header{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border,#333840);background:var(--bg-elevated,#252830);}
+.notif-panel-title{font-size:11px;font-weight:700;}.notif-mark-all{font-size:9px;color:var(--accent-blue,#58a6ff);cursor:pointer;font-weight:600;}
+.notif-list{max-height:320px;overflow-y:auto;}
+.notif-item{display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;transition:background .15s;}
+.notif-item:hover{background:rgba(255,255,255,.03);}
+.notif-item.unread{background:rgba(88,166,255,.05);border-left:3px solid var(--accent-blue,#58a6ff);}
+.notif-ico{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;}
+.notif-ico.asignacion{background:rgba(34,197,94,.12);}.notif-ico.estado{background:rgba(88,166,255,.12);}.notif-ico.alerta{background:rgba(234,179,8,.12);}.notif-ico.urgente{background:rgba(248,81,73,.12);}.notif-ico.info{background:rgba(139,92,246,.12);}
+.notif-body{flex:1;min-width:0;}.notif-title{font-size:10px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.notif-msg{font-size:9px;color:var(--text-secondary,#8b8f98);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.notif-time{font-size:8px;color:var(--text-muted,#6b7280);margin-top:2px;font-family:var(--font-mono,monospace);}
+.notif-empty{padding:24px;text-align:center;color:var(--text-muted,#6b7280);font-size:11px;}
 </style>
 </head>
 <body>
@@ -244,6 +263,14 @@ html{--text:var(--text-primary);--text2:var(--text-secondary);--text3:var(--text
   <div class="hdr-logo"><svg viewBox="0 0 40 40" fill="none"><path d="M20 4L35 12V28L20 36L5 28V12L20 4Z" fill="rgba(255,255,255,.15)" stroke="rgba(255,255,255,.4)" stroke-width="1.5"/><rect x="13" y="14" width="14" height="12" rx="2" stroke="#fff" stroke-width="1.3" fill="none"/><path d="M13 18h14M18 14v12M24 14v12" stroke="#fff" stroke-width="1" opacity=".6"/></svg></div>
   <div><div class="hdr-t">Gobernanza BUILD</div><div class="hdr-s">Coordinaci&oacute;n de Proyectos &middot; PMO</div></div>
 </div><div class="hdr-r">
+  <div class="notif-bell" id="notif-bell" onclick="toggleNotifPanel(event)">
+    <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    <span class="notif-badge" id="notif-badge">0</span>
+    <div class="notif-panel" id="notif-panel">
+      <div class="notif-panel-header"><span class="notif-panel-title">Notificaciones</span><span class="notif-mark-all" onclick="notifMarkAll(event)">Marcar todo le&iacute;do</span></div>
+      <div class="notif-list" id="notif-list"></div>
+    </div>
+  </div>
   <div class="thm"><span>&#9790;</span><div class="thm-btn" onclick="toggleTheme()"></div><span>&#9728;</span></div>
   <div class="pdot"></div><div class="hdr-u"><strong id="un">Coordinador</strong><span id="ur">Gobernanza BUILD</span></div>
   <button class="btn-out" onclick="doLogout()">Salir</button>
@@ -964,7 +991,16 @@ function toggleTheme(){var h=document.documentElement,n=h.getAttribute('data-the
 function af(u,o){o=o||{};o.headers=o.headers||{};if(TK)o.headers['Authorization']='Bearer '+TK;if(o.body&&typeof o.body==='string')o.headers['Content-Type']='application/json';return fetch(AB+u,o).then(function(r){return r.text().then(function(t){try{return JSON.parse(t);}catch(e){return t;}});});}
 function doLogin(){var e=document.getElementById('le').value,p=document.getElementById('lp').value;fetch(AB+'/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})}).then(function(r){return r.text().then(function(t){try{return JSON.parse(t);}catch(x){return{};}});}).then(function(d){if(d.token){TK=d.token;localStorage.setItem('cpm_token',d.token);var u=d.user||d;document.getElementById('login-overlay').style.display='none';document.getElementById('app').style.display='block';document.getElementById('un').textContent=u.nombre_completo||e;document.getElementById('ur').textContent=u.rol||'Coordinador BUILD';init();}else{document.getElementById('lerr').style.display='block';}}).catch(function(){document.getElementById('lerr').style.display='block';});}
 function doLogout(){localStorage.removeItem('cpm_token');TK='';location.reload();}
-if(TK){af('/health').then(function(d){if(d&&d.status==='ok'){document.getElementById('login-overlay').style.display='none';document.getElementById('app').style.display='block';init();}}).catch(function(){});}
+// ── Notificaciones ──
+function toggleNotifPanel(e){e.stopPropagation();var p=document.getElementById('notif-panel');p.classList.toggle('open');if(p.classList.contains('open'))loadNotif();}
+function loadNotif(){if(!TK)return;af('/api/notificaciones').then(function(d){if(!Array.isArray(d))return;var u=d.filter(function(n){return!n.leida;}).length;var b=document.getElementById('notif-badge');if(b){b.textContent=u;b.className='notif-badge'+(u>0?' show':'');}var el=document.getElementById('notif-list');if(!el)return;if(!d.length){el.innerHTML='<div class="notif-empty">Sin notificaciones</div>';return;}var ic={asignacion:'\u2705',estado:'\u{1F504}',alerta:'\u26A0\uFE0F',urgente:'\u{1F6A8}',info:'\u{1F4AC}'};el.innerHTML=d.map(function(n){var ago=nAgo(n.created_at),cls=n.leida?'':' unread',t=n.tipo||'info';return'<div class="notif-item'+cls+'" onclick="nClick(event,'+n.id+')"><div class="notif-ico '+t+'">'+(ic[t]||'\u{1F4AC}')+'</div><div class="notif-body"><div class="notif-title">'+nEsc(n.titulo)+'</div><div class="notif-msg">'+nEsc(n.mensaje||'')+'</div><div class="notif-time">'+ago+'</div></div></div>';}).join('');}).catch(function(){});}
+function nEsc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+function nAgo(dt){if(!dt)return'';var d=new Date(dt+(dt.indexOf('Z')<0&&dt.indexOf('+')<0?'Z':''));var s=Math.floor((Date.now()-d.getTime())/1000);if(s<60)return'ahora';if(s<3600)return Math.floor(s/60)+'m';if(s<86400)return Math.floor(s/3600)+'h';return Math.floor(s/86400)+'d';}
+function nClick(e,id){e.stopPropagation();af('/api/notificaciones/'+id+'/leer',{method:'PUT'}).then(function(){loadNotif();}).catch(function(){});}
+function notifMarkAll(e){e.stopPropagation();af('/api/notificaciones/leer-todas',{method:'PUT'}).then(function(){loadNotif();}).catch(function(){});}
+setInterval(function(){if(TK)loadNotif();},30000);
+document.addEventListener('click',function(e){var p=document.getElementById('notif-panel');if(p&&p.classList.contains('open')&&!e.target.closest('.notif-bell'))p.classList.remove('open');});
+if(TK){af('/health').then(function(d){if(d&&d.status==='ok'){document.getElementById('login-overlay').style.display='none';document.getElementById('app').style.display='block';init();loadNotif();}}).catch(function(){});}
 document.getElementById('lp').addEventListener('keypress',function(e){if(e.key==='Enter')doLogin();});
 function sw(n){document.querySelectorAll('.tb').forEach(function(b){b.classList.remove('a');});document.querySelector('.tb[data-t="'+n+'"]').classList.add('a');document.querySelectorAll('.tp').forEach(function(p){p.classList.remove('a');});document.getElementById('p-'+n).classList.add('a');if(n==='tecnicos'&&ALL_TEAM.length===0)loadTeam();if(n==='scrum'&&!SELECTED_PROJECT)autoSelectProject();if(n==='gantt'){syncGanttSelector();if(SELECTED_PROJECT)loadGanttView(SELECTED_PROJECT);else autoSelectProject();}if(n==='proyecto'){syncProjSelector();if(SELECTED_PROJECT)loadProjectDetail(SELECTED_PROJECT);}if(n==='cab'){loadCABData();}}
 function toast(m,t){var e=document.getElementById('tst');e.textContent=m;e.className='toast '+(t||'ok')+' show';setTimeout(function(){e.classList.remove('show');},3000);}

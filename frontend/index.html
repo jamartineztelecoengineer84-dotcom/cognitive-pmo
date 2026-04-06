@@ -139,6 +139,35 @@ body{background:var(--bg);font-family:var(--font);color:var(--text);font-size:14
 .demo-dest{font-size:8px;color:var(--cyan);font-weight:600;letter-spacing:.3px;margin-top:2px;opacity:.8;}
 .demo-card.loading .demo-avatar{animation:demo-pulse 1s infinite;}
 @keyframes demo-pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+/* ── Notification Bell ── */
+.notif-bell{position:relative;cursor:pointer;padding:6px;border-radius:8px;transition:background .2s;}
+.notif-bell:hover{background:rgba(255,255,255,.06);}
+.notif-bell svg{width:18px;height:18px;stroke:var(--text2);fill:none;stroke-width:1.8;transition:stroke .2s;}
+.notif-bell:hover svg{stroke:var(--text);}
+.notif-badge{position:absolute;top:2px;right:2px;min-width:16px;height:16px;border-radius:8px;background:#ef4444;color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 4px;line-height:1;border:2px solid var(--bg);display:none;}
+.notif-badge.show{display:flex;}
+.notif-panel{position:absolute;top:calc(100% + 8px);right:0;width:340px;max-height:420px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 48px rgba(0,0,0,.4);z-index:9100;display:none;overflow:hidden;}
+.notif-panel.open{display:block;}
+.notif-panel-header{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border);background:var(--bg3);}
+.notif-panel-title{font-size:12px;font-weight:700;color:var(--text);}
+.notif-mark-all{font-size:10px;color:var(--blue);cursor:pointer;font-weight:600;}
+.notif-mark-all:hover{text-decoration:underline;}
+.notif-list{max-height:350px;overflow-y:auto;}
+.notif-item{display:flex;gap:10px;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;transition:background .15s;}
+.notif-item:hover{background:rgba(255,255,255,.03);}
+.notif-item.unread{background:rgba(45,126,247,.04);border-left:3px solid var(--blue);}
+.notif-item.unread:hover{background:rgba(45,126,247,.08);}
+.notif-ico{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;}
+.notif-ico.asignacion{background:rgba(34,197,94,.12);color:#22c55e;}
+.notif-ico.estado{background:rgba(45,126,247,.12);color:#2d7ef7;}
+.notif-ico.alerta{background:rgba(234,179,8,.12);color:#eab308;}
+.notif-ico.urgente{background:rgba(248,81,73,.12);color:#f85149;}
+.notif-ico.info{background:rgba(139,92,246,.12);color:#8b5cf6;}
+.notif-body{flex:1;min-width:0;}
+.notif-title{font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.notif-msg{font-size:10px;color:var(--text3);margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.notif-time{font-size:9px;color:var(--text3);margin-top:3px;font-family:var(--mono);}
+.notif-empty{padding:30px 14px;text-align:center;color:var(--text3);font-size:12px;}
 .login-footer a{color:var(--blue);text-decoration:none;}
 .login-particles{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;}
 .login-particle{position:absolute;animation:floatParticle 20s infinite ease-in-out;}
@@ -1216,6 +1245,14 @@ footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;disp
     </div>
   </div>
   <div class="topbar-right">
+    <div class="notif-bell" id="notif-bell" onclick="toggleNotifPanel(event)">
+      <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span class="notif-badge" id="notif-badge">0</span>
+      <div class="notif-panel" id="notif-panel">
+        <div class="notif-panel-header"><span class="notif-panel-title">Notificaciones</span><span class="notif-mark-all" onclick="notifMarkAll(event)">Marcar todo le&iacute;do</span></div>
+        <div class="notif-list" id="notif-list"></div>
+      </div>
+    </div>
     <div class="theme-btn" onclick="toggleLang()" id="lang-toggle" title="Cambiar idioma / Change language" style="font-size:11px;font-weight:800;letter-spacing:.5px;">EN</div>
     <div class="theme-btn" onclick="toggleTheme()" id="theme-toggle" title="Cambiar tema claro/oscuro">🌙</div>
     <div class="user-menu-btn" id="user-menu-btn" onclick="toggleUserMenu()">
@@ -4087,6 +4124,67 @@ async function demoLogin(email, target) {
   }
 }
 
+// ── Notificaciones (bell) ──
+var _notifData = [];
+function toggleNotifPanel(e) {
+  e.stopPropagation();
+  var p = document.getElementById('notif-panel');
+  p.classList.toggle('open');
+  if (p.classList.contains('open')) loadNotificaciones();
+}
+function loadNotificaciones() {
+  if (!AUTH_TOKEN) return;
+  authFetch(API_BASE + '/api/notificaciones').then(function(data) {
+    if (!Array.isArray(data)) return;
+    _notifData = data;
+    var unread = data.filter(function(n){ return !n.leida; }).length;
+    var badge = document.getElementById('notif-badge');
+    if (badge) { badge.textContent = unread; badge.className = 'notif-badge' + (unread > 0 ? ' show' : ''); }
+    renderNotifList(data);
+  }).catch(function(){});
+}
+function renderNotifList(data) {
+  var el = document.getElementById('notif-list');
+  if (!el) return;
+  if (!data.length) { el.innerHTML = '<div class="notif-empty">Sin notificaciones</div>'; return; }
+  var icons = {asignacion:'\u2705',estado:'\u{1F504}',alerta:'\u26A0\uFE0F',urgente:'\u{1F6A8}',info:'\u{1F4AC}'};
+  el.innerHTML = data.map(function(n){
+    var ago = timeAgo(n.created_at);
+    var cls = n.leida ? '' : ' unread';
+    var tipo = n.tipo || 'info';
+    return '<div class="notif-item'+cls+'" onclick="notifClick(event,'+n.id+')">'+
+      '<div class="notif-ico '+tipo+'">'+(icons[tipo]||'\u{1F4AC}')+'</div>'+
+      '<div class="notif-body"><div class="notif-title">'+esc(n.titulo)+'</div>'+
+      '<div class="notif-msg">'+esc(n.mensaje||'')+'</div>'+
+      '<div class="notif-time">'+ago+'</div></div></div>';
+  }).join('');
+}
+function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+function timeAgo(dt) {
+  if (!dt) return '';
+  var d = new Date(dt + (dt.indexOf('Z') < 0 && dt.indexOf('+') < 0 ? 'Z' : ''));
+  var s = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (s < 60) return 'ahora';
+  if (s < 3600) return Math.floor(s/60) + 'm';
+  if (s < 86400) return Math.floor(s/3600) + 'h';
+  return Math.floor(s/86400) + 'd';
+}
+function notifClick(e, id) {
+  e.stopPropagation();
+  authFetch(API_BASE + '/api/notificaciones/' + id + '/leer', {method:'PUT'}).then(function(){ loadNotificaciones(); }).catch(function(){});
+}
+function notifMarkAll(e) {
+  e.stopPropagation();
+  authFetch(API_BASE + '/api/notificaciones/leer-todas', {method:'PUT'}).then(function(){ loadNotificaciones(); }).catch(function(){});
+}
+// Polling cada 30s
+setInterval(function(){ if (AUTH_TOKEN) loadNotificaciones(); }, 30000);
+// Close panel on outside click
+document.addEventListener('click', function(e) {
+  var p = document.getElementById('notif-panel');
+  if (p && p.classList.contains('open') && !e.target.closest('.notif-bell')) p.classList.remove('open');
+});
+
 // ── Logout ──
 function doLogout() {
   authFetch(API_BASE + '/auth/logout', {method: 'POST'}).catch(()=>{});
@@ -4123,6 +4221,7 @@ function showApp() {
   loadProjects();
   loadKanban();
   loadBudgets();
+  loadNotificaciones();
 }
 
 // ── Update topbar with user info ──
