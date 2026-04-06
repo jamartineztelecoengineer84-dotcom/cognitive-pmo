@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 import psycopg2
 import httpx
 import psycopg2.extras
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,6 +25,10 @@ from models import (
 from rbac_api import router as rbac_router
 from cmdb_api import router as cmdb_router
 from db_loader import router as db_loader_router
+from tech_routes import router as tech_router
+from tech_terminal_ws import router as tech_terminal_router
+from tech_copiloto import router as tech_copiloto_router
+from auth import get_current_user, UserInfo
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -108,6 +112,28 @@ app.add_middleware(
 app.include_router(rbac_router)
 app.include_router(cmdb_router)
 app.include_router(db_loader_router)
+app.include_router(tech_router)
+app.include_router(tech_terminal_router)
+app.include_router(tech_copiloto_router)
+
+
+# ── Admin: Valoración mensual ─────────────────────────────────────────────
+@app.post("/api/admin/valoracion/calcular")
+async def admin_calcular_valoracion(
+    mes: Optional[str] = None,
+    user: Optional[UserInfo] = Depends(get_current_user),
+):
+    """Ejecutar job de valoración mensual. Solo admin/superadmin."""
+    from jobs.tech_valoracion_job import calcular_valoracion_mensual
+    if user and hasattr(user, 'role_code') and user.role_code not in ('SUPERADMIN', 'CTO', 'CIO', 'VP_PMO', 'PMO_SENIOR'):
+        raise HTTPException(status_code=403, detail="Solo administradores pueden ejecutar este job")
+    pool = get_pool()
+    mes_date = None
+    if mes:
+        from datetime import date as d
+        mes_date = d.fromisoformat(mes)
+    result = await calcular_valoracion_mensual(pool, mes_date)
+    return result
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────
@@ -737,6 +763,29 @@ async def asignar_tecnico_tarea(req: AsignarTecnicoTarea):
                     UPDATE incidencias_run SET tecnico_asignado = $1, timestamp_asignacion = now()
                     WHERE ticket_id = $2 AND tecnico_asignado IS NULL
                 """, req.id_recurso, req.ticket_id)
+            # Auto-crear sala de chat para tech dashboard
+            try:
+                tarea_info = await conn.fetchrow(
+                    "SELECT titulo, tipo FROM kanban_tareas WHERE id = $1", req.task_id)
+                nombre_tecnico = await conn.fetchval(
+                    "SELECT nombre FROM pmo_staff_skills WHERE id_recurso = $1", req.id_recurso)
+                tipo_sala = 'run' if req.ticket_id else 'build'
+                ref_id = req.ticket_id if req.ticket_id else req.task_id
+                sala_nombre = f"{ref_id} · {tarea_info['titulo'][:80]}" if tarea_info else ref_id
+                sala_id = await conn.fetchval("""
+                    INSERT INTO tech_chat_salas (tipo, id_referencia, nombre)
+                    VALUES ($1, $2, $3)
+                    ON CONFLICT (tipo, id_referencia) DO UPDATE SET activa = TRUE
+                    RETURNING id
+                """, tipo_sala, ref_id, sala_nombre)
+                if sala_id:
+                    await conn.execute("""
+                        INSERT INTO tech_chat_mensajes (id_sala, id_autor, rol_autor, mensaje)
+                        VALUES ($1, $2, 'agente', $3)
+                    """, sala_id, 'AG-002',
+                        f"Asignada a {nombre_tecnico or req.id_recurso}.")
+            except Exception:
+                pass  # Non-critical
             return {"ok": True, "task_id": req.task_id, "id_recurso": req.id_recurso}
     except HTTPException:
         raise

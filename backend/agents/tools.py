@@ -360,6 +360,29 @@ async def assign_technician(db, task_id: str, id_recurso: str,
         SET carga_actual = LEAST(carga_actual + $1, 200)
         WHERE id_recurso = $2
     """, int(horas or 2), id_recurso)
+    # Auto-crear sala de chat para el tech dashboard
+    try:
+        nombre_tecnico = await db.fetchval(
+            "SELECT nombre FROM pmo_staff_skills WHERE id_recurso = $1", id_recurso)
+        tarea_info = await db.fetchrow(
+            "SELECT titulo, tipo FROM kanban_tareas WHERE id = $1", task_id)
+        tipo_sala = 'run' if (tarea_info and tarea_info['tipo'] == 'RUN') else 'build'
+        ref_id = ticket_id if tipo_sala == 'run' else task_id
+        sala_nombre = f"{ref_id} · {tarea_info['titulo'][:80]}" if tarea_info else ref_id
+        sala_id = await db.fetchval("""
+            INSERT INTO tech_chat_salas (tipo, id_referencia, nombre)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (tipo, id_referencia) DO UPDATE SET activa = TRUE
+            RETURNING id
+        """, tipo_sala, ref_id, sala_nombre)
+        if sala_id:
+            await db.execute("""
+                INSERT INTO tech_chat_mensajes (id_sala, id_autor, rol_autor, mensaje)
+                VALUES ($1, $2, 'agente', $3)
+            """, sala_id, 'AG-002',
+                f"Asignada a {nombre_tecnico or id_recurso} ({id_recurso}). Carga previa: {int(horas or 2)}h añadidas.")
+    except Exception:
+        pass  # Non-critical: don't break assignment if chat creation fails
     return {"status": "assigned", "task_id": task_id, "tecnico": id_recurso}
 
 
