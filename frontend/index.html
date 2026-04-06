@@ -168,6 +168,42 @@ body{background:var(--bg);font-family:var(--font);color:var(--text);font-size:14
 .notif-msg{font-size:10px;color:var(--text3);margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 .notif-time{font-size:9px;color:var(--text3);margin-top:3px;font-family:var(--mono);}
 .notif-empty{padding:30px 14px;text-align:center;color:var(--text3);font-size:12px;}
+/* ── Org Tree ── */
+.otree{display:flex;flex-direction:column;align-items:center;gap:0;padding:20px 10px 40px;min-width:fit-content;}
+.otree-level{display:flex;justify-content:center;gap:12px;position:relative;flex-wrap:nowrap;}
+.otree-branch{display:flex;flex-direction:column;align-items:center;gap:0;}
+.otree-connector{display:flex;flex-direction:column;align-items:center;}
+.otree-vline{width:2px;height:18px;background:rgba(88,166,255,.2);}
+.otree-hline-wrap{display:flex;align-items:flex-start;position:relative;}
+.otree-hline{height:2px;background:rgba(88,166,255,.2);position:absolute;top:0;}
+.otree-card{min-width:136px;max-width:172px;padding:12px 10px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:12px;cursor:pointer;transition:all .2s;position:relative;text-align:center;user-select:none;}
+.otree-card:hover{background:rgba(255,255,255,.08);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3);}
+.otree-card.expanded{border-color:rgba(88,166,255,.3);background:rgba(88,166,255,.04);}
+.otree-card.highlight{border-color:rgba(234,179,8,.6);box-shadow:0 0 0 2px rgba(234,179,8,.25);animation:org-hl 1.5s ease-in-out 2;}
+@keyframes org-hl{0%,100%{box-shadow:0 0 0 2px rgba(234,179,8,.25)}50%{box-shadow:0 0 0 5px rgba(234,179,8,.4)}}
+.otree-avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;margin:0 auto 6px;border:2px solid rgba(255,255,255,.12);flex-shrink:0;}
+.otree-name{font-size:11px;font-weight:700;color:var(--text);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.otree-cargo{font-size:9px;color:var(--text3);margin-top:2px;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.otree-badge{display:inline-block;padding:1px 6px;border-radius:4px;font-size:8px;font-weight:700;margin-top:4px;letter-spacing:.3px;}
+.otree-count{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;border-radius:9px;background:var(--blue);color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 4px;border:2px solid var(--bg2);}
+.otree-children{display:none;flex-direction:column;align-items:center;gap:0;}
+.otree-children.open{display:flex;}
+.otree-leaf-row{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;max-width:900px;}
+.otree-leaf{display:flex;align-items:center;gap:6px;padding:5px 8px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:8px;min-width:120px;max-width:180px;font-size:10px;transition:all .15s;}
+.otree-leaf:hover{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12);}
+.otree-leaf .ol-avatar{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff;flex-shrink:0;}
+.otree-leaf .ol-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;}
+.otree-leaf .ol-nivel{font-size:8px;font-weight:700;padding:1px 4px;border-radius:3px;}
+.otree-leaf .ol-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.otree-more{padding:4px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:6px;font-size:9px;color:var(--text3);font-weight:600;cursor:pointer;}
+.otree-more:hover{background:rgba(255,255,255,.08);}
+.otree-area-group{margin-top:16px;width:100%;}
+.otree-area-header{display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:8px;cursor:pointer;margin-bottom:4px;transition:background .15s;}
+.otree-area-header:hover{background:rgba(255,255,255,.05);}
+.otree-area-title{font-size:11px;font-weight:700;color:var(--text);}
+.otree-area-count{font-size:9px;color:var(--text3);font-weight:600;}
+.otree-area-body{display:none;padding:4px 0 4px 12px;}
+.otree-area-body.open{display:block;}
 .login-footer a{color:var(--blue);text-decoration:none;}
 .login-particles{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;}
 .login-particle{position:absolute;animation:floatParticle 20s infinite ease-in-out;}
@@ -3014,11 +3050,24 @@ footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;disp
 
       <!-- ═══ RBAC: Organigrama ═══ -->
       <div class="dev-section" id="dev-sec-rbac-org">
-        <div style="font-size:14px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-          Organigrama Corporativo
+        <!-- Toolbar -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+          <div style="font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            Organigrama Corporativo
+          </div>
+          <div id="org-stats" style="display:flex;gap:8px;font-size:10px;color:var(--text3);margin-left:8px;"></div>
+          <div style="margin-left:auto;display:flex;gap:6px;align-items:center;">
+            <input type="text" id="org-search" placeholder="Buscar persona..." oninput="orgSearchTree(this.value)" style="width:160px;padding:5px 10px;font-size:11px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;">
+            <button onclick="orgExpandAll()" style="padding:4px 10px;font-size:10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text2);cursor:pointer;font-weight:600;">Expandir</button>
+            <button onclick="orgCollapseAll()" style="padding:4px 10px;font-size:10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text2);cursor:pointer;font-weight:600;">Colapsar</button>
+            <div style="display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;">
+              <button id="org-view-tree" onclick="orgToggleView('tree')" style="padding:4px 10px;font-size:10px;font-weight:700;cursor:pointer;border:none;background:var(--blue);color:#fff;">&#x1f332; &Aacute;rbol</button>
+              <button id="org-view-list" onclick="orgToggleView('list')" style="padding:4px 10px;font-size:10px;font-weight:700;cursor:pointer;border:none;background:var(--bg3);color:var(--text3);">&#x2630; Lista</button>
+            </div>
+          </div>
         </div>
-        <div id="rbac-org-content" style="overflow-y:auto;max-height:calc(100vh - 200px);"></div>
+        <div id="rbac-org-content" style="overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 200px);"></div>
       </div>
 
     </div>
@@ -15137,7 +15186,7 @@ function devShowSection(id, el) {
   if (id==='rbac-users') loadRbacUsers();
   if (id==='rbac-roles') loadRbacRolesPanel();
   if (id==='rbac-audit') loadRbacAudit();
-  if (id==='rbac-org') loadRbacOrg();
+  if (id==='rbac-org') { if (_orgView==='list') loadRbacOrg(); else loadRbacOrgTree(); }
 }
 
 async function loadDevTables() {
@@ -16089,6 +16138,297 @@ async function loadRbacOrg() {
   } catch(e) {
     document.getElementById('rbac-org-content').innerHTML = '<div style="color:var(--red);">Error: '+escHtml(e.message)+'</div>';
   }
+}
+
+// ── Org Tree (hybrid interactive) ──
+var _orgTreeData = null;
+var _orgView = 'tree';
+var _orgAllNodes = [];
+
+function orgToggleView(view) {
+  _orgView = view;
+  document.getElementById('org-view-tree').style.background = view==='tree' ? 'var(--blue)' : 'var(--bg3)';
+  document.getElementById('org-view-tree').style.color = view==='tree' ? '#fff' : 'var(--text3)';
+  document.getElementById('org-view-list').style.background = view==='list' ? 'var(--blue)' : 'var(--bg3)';
+  document.getElementById('org-view-list').style.color = view==='list' ? '#fff' : 'var(--text3)';
+  if (view==='list') loadRbacOrg();
+  else if (_orgTreeData) renderOrgTree(_orgTreeData);
+  else loadRbacOrgTree();
+}
+
+async function loadRbacOrgTree() {
+  var container = document.getElementById('rbac-org-content');
+  container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3);">Cargando organigrama...</div>';
+  try {
+    var data = await authFetch(API_BASE+'/directorio/organigrama').then(function(r){return r.json()});
+    _orgTreeData = data;
+    renderOrgTree(data);
+  } catch(e) {
+    container.innerHTML = '<div style="color:var(--red);">Error: '+escHtml(e.message)+'</div>';
+  }
+}
+
+function renderOrgTree(data) {
+  var all = data.organigrama || [];
+  _orgAllNodes = [];
+  flattenNodes(all);
+  var totalPersonas = data.total_directivos || all.length;
+  var areas = {};
+  _orgAllNodes.forEach(function(n){ areas[n.area]=true; });
+  var niveles = {};
+  _orgAllNodes.forEach(function(n){ niveles[n.nivel_organizativo]=true; });
+
+  var statsEl = document.getElementById('org-stats');
+  if (statsEl) {
+    statsEl.innerHTML =
+      '<span style="padding:2px 8px;background:rgba(45,126,247,.1);border:1px solid rgba(45,126,247,.15);border-radius:4px;"><strong style="color:var(--blue);">'+totalPersonas+'</strong> personas</span>'+
+      '<span style="padding:2px 8px;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.15);border-radius:4px;"><strong style="color:var(--purple);">'+Object.keys(areas).length+'</strong> &aacute;reas</span>'+
+      '<span style="padding:2px 8px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.15);border-radius:4px;"><strong style="color:var(--green);">'+Object.keys(niveles).length+'</strong> niveles</span>';
+  }
+
+  // Separate connected tree (root = CEO) from orphans
+  var ceoNode = null;
+  var orphans = [];
+  all.forEach(function(n){
+    if (n.nivel_organizativo==='C-LEVEL' && !n.reporta_a && n.subordinados && n.subordinados.length) {
+      ceoNode = n;
+    } else if (n.nivel_organizativo!=='C-LEVEL' || (!n.subordinados || !n.subordinados.length)) {
+      if (n !== ceoNode) orphans.push(n);
+    }
+  });
+
+  var container = document.getElementById('rbac-org-content');
+  var html = '<div class="otree" id="otree-root">';
+
+  // CEO card at top
+  if (ceoNode) {
+    html += renderTreeNode(ceoNode, 0, true);
+  }
+  html += '</div>';
+
+  // Orphan areas
+  if (orphans.length) {
+    html += '<div style="margin-top:20px;padding-top:14px;border-top:1px solid rgba(255,255,255,.06);">';
+    html += '<div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Otras &aacute;reas ('+orphans.length+' directivos)</div>';
+    var byArea = {};
+    orphans.forEach(function(o){ var a=o.area||'Sin \u00e1rea'; if(!byArea[a])byArea[a]=[]; byArea[a].push(o); });
+    var areaKeys = Object.keys(byArea).sort();
+    areaKeys.forEach(function(a,ai){
+      var people = byArea[a];
+      html += '<div class="otree-area-group">';
+      html += '<div class="otree-area-header" onclick="this.nextElementSibling.classList.toggle(\'open\');this.querySelector(\'.oa-arrow\').textContent=this.nextElementSibling.classList.contains(\'open\')?\'\u25BC\':\'\u25B6\';">';
+      html += '<span class="oa-arrow" style="font-size:9px;color:var(--text3);width:12px;">\u25B6</span>';
+      html += '<span class="otree-area-title">'+escHtml(a)+'</span>';
+      html += '<span class="otree-area-count">'+people.length+' personas</span>';
+      html += '</div>';
+      html += '<div class="otree-area-body">';
+      html += '<div class="otree-leaf-row">';
+      people.forEach(function(p){
+        html += renderLeafCard(p);
+      });
+      html += '</div></div></div>';
+    });
+    html += '</div>';
+  }
+
+  container.innerHTML = html;
+
+  // Auto-expand CEO level
+  if (ceoNode) {
+    var ceoId = 'otn-'+(ceoNode.id_directivo||'').replace(/[^a-zA-Z0-9]/g,'');
+    var ceoChildren = document.getElementById(ceoId+'-children');
+    var ceoCard = document.getElementById(ceoId);
+    if (ceoChildren) { ceoChildren.classList.add('open'); }
+    if (ceoCard) { ceoCard.classList.add('expanded'); }
+  }
+}
+
+function renderTreeNode(node, depth, isRoot) {
+  var lc = getLevelColor(node.nivel_organizativo);
+  var ac = getAreaColor(node.area);
+  var initials = (node.nombre_completo||'?').split(' ').map(function(w){return w[0]}).join('').substring(0,2).toUpperCase();
+  var childCount = countDescendants(node);
+  var hasChildren = node.subordinados && node.subordinados.length > 0;
+  var nodeId = 'otn-'+(node.id_directivo||'').replace(/[^a-zA-Z0-9]/g,'');
+
+  var html = '<div class="otree-branch">';
+
+  // Vertical connector from parent (not for root)
+  if (!isRoot) {
+    html += '<div class="otree-vline"></div>';
+  }
+
+  // The card
+  html += '<div class="otree-card'+(hasChildren?' expandable':'')+'" id="'+nodeId+'" onclick="orgToggleNode(\''+nodeId+'\')" data-name="'+escHtml(node.nombre_completo)+'" data-id="'+escHtml(node.id_directivo||'')+'">';
+  if (childCount > 0) {
+    html += '<div class="otree-count">'+childCount+'</div>';
+  }
+  html += '<div class="otree-avatar" style="background:'+ac+';">'+initials+'</div>';
+  html += '<div class="otree-name" title="'+escHtml(node.nombre_completo)+'">'+escHtml(shortName(node.nombre_completo))+'</div>';
+  html += '<div class="otree-cargo">'+escHtml(node.cargo)+'</div>';
+  html += '<div class="otree-badge" style="background:'+lc+'22;color:'+lc+';">'+escHtml(node.nivel_organizativo)+'</div>';
+  html += '</div>';
+
+  // Children
+  if (hasChildren) {
+    html += '<div class="otree-children" id="'+nodeId+'-children">';
+    html += '<div class="otree-vline"></div>';
+
+    // Separate manager-level children from leaf-level
+    var managers = [];
+    var leaves = [];
+    node.subordinados.forEach(function(s){
+      if (s.subordinados && s.subordinados.length > 0) {
+        managers.push(s);
+      } else if (s.nivel_organizativo==='JEFE_EQUIPO' || s.nivel_organizativo==='COORDINADOR') {
+        leaves.push(s);
+      } else {
+        managers.push(s);
+      }
+    });
+
+    // Manager children in horizontal row
+    if (managers.length) {
+      html += '<div class="otree-level">';
+      managers.forEach(function(child){
+        html += renderTreeNode(child, depth+1, false);
+      });
+      html += '</div>';
+    }
+
+    // Leaf children as mini cards
+    if (leaves.length) {
+      html += '<div class="otree-vline" style="height:10px;"></div>';
+      html += '<div class="otree-leaf-row">';
+      var showCount = Math.min(leaves.length, 20);
+      for (var li=0; li<showCount; li++) {
+        html += renderLeafCard(leaves[li]);
+      }
+      if (leaves.length > 20) {
+        html += '<div class="otree-more" onclick="event.stopPropagation()">+' + (leaves.length-20) + ' m&aacute;s</div>';
+      }
+      html += '</div>';
+    }
+
+    html += '</div>';
+  }
+
+  html += '</div>';
+  return html;
+}
+
+function renderLeafCard(p) {
+  var ac = getAreaColor(p.area);
+  var initials = (p.nombre_completo||'?').split(' ').map(function(w){return w[0]}).join('').substring(0,2).toUpperCase();
+  var nivelMatch = (p.cargo||'').match(/N([1-4])/);
+  var nivelTxt = nivelMatch ? 'N'+nivelMatch[1] : '';
+  var nivelClr = nivelMatch ? ({1:'#ef4444',2:'#f59e0b',3:'#22c55e',4:'#8b5cf6'}[nivelMatch[1]] || '#6b7280') : '#6b7280';
+  return '<div class="otree-leaf" data-name="'+escHtml(p.nombre_completo)+'" data-id="'+escHtml(p.id_directivo||'')+'">'+
+    '<div class="ol-avatar" style="background:'+ac+';">'+initials+'</div>'+
+    '<div class="ol-name" title="'+escHtml(p.nombre_completo)+'">'+escHtml(shortName(p.nombre_completo))+'</div>'+
+    (nivelTxt ? '<span class="ol-nivel" style="background:'+nivelClr+'22;color:'+nivelClr+';">'+nivelTxt+'</span>' : '')+
+    '<div class="ol-dot" style="background:#22c55e;" title="Activo"></div>'+
+  '</div>';
+}
+
+function shortName(full) {
+  if (!full) return '?';
+  var parts = full.split(' ');
+  if (parts.length <= 2) return full;
+  return parts[0] + ' ' + parts[parts.length-2];
+}
+
+function countDescendants(node) {
+  if (!node.subordinados || !node.subordinados.length) return 0;
+  var c = node.subordinados.length;
+  node.subordinados.forEach(function(s){ c += countDescendants(s); });
+  return c;
+}
+
+function flattenNodes(arr) {
+  arr.forEach(function(n){
+    _orgAllNodes.push(n);
+    if (n.subordinados) flattenNodes(n.subordinados);
+  });
+}
+
+function getLevelColor(nivel) {
+  return {'C-LEVEL':'#EF4444','VP':'#8B5CF6','DIRECTOR':'#2563EB','SUBDIRECTOR':'#0891B2','GERENTE':'#10B981','COORDINADOR':'#06B6D4','JEFE_EQUIPO':'#F59E0B'}[nivel] || '#6B7280';
+}
+
+function getAreaColor(area) {
+  if (!area) return '#6B7280';
+  var a = area.toLowerCase();
+  if (a.includes('direcci')) return '#EAB308';
+  if (a.includes('tecnolog') || a.includes('ingenier') || a.includes('software')) return '#8B5CF6';
+  if (a.includes('backend') || a.includes('frontend') || a.includes('qa') || a.includes('quality')) return '#8B5CF6';
+  if (a.includes('infraestr') || a.includes('redes') || a.includes('seguridad') || a.includes('ciber') || a.includes('soc') || a.includes('noc')) return '#EF4444';
+  if (a.includes('devops') || a.includes('sre')) return '#3B82F6';
+  if (a.includes('soporte') || a.includes('service') || a.includes('contact') || a.includes('atencion')) return '#22C55E';
+  if (a.includes('data') || a.includes('datos') || a.includes('bbdd')) return '#F97316';
+  if (a.includes('pmo') || a.includes('operaciones')) return '#06B6D4';
+  if (a.includes('finanza') || a.includes('tesor') || a.includes('contab') || a.includes('fiscal')) return '#EAB308';
+  if (a.includes('windows') || a.includes('sistema')) return '#06B6D4';
+  if (a.includes('red de oficina')) return '#10B981';
+  if (a.includes('compliance') || a.includes('riesgo') || a.includes('audit')) return '#F59E0B';
+  if (a.includes('banca') || a.includes('negocio') || a.includes('comercio') || a.includes('trading')) return '#0EA5E9';
+  return '#6B7280';
+}
+
+function orgToggleNode(nodeId) {
+  var children = document.getElementById(nodeId + '-children');
+  var card = document.getElementById(nodeId);
+  if (!children) return;
+  children.classList.toggle('open');
+  if (card) card.classList.toggle('expanded');
+}
+
+function orgExpandAll() {
+  document.querySelectorAll('.otree-children').forEach(function(el){ el.classList.add('open'); });
+  document.querySelectorAll('.otree-card.expandable').forEach(function(el){ el.classList.add('expanded'); });
+  document.querySelectorAll('.otree-area-body').forEach(function(el){ el.classList.add('open'); });
+}
+
+function orgCollapseAll() {
+  document.querySelectorAll('.otree-children').forEach(function(el){ el.classList.remove('open'); });
+  document.querySelectorAll('.otree-card.expandable').forEach(function(el){ el.classList.remove('expanded'); });
+  document.querySelectorAll('.otree-area-body').forEach(function(el){ el.classList.remove('open'); });
+}
+
+function orgSearchTree(q) {
+  // Remove previous highlights
+  document.querySelectorAll('.otree-card.highlight, .otree-leaf.highlight').forEach(function(el){ el.classList.remove('highlight'); });
+  if (!q || q.length < 2) return;
+  var ql = q.toLowerCase();
+  // Search cards
+  document.querySelectorAll('.otree-card[data-name]').forEach(function(el){
+    if (el.getAttribute('data-name').toLowerCase().includes(ql)) {
+      el.classList.add('highlight');
+      // Expand parents
+      var p = el.parentElement;
+      while (p) {
+        if (p.classList && p.classList.contains('otree-children')) p.classList.add('open');
+        if (p.classList && p.classList.contains('otree-area-body')) p.classList.add('open');
+        p = p.parentElement;
+      }
+      el.scrollIntoView({behavior:'smooth', block:'center'});
+    }
+  });
+  // Search leaves
+  document.querySelectorAll('.otree-leaf[data-name]').forEach(function(el){
+    if (el.getAttribute('data-name').toLowerCase().includes(ql)) {
+      el.style.border = '1px solid rgba(234,179,8,.6)';
+      el.style.boxShadow = '0 0 0 2px rgba(234,179,8,.25)';
+      var p = el.parentElement;
+      while (p) {
+        if (p.classList && p.classList.contains('otree-children')) p.classList.add('open');
+        if (p.classList && p.classList.contains('otree-area-body')) p.classList.add('open');
+        p = p.parentElement;
+      }
+      el.scrollIntoView({behavior:'smooth', block:'center'});
+      setTimeout(function(){ el.style.border=''; el.style.boxShadow=''; }, 3000);
+    }
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════
