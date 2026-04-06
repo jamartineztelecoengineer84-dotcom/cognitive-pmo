@@ -104,7 +104,7 @@ body{background:var(--bg);font-family:var(--font);color:var(--text);font-size:14
 #login-screen{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:#0a0e14;background-image:url('login-bg.png');background-size:cover;background-position:center;background-repeat:no-repeat;image-rendering:-webkit-optimize-contrast;}
 #login-screen .login-container{position:relative;z-index:1;}
 #login-screen .login-particles{display:none;}
-.login-container{width:420px;max-width:92vw;}
+.login-container{width:520px;max-width:92vw;}
 .login-card{background:rgba(22,27,34,.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:40px 36px 32px;box-shadow:0 25px 60px rgba(0,0,0,.5);}
 .login-logo{display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:32px;}
 .login-logo svg{width:48px;height:48px;color:var(--blue);}
@@ -122,6 +122,23 @@ body{background:var(--bg);font-family:var(--font);color:var(--text);font-size:14
 .login-error{background:var(--red-bg);color:var(--red);padding:10px 14px;border-radius:8px;font-size:13px;font-weight:500;margin-bottom:14px;display:none;border:1px solid rgba(248,81,73,.2);}
 .login-error.show{display:block;}
 .login-footer{text-align:center;margin-top:24px;font-size:11px;color:var(--text3);}
+/* ── Demo Tribunal Panel ── */
+.demo-panel{margin-top:20px;background:rgba(22,27,34,.7);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:18px 16px 14px;box-shadow:0 12px 40px rgba(0,0,0,.4);}
+.demo-title{text-align:center;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:8px;}
+.demo-title::before,.demo-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);}
+.demo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;}
+.demo-card{display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;cursor:pointer;transition:all .25s;position:relative;overflow:hidden;}
+.demo-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--dc-color,.2),transparent);opacity:0;transition:opacity .25s;}
+.demo-card:hover{border-color:rgba(255,255,255,.15);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3);}
+.demo-card:hover::before{opacity:1;}
+.demo-card:active{transform:translateY(0);}
+.demo-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;letter-spacing:.5px;flex-shrink:0;position:relative;z-index:1;border:2px solid rgba(255,255,255,.1);}
+.demo-info{flex:1;min-width:0;position:relative;z-index:1;}
+.demo-name{font-size:11px;font-weight:700;color:#e8e9ed;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.demo-role{font-size:9px;color:var(--text3);font-weight:600;margin-top:1px;}
+.demo-dest{font-size:8px;color:var(--cyan);font-weight:600;letter-spacing:.3px;margin-top:2px;opacity:.8;}
+.demo-card.loading .demo-avatar{animation:demo-pulse 1s infinite;}
+@keyframes demo-pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
 .login-footer a{color:var(--blue);text-decoration:none;}
 .login-particles{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;}
 .login-particle{position:absolute;animation:floatParticle 20s infinite ease-in-out;}
@@ -1055,6 +1072,40 @@ footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;disp
       <div class="login-footer">
         Cognitive PMO &mdash; <span data-i18n="login.footer">Role-Based Access Control</span><br>
         <span style="color:var(--text3);font-size:10px;">TFM &copy; 2025 &middot; Jose Antonio Martinez Victoria</span>
+      </div>
+    </div>
+    <!-- ═══ DEMO TRIBUNAL PANEL ═══ -->
+    <div class="demo-panel" id="demo-panel">
+      <div class="demo-title">Acceso r&aacute;pido &mdash; Demo Tribunal</div>
+      <div class="demo-grid">
+        <div class="demo-card" onclick="demoLogin('alejandro.vidal@cognitivepmo.com','index')" style="--dc-color:rgba(234,179,8,.15);">
+          <div class="demo-avatar" style="background:rgba(234,179,8,.15);color:#eab308;border-color:rgba(234,179,8,.3);">AV</div>
+          <div class="demo-info"><div class="demo-name">Alejandro Vidal</div><div class="demo-role">CEO</div><div class="demo-dest">&rarr; Vista Ejecutiva</div></div>
+        </div>
+        <div class="demo-card" onclick="demoLogin('carmen.delgado@cognitivepmo.com','index')" style="--dc-color:rgba(139,92,246,.15);">
+          <div class="demo-avatar" style="background:rgba(139,92,246,.15);color:#8b5cf6;border-color:rgba(139,92,246,.3);">CD</div>
+          <div class="demo-info"><div class="demo-name">Carmen Delgado</div><div class="demo-role">CTO</div><div class="demo-dest">&rarr; Vista Ejecutiva</div></div>
+        </div>
+        <div class="demo-card" onclick="demoLogin('patricia.lopez@cognitivepmo.com','gov-run')" style="--dc-color:rgba(248,81,73,.15);">
+          <div class="demo-avatar" style="background:rgba(248,81,73,.15);color:#f85149;border-color:rgba(248,81,73,.3);">PL</div>
+          <div class="demo-info"><div class="demo-name">Patricia L&oacute;pez</div><div class="demo-role">VP Operations</div><div class="demo-dest">&rarr; Gobernanza RUN</div></div>
+        </div>
+        <div class="demo-card" onclick="demoLogin('miguelangel.ruiz@cognitivepmo.com','gov-build')" style="--dc-color:rgba(45,126,247,.15);">
+          <div class="demo-avatar" style="background:rgba(45,126,247,.15);color:#2d7ef7;border-color:rgba(45,126,247,.3);">MR</div>
+          <div class="demo-info"><div class="demo-name">Miguel &Aacute;. Ruiz</div><div class="demo-role">VP Engineering</div><div class="demo-dest">&rarr; Gobernanza BUILD</div></div>
+        </div>
+        <div class="demo-card" onclick="demoLogin('pablo.rivas@cognitivepmo.com','index')" style="--dc-color:rgba(34,197,94,.15);">
+          <div class="demo-avatar" style="background:rgba(34,197,94,.15);color:#22c55e;border-color:rgba(34,197,94,.3);">PR</div>
+          <div class="demo-info"><div class="demo-name">Pablo Rivas</div><div class="demo-role">PMO Senior</div><div class="demo-dest">&rarr; Vista PMO</div></div>
+        </div>
+        <div class="demo-card" onclick="demoLogin('sandra.ortega@cognitivepmo.com','tech')" style="--dc-color:rgba(57,210,192,.15);">
+          <div class="demo-avatar" style="background:rgba(57,210,192,.15);color:#39d2c0;border-color:rgba(57,210,192,.3);">SO</div>
+          <div class="demo-info"><div class="demo-name">Sandra Ortega</div><div class="demo-role">T&eacute;cnico Senior N3</div><div class="demo-dest">&rarr; Tech Dashboard</div></div>
+        </div>
+        <div class="demo-card" onclick="demoLogin('adriana.suarez@cognitivepmo.com','tech')" style="--dc-color:rgba(188,140,255,.15);">
+          <div class="demo-avatar" style="background:rgba(188,140,255,.15);color:#bc8cff;border-color:rgba(188,140,255,.3);">AS</div>
+          <div class="demo-info"><div class="demo-name">Adriana Su&aacute;rez</div><div class="demo-role">T&eacute;cnico Junior N2</div><div class="demo-dest">&rarr; Tech Dashboard</div></div>
+        </div>
       </div>
     </div>
   </div>
@@ -3992,6 +4043,48 @@ async function doLogin() {
   }
   btn.disabled = false;
   btn.textContent = t('login.btn');
+}
+
+// ── Demo Login (quick access for tribunal) ──
+async function demoLogin(email, target) {
+  const card = event.currentTarget;
+  card.classList.add('loading');
+  try {
+    const res = await fetch(API_BASE + '/auth/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email: email, password: '12345'}),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      alert('Error: ' + (data.detail || 'Login fallido'));
+      card.classList.remove('loading');
+      return;
+    }
+    if (target === 'gov-run' || target === 'gov-build') {
+      localStorage.setItem('cpm_token', data.token);
+      window.location.href = '/' + target + '.html';
+    } else if (target === 'tech') {
+      localStorage.setItem('pmo_token', data.token);
+      localStorage.setItem('pmo_user', JSON.stringify(data.usuario));
+      localStorage.setItem('pmo_permisos', JSON.stringify(data.permisos || []));
+      localStorage.setItem('pmo_role', JSON.stringify(data.role));
+      window.location.href = '/tech-dashboard.html';
+    } else {
+      AUTH_TOKEN = data.token;
+      AUTH_USER = data.usuario;
+      AUTH_PERMISOS = data.permisos || [];
+      AUTH_ROLE = data.role;
+      localStorage.setItem('pmo_token', AUTH_TOKEN);
+      localStorage.setItem('pmo_user', JSON.stringify(AUTH_USER));
+      localStorage.setItem('pmo_permisos', JSON.stringify(AUTH_PERMISOS));
+      localStorage.setItem('pmo_role', JSON.stringify(AUTH_ROLE));
+      showApp();
+    }
+  } catch (e) {
+    alert('Error de conexión: ' + (e.message || e));
+    card.classList.remove('loading');
+  }
 }
 
 // ── Logout ──
