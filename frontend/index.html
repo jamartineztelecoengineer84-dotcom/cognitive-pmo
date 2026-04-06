@@ -2959,7 +2959,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;disp
             <button onclick="showCreateUserForm()" style="background:linear-gradient(135deg,#f59e0b,#d97706);border:none;color:#fff;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;" data-i18n="rbac.new_user">+ Nuevo Usuario</button>
           </div>
         </div>
-        <div id="rbac-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;"></div>
+        <div id="rbac-stats" style="margin-bottom:14px;"></div>
         <div style="overflow-x:auto;max-height:calc(100vh - 280px);overflow-y:auto;">
           <table class="data-table" style="width:100%;font-size:12px;" id="rbac-users-table">
             <thead><tr>
@@ -15117,6 +15117,14 @@ async function loadCmdbCompliance() {
 let _devLoaded = false;
 
 function devShowSection(id, el) {
+  // RBAC sections restricted to SUPERADMIN, CTO, CIO
+  if (id.startsWith('rbac-')) {
+    var rc = AUTH_ROLE ? AUTH_ROLE.code : '';
+    if (rc !== 'SUPERADMIN' && rc !== 'CTO' && rc !== 'CIO') {
+      alert('Acceso restringido: solo SUPERADMIN, CTO o CIO pueden gestionar RBAC.');
+      return;
+    }
+  }
   document.querySelectorAll('.dev-section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.dev-nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('dev-sec-'+id).classList.add('active');
@@ -15529,43 +15537,143 @@ async function loadRbacUsers() {
 }
 
 function renderRbacStats() {
-  const total = _rbacUsers.length;
-  const activos = _rbacUsers.filter(u=>u.activo).length;
-  const conLogin = _rbacUsers.filter(u=>u.ultimo_login).length;
-  const roles = new Set(_rbacUsers.map(u=>u.role_code)).size;
-  document.getElementById('rbac-stats').innerHTML =
-    '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:600;">'+t('rbac.total_users')+'</div><div style="font-size:22px;font-weight:800;color:var(--blue);">'+total+'</div></div>'+
-    '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:600;">'+t('rbac.active')+'</div><div style="font-size:22px;font-weight:800;color:var(--green);">'+activos+'</div></div>'+
-    '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:600;">'+t('rbac.logged_in')+'</div><div style="font-size:22px;font-weight:800;color:var(--orange);">'+conLogin+'</div></div>'+
-    '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:600;">'+t('rbac.roles_used')+'</div><div style="font-size:22px;font-weight:800;color:var(--purple);">'+roles+'</div></div>';
+  var total = _rbacUsers.length;
+  var activos = _rbacUsers.filter(function(u){return u.activo}).length;
+  var conLogin = _rbacUsers.filter(function(u){return u.ultimo_login}).length;
+  var roles = {};
+  _rbacUsers.forEach(function(u){ if(!roles[u.role_code]) roles[u.role_code]={code:u.role_code,color:u.role_color||'#6B7280',cnt:0}; roles[u.role_code].cnt++; });
+  var roleArr = Object.values(roles).sort(function(a,b){return b.cnt-a.cnt});
+  var maxRoleCnt = roleArr.length ? roleArr[0].cnt : 1;
+
+  // Count N-levels from cargo
+  var niveles = {N1:0,N2:0,N3:0,N4:0};
+  _rbacUsers.forEach(function(u){ var c=u.cargo||''; var m=c.match(/N([1-4])/); if(m) niveles['N'+m[1]]++; });
+  var maxNivel = Math.max(niveles.N1,niveles.N2,niveles.N3,niveles.N4,1);
+
+  var cardS = 'background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px 16px;';
+  var labelS = 'font-size:9px;color:var(--text3);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:6px;';
+  var numS = 'font-size:26px;font-weight:800;line-height:1;';
+
+  // Row 1: 4 stat cards
+  var h = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px;">';
+  h += '<div style="'+cardS+'"><div style="'+labelS+'">'+t('rbac.total_users')+'</div><div style="'+numS+'color:var(--blue);">'+total+'</div></div>';
+  h += '<div style="'+cardS+'"><div style="'+labelS+'">'+t('rbac.active')+'</div><div style="'+numS+'color:var(--green);">'+activos+'</div></div>';
+  h += '<div style="'+cardS+'"><div style="'+labelS+'">'+t('rbac.logged_in')+'</div><div style="'+numS+'color:var(--orange);">'+conLogin+'</div></div>';
+  h += '<div style="'+cardS+'"><div style="'+labelS+'">'+t('rbac.roles_used')+'</div><div style="'+numS+'color:var(--purple);">'+Object.keys(roles).length+'</div></div>';
+  h += '</div>';
+
+  // Row 2: Role distribution + N-level bars + Availability donut
+  h += '<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;margin-bottom:10px;">';
+
+  // Role distribution bars
+  h += '<div style="'+cardS+'"><div style="'+labelS+'">Distribución por Rol</div>';
+  roleArr.slice(0,8).forEach(function(r){
+    var pct = Math.round(r.cnt/total*100);
+    h += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">'+
+      '<div style="width:80px;font-size:9px;font-weight:600;color:'+r.color+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+r.code+'">'+r.code+'</div>'+
+      '<div style="flex:1;height:10px;background:rgba(255,255,255,.04);border-radius:5px;overflow:hidden;">'+
+      '<div style="width:'+Math.round(r.cnt/maxRoleCnt*100)+'%;height:100%;background:'+r.color+';border-radius:5px;transition:width .3s;"></div></div>'+
+      '<div style="width:24px;text-align:right;font-size:9px;font-weight:700;color:var(--text2);">'+r.cnt+'</div></div>';
+  });
+  h += '</div>';
+
+  // N-level bars
+  h += '<div style="'+cardS+'"><div style="'+labelS+'">Niveles N1-N4</div>';
+  ['N1','N2','N3','N4'].forEach(function(n){
+    var clr = n==='N1'?'#ef4444':n==='N2'?'#f59e0b':n==='N3'?'#22c55e':'#8b5cf6';
+    h += '<div style="margin-bottom:6px;"><div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;margin-bottom:2px;"><span style="color:'+clr+';">'+n+'</span><span style="color:var(--text2);">'+niveles[n]+'</span></div>'+
+      '<div style="height:8px;background:rgba(255,255,255,.04);border-radius:4px;overflow:hidden;">'+
+      '<div style="width:'+Math.round(niveles[n]/maxNivel*100)+'%;height:100%;background:'+clr+';border-radius:4px;"></div></div></div>';
+  });
+  h += '</div>';
+
+  // Availability donut (CSS-only)
+  h += '<div style="'+cardS+'"><div style="'+labelS+'">Disponibilidad</div>';
+  h += '<div id="rbac-avail-chart" style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;"><div style="color:var(--text3);font-size:10px;">Cargando...</div></div></div>';
+
+  h += '</div>';
+  document.getElementById('rbac-stats').innerHTML = h;
+
+  // Load availability data async
+  authFetch(API_BASE+'/team/tecnicos').then(function(r){return r.json()}).then(function(data){
+    var team = data.recursos || data || [];
+    if (!Array.isArray(team)) return;
+    var st = {};
+    team.forEach(function(t){ var e=t.estado_run||'DESCONOCIDO'; st[e]=(st[e]||0)+1; });
+    var tot = team.length || 1;
+    var colors = {DISPONIBLE:'#22c55e',OCUPADO:'#f59e0b',GUARDIA:'#3b82f6',VACACIONES:'#8b5cf6',BAJA:'#ef4444'};
+    var el = document.getElementById('rbac-avail-chart');
+    if (!el) return;
+    // CSS conic donut
+    var segments = [], offset = 0;
+    Object.keys(st).forEach(function(k){ var pct=st[k]/tot*100; segments.push((colors[k]||'#6b7280')+' '+offset+'% '+(offset+pct)+'%'); offset+=pct; });
+    var ah = '<div style="width:80px;height:80px;border-radius:50%;background:conic-gradient('+segments.join(',')+');position:relative;margin:0 auto;">'+
+      '<div style="position:absolute;inset:16px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:var(--text);">'+tot+'</div></div>';
+    ah += '<div style="display:flex;flex-wrap:wrap;gap:4px 8px;justify-content:center;">';
+    Object.keys(st).forEach(function(k){
+      ah += '<div style="display:flex;align-items:center;gap:3px;font-size:8px;font-weight:600;"><div style="width:7px;height:7px;border-radius:2px;background:'+(colors[k]||'#6b7280')+';"></div>'+k+' <span style="color:var(--text2);">'+st[k]+'</span></div>';
+    });
+    ah += '</div>';
+    el.innerHTML = ah;
+  }).catch(function(){});
 }
 
 function renderRbacUsers(users) {
-  const tbody = document.getElementById('rbac-users-tbody');
+  var tbody = document.getElementById('rbac-users-tbody');
   if (!users.length) {
     tbody.innerHTML = '<tr><td colspan="8" class="no-data">No se encontraron usuarios</td></tr>';
     return;
   }
-  tbody.innerHTML = users.map((u,i) => {
-    const initials = (u.nombre_completo||'?').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
-    const roleColor = u.role_color || '#6B7280';
-    const loginDate = u.ultimo_login ? new Date(u.ultimo_login).toLocaleDateString(LANG==='en'?'en-US':'es-ES',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '<span style="color:var(--text3);">'+t('rbac.never')+'</span>';
-    return '<tr>'+
-      '<td style="color:var(--text3);">'+(i+1)+'</td>'+
+  // Detect silo from cargo/department
+  function getSiloColor(u){
+    var c = ((u.cargo||'')+(u.departamento||'')).toLowerCase();
+    if(c.includes('backend')||c.includes('bbdd')||c.includes('datos'))return'#f97316';
+    if(c.includes('frontend')||c.includes('qa'))return'#06b6d4';
+    if(c.includes('devops')||c.includes('cloud'))return'#8b5cf6';
+    if(c.includes('redes')||c.includes('infraestr'))return'#3b82f6';
+    if(c.includes('seguridad')||c.includes('soc')||c.includes('noc'))return'#ef4444';
+    if(c.includes('soporte')||c.includes('service'))return'#22c55e';
+    if(c.includes('windows')||c.includes('sistemas'))return'#06b6d4';
+    return u.role_color||'#6B7280';
+  }
+  tbody.innerHTML = users.map(function(u,i) {
+    var initials = (u.nombre_completo||'?').split(' ').map(function(w){return w[0]}).join('').substring(0,2).toUpperCase();
+    var rc = u.role_color || '#6B7280';
+    var sc = getSiloColor(u);
+    var loginDate = u.ultimo_login ? new Date(u.ultimo_login).toLocaleDateString(LANG==='en'?'en-US':'es-ES',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '<span style="color:var(--text3);">'+t('rbac.never')+'</span>';
+    // Status badge with more detail
+    var statusBadge;
+    if (!u.activo) {
+      statusBadge = '<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700;background:rgba(239,68,68,.1);color:#ef4444;border:1px solid rgba(239,68,68,.2);"><span style="width:6px;height:6px;border-radius:50%;background:#ef4444;"></span>'+t('common.inactive')+'</span>';
+    } else if (u.ultimo_login && (Date.now()-new Date(u.ultimo_login).getTime())<86400000) {
+      statusBadge = '<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700;background:rgba(34,197,94,.1);color:#22c55e;border:1px solid rgba(34,197,94,.2);"><span style="width:6px;height:6px;border-radius:50%;background:#22c55e;"></span>Online</span>';
+    } else {
+      statusBadge = '<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700;background:rgba(107,114,128,.1);color:#9ca3af;border:1px solid rgba(107,114,128,.2);"><span style="width:6px;height:6px;border-radius:50%;background:#9ca3af;"></span>'+t('common.active')+'</span>';
+    }
+    // N-level badge
+    var nLevel = '';
+    var cm = (u.cargo||'').match(/N([1-4])/);
+    if(cm){
+      var nc = {1:'#ef4444',2:'#f59e0b',3:'#22c55e',4:'#8b5cf6'}[cm[1]];
+      nLevel = '<span style="font-size:8px;font-weight:800;padding:1px 4px;border-radius:3px;background:'+nc+'18;color:'+nc+';margin-left:4px;">N'+cm[1]+'</span>';
+    }
+    return '<tr style="transition:background .15s;" onmouseenter="this.style.background=\'rgba(255,255,255,.02)\'" onmouseleave="this.style.background=\'\'">'+
+      '<td style="color:var(--text3);font-size:10px;">'+(i+1)+'</td>'+
       '<td><div style="display:flex;align-items:center;gap:8px;">'+
-        '<div style="width:28px;height:28px;border-radius:50%;background:'+roleColor+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0;">'+initials+'</div>'+
-        '<div><div style="font-weight:600;">'+escHtml(u.nombre_completo)+'</div>'+
-        (u.id_recurso ? '<span style="font-size:10px;color:var(--cyan);font-family:var(--mono);">'+escHtml(u.id_recurso)+'</span>' : '')+
-        (u.id_directivo ? '<span style="font-size:10px;color:var(--orange);font-family:var(--mono);">'+escHtml(u.id_directivo)+'</span>' : '')+
-        '</div></div></td>'+
-      '<td style="font-family:var(--mono);font-size:11px;">'+escHtml(u.email)+'</td>'+
-      '<td><span style="padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;background:'+roleColor+'22;color:'+roleColor+';">'+escHtml(u.role_code)+'</span></td>'+
+        '<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,'+sc+'22,'+sc+'44);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:'+sc+';flex-shrink:0;border:2px solid '+sc+'33;">'+initials+'</div>'+
+        '<div><div style="font-weight:600;font-size:12px;">'+escHtml(u.nombre_completo)+nLevel+'</div>'+
+        '<div style="display:flex;gap:4px;align-items:center;">'+
+        (u.id_recurso ? '<span style="font-size:9px;padding:1px 5px;border-radius:3px;background:rgba(6,182,212,.1);color:var(--cyan);font-family:var(--mono);border:1px solid rgba(6,182,212,.15);">'+escHtml(u.id_recurso)+'</span>' : '')+
+        (u.id_directivo ? '<span style="font-size:9px;padding:1px 5px;border-radius:3px;background:rgba(240,136,62,.1);color:var(--orange);font-family:var(--mono);border:1px solid rgba(240,136,62,.15);">'+escHtml(u.id_directivo)+'</span>' : '')+
+        '</div></div></div></td>'+
+      '<td style="font-family:var(--mono);font-size:10px;color:var(--text2);">'+escHtml(u.email)+'</td>'+
+      '<td><span style="padding:2px 8px;border-radius:6px;font-size:9px;font-weight:700;background:'+rc+'18;color:'+rc+';border:1px solid '+rc+'25;">'+escHtml(u.role_code)+'</span></td>'+
       '<td style="font-size:11px;">'+escHtml(u.departamento||'-')+'</td>'+
       '<td style="font-size:11px;">'+loginDate+'</td>'+
-      '<td>'+(u.activo ? '<span style="color:var(--green);font-weight:700;font-size:11px;">'+t('common.active')+'</span>' : '<span style="color:var(--red);font-weight:700;font-size:11px;">'+t('common.inactive')+'</span>')+'</td>'+
+      '<td>'+statusBadge+'</td>'+
       '<td><div style="display:flex;gap:4px;">'+
-        '<button onclick="showEditUserForm('+u.id_usuario+')" style="background:var(--blue-bg);border:1px solid rgba(45,126,247,.2);color:var(--blue);border-radius:4px;padding:3px 8px;font-size:10px;font-weight:600;cursor:pointer;" title="'+t('common.edit')+'">'+t('common.edit')+'</button>'+
-        '<button onclick="resetUserPass('+u.id_usuario+',\''+escHtml(u.nombre_completo)+'\')" style="background:var(--orange-bg);border:1px solid rgba(240,136,62,.2);color:var(--orange);border-radius:4px;padding:3px 8px;font-size:10px;font-weight:600;cursor:pointer;" title="Reset Pass">'+t('rbac.reset_pass')+'</button>'+
+        '<button onclick="showEditUserForm('+u.id_usuario+')" style="background:rgba(45,126,247,.08);border:1px solid rgba(45,126,247,.2);color:var(--blue);border-radius:6px;padding:4px 10px;font-size:10px;font-weight:600;cursor:pointer;transition:all .15s;" onmouseenter="this.style.background=\'rgba(45,126,247,.15)\'" onmouseleave="this.style.background=\'rgba(45,126,247,.08)\'" title="'+t('common.edit')+'">'+t('common.edit')+'</button>'+
+        '<button onclick="resetUserPass('+u.id_usuario+',\''+escHtml(u.nombre_completo)+'\')" style="background:rgba(240,136,62,.08);border:1px solid rgba(240,136,62,.2);color:var(--orange);border-radius:6px;padding:4px 10px;font-size:10px;font-weight:600;cursor:pointer;transition:all .15s;" onmouseenter="this.style.background=\'rgba(240,136,62,.15)\'" onmouseleave="this.style.background=\'rgba(240,136,62,.08)\'" title="Reset">'+t('rbac.reset_pass')+'</button>'+
       '</div></td>'+
     '</tr>';
   }).join('');
