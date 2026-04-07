@@ -1926,10 +1926,13 @@ function bgApplyRole(roleKey){
 
 // ═══════════════ LOGIN / LOGOUT ═══════════════
 document.querySelectorAll('.bg-login-card').forEach(c=>{
-  c.addEventListener('click',()=>{
+  c.addEventListener('click', async ()=>{
     const role = c.dataset.role;
     bgApplyRole(role);
     document.getElementById('bg-login-overlay').classList.add('hidden');
+    // P97 FASE 5.1: login REAL contra /auth/login antes de cargar datos
+    if(typeof p96AuthLogin==='function'){ await p96AuthLogin(role); }
+    if(typeof p96BootstrapData==='function'){ await p96BootstrapData(); }
   });
 });
 
@@ -2150,23 +2153,263 @@ document.querySelectorAll('.alert-block[data-bg-modal-type]').forEach(block=>{
 });
 
 // ═══════════════ GOBERNADORES 360 ═══════════════
-const bgGovernorsData = [
-  {id:'GOV-01',name:'Pablo Rivas',          role:'PMO_SENIOR',     silo:'CROSS',        avCls:'bl', projs:8, bac:4.21, cpi:0.96, spi:0.98, cap:95, risk:42, ia:78, status:'or', spark:[12,18,15,22,28,35], team:6, ai_lead:true,  desc:'PMO Senior con responsabilidad cross-silo. Lleva 8 proyectos BUILD activos en IT-DATA, IT-CLOUD y oficinas.'},
-  {id:'GOV-02',name:'Javier Iglesias',      role:'DIRECTOR_INFRA', silo:'IT-INFRA',     avCls:'gn', projs:6, bac:2.87, cpi:1.02, spi:0.99, cap:80, risk:24, ia:71, status:'gn', spark:[18,22,28,30,32,38], team:9, ai_lead:true,  desc:'Director de Infraestructura. Lleva la renovación del backbone, NAC y capacidad de servidores.'},
-  {id:'GOV-03',name:'Elena Marín',          role:'DIRECTOR_SEC',   silo:'IT-SEGURIDAD', avCls:'rd', projs:5, bac:1.92, cpi:1.05, spi:1.00, cap:85, risk:28, ia:69, status:'gn', spark:[14,17,21,24,28,30], team:7, ai_lead:true,  desc:'Directora de Seguridad. Lleva el SOC unificado SIEM/SOAR y el cumplimiento DORA.'},
-  {id:'GOV-04',name:'Marta Núñez',          role:'TEAM_LEAD',      silo:'IT-INFRA',     avCls:'or', projs:4, bac:1.54, cpi:0.91, spi:0.94, cap:90, risk:38, ia:82, status:'or', spark:[16,20,22,26,28,32], team:8, ai_lead:false, desc:'Team Lead Infra Core. Coordina el equipo que ejecuta los proyectos de Javier Iglesias.'},
-  {id:'GOV-05',name:'Raúl Santos',          role:'VP_OPERATIONS',  silo:'CROSS',        avCls:'pu', projs:7, bac:3.48, cpi:0.97, spi:0.96, cap:75, risk:35, ia:65, status:'or', spark:[20,18,22,25,27,28], team:32,ai_lead:false, desc:'VP Operations. Cubre IT-INFRA + IT-RED + IT-CLOUD + IT-VIRTUAL + IT-STORAGE.'},
-  {id:'GOV-06',name:'Andrés Vela',          role:'PM_BUILD',       silo:'IT-DATA',      avCls:'bl', projs:5, bac:2.14, cpi:0.88, spi:0.92, cap:100,risk:48, ia:75, status:'or', spark:[10,14,18,20,22,24], team:4, ai_lead:false, desc:'PM Build de la rama IT-DATA. Microsoft Fabric, lakehouse y nuevo modelo semántico.'},
-  {id:'GOV-07',name:'Lorena Castillo',      role:'PMO_JUNIOR',     silo:'IT-RED',       avCls:'gn', projs:3, bac:0.92, cpi:1.03, spi:1.01, cap:65, risk:18, ia:88, status:'gn', spark:[8,12,16,20,24,28],  team:3, ai_lead:false, desc:'PMO Junior IT-RED. Apoya a Javier en proyectos menores y campañas de auditoría.'},
-  {id:'GOV-08',name:'Sergio Mateos',        role:'PM_BUILD',       silo:'IT-CLOUD',     avCls:'rd', projs:4, bac:1.74, cpi:0.65, spi:0.86, cap:110,risk:74, ia:62, status:'rd', spark:[22,18,15,12,10,8],  team:5, ai_lead:false, desc:'PM Build IT-CLOUD. OpenShift on-premise. Sobrecoste 53%, retraso 3 semanas.'},
-  {id:'GOV-09',name:'Nuria Beltrán',        role:'PM_BUILD',       silo:'IT-VIRTUAL',   avCls:'bl', projs:3, bac:1.21, cpi:0.99, spi:1.00, cap:70, risk:22, ia:60, status:'gn', spark:[16,18,20,22,24,26], team:4, ai_lead:false, desc:'PM Build IT-VIRTUAL. Migración Broadcom vSphere y proyecto Proxmox piloto.'},
-  {id:'GOV-10',name:'Diego Soler',          role:'TEAM_LEAD',      silo:'IT-SEGURIDAD', avCls:'or', projs:3, bac:1.12, cpi:0.93, spi:0.95, cap:90, risk:36, ia:70, status:'or', spark:[14,16,18,20,22,24], team:5, ai_lead:false, desc:'Team Lead SecOps. Operación del SOC y respuesta ante incidentes.'},
-  {id:'GOV-11',name:'Inés Carmona',         role:'PM_BUILD',       silo:'IT-STORAGE',   avCls:'gn', projs:3, bac:1.05, cpi:1.04, spi:1.02, cap:75, risk:20, ia:64, status:'gn', spark:[12,14,18,21,25,28], team:3, ai_lead:false, desc:'PM Build IT-STORAGE. Renovación cabinas NetApp y backup Rubrik.'},
-  {id:'GOV-12',name:'Tomás Aranda',         role:'PMO_JUNIOR',     silo:'IT-DATA',      avCls:'or', projs:2, bac:0.65, cpi:0.94, spi:0.97, cap:60, risk:30, ia:80, status:'or', spark:[8,10,13,16,18,20],  team:2, ai_lead:false, desc:'PMO Junior IT-DATA. Apoyo en proyectos de gobierno del dato y catálogo.'},
-  {id:'GOV-13',name:'Beatriz Lago',         role:'PM_BUILD',       silo:'IT-INFRA',     avCls:'gn', projs:4, bac:1.51, cpi:1.06, spi:1.03, cap:85, risk:22, ia:73, status:'gn', spark:[14,18,22,24,26,30], team:6, ai_lead:false, desc:'PM Build IT-INFRA. Capacity & DCIM, refresco de servidores HPE.'},
-  {id:'GOV-14',name:'Rubén Ortiz',          role:'TEAM_LEAD',      silo:'IT-RED',       avCls:'pu', projs:3, bac:1.02, cpi:0.99, spi:0.98, cap:80, risk:26, ia:67, status:'gn', spark:[16,17,19,22,24,25], team:6, ai_lead:false, desc:'Team Lead Red Backbone. Operación L2/L3 y monitorización SDN.'},
-  {id:'GOV-15',name:'Carmen Delgado',       role:'CTO',            silo:'CROSS',        avCls:'pu', projs:12,bac:8.40, cpi:0.93, spi:0.95, cap:100,risk:55, ia:74, status:'rd', spark:[24,22,20,22,21,19], team:75,ai_lead:true,  desc:'CTO. Acceso económico completo. Lleva los 12 proyectos estratégicos del banco. Capacidad saturada.'}
-];
+
+// ═══════════════════════════════════════════════════════════════
+// ═══ P97 FASE 5 — Loaders + adapters /api/p96/*               ═══
+// ═══════════════════════════════════════════════════════════════
+// IMPORTANTE: el JSON del API usa snake_case (id_gov, av_cls, descripcion)
+// y los renders del mockup esperan camelCase corto (id, avCls, desc).
+// Por eso cada loader incluye un adapter que normaliza la forma del payload
+// SIN tocar las funciones render. Es la única forma de respetar las dos
+// zonas congeladas (backend p96_router.py + funciones render del mockup).
+
+// ─── Auth real contra /auth/login (P97 F5.1) ───
+const P96_ROLE_TO_EMAIL = {
+  'SUPERADMIN':     'admin',
+  'CEO':            'alejandro.vidal@cognitivepmo.com',
+  'CFO':            'francisco.herrera@cognitivepmo.com',
+  'CTO':            'carmen.delgado@cognitivepmo.com',
+  'CIO':            'roberto.navarro@cognitivepmo.com',
+  'CISO':           'elena.marquez@cognitivepmo.com',
+  'VP_PMO':         'gonzalo.fernandez@cognitivepmo.com',
+  'VP_ENGINEERING': 'miguelangel.ruiz@cognitivepmo.com',
+  'VP_OPERATIONS':  'patricia.lopez@cognitivepmo.com',
+  'DIRECTOR_INFRA': 'javier.iglesias@cognitivepmo.com',
+  'DIRECTOR_SEC':   'marta.fuentes@cognitivepmo.com',
+  'DIRECTOR_DATA':  'oscar.blanco@cognitivepmo.com',
+  'DIRECTOR_IT':    'laura.sanz@cognitivepmo.com',
+  'PMO_SENIOR':     'pablo.rivas@cognitivepmo.com',
+  'PMO_JUNIOR':     'pablo.rivas@cognitivepmo.com',
+  'AUDITOR':        'auditor.externo@cognitivepmo.com',
+  'TEAM_LEAD':      'diana.sanchez@cognitivepmo.com',
+  'QA_LEAD':        'diana.sanchez@cognitivepmo.com',
+  'DEVOPS_LEAD':    'diana.sanchez@cognitivepmo.com',
+  'TECH_SENIOR':    'sandra.ortega@cognitivepmo.com',
+  'TECH_JUNIOR':    'adriana.suarez@cognitivepmo.com',
+  'OBSERVADOR':     'auditor.externo@cognitivepmo.com',
+  'READONLY':       'auditor.externo@cognitivepmo.com',
+};
+
+async function p96AuthLogin(roleCode){
+  const email = P96_ROLE_TO_EMAIL[roleCode];
+  if(!email){ console.warn('[p96] no email mapping for role', roleCode); return false; }
+  try{
+    const r = await fetch('/auth/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email, password: '12345'})
+    });
+    if(!r.ok){ console.warn('[p96] auth/login failed', r.status, 'for', email); return false; }
+    const data = await r.json();
+    if(data && data.token){
+      sessionStorage.setItem('p96_token', data.token);
+      console.log('[p96] login OK as', roleCode, '·', email);
+      return true;
+    }
+    return false;
+  }catch(e){ console.warn('[p96] auth/login err', e); return false; }
+}
+
+function p96Fetch(url, opts){
+  const tok = sessionStorage.getItem('p96_token');
+  const headers = Object.assign({}, (opts && opts.headers) || {});
+  if(tok){ headers['Authorization'] = 'Bearer ' + tok; }
+  return fetch(url, Object.assign({}, opts || {}, {headers}));
+}
+
+let bgGovernorsData = [];
+async function p96LoadGovernors(){
+  try{
+    const r = await p96Fetch('/api/p96/governors');
+    if(!r.ok){ console.warn('[p96] governors', r.status); return; }
+    const data = await r.json();
+    bgGovernorsData = data.map(g => ({
+      id: g.id_gov, name: g.nombre, role: g.role_code, silo: g.silo,
+      avCls: g.av_cls, projs: g.projs, bac: parseFloat(g.bac),
+      cpi: parseFloat(g.cpi), spi: parseFloat(g.spi),
+      cap: g.cap, risk: g.risk, ia: g.ia, status: g.status,
+      spark: g.spark || [], team: g.team, ai_lead: g.ai_lead,
+      desc: g.descripcion
+    }));
+  }catch(e){ console.warn('[p96] governors fetch err', e); }
+}
+
+let bgRunMatrix = {};
+async function p96LoadRunMatrix(){
+  try{
+    const r = await p96Fetch('/api/p96/run/matrix');
+    if(!r.ok){ console.warn('[p96] run/matrix', r.status); return; }
+    const rows = await r.json();
+    // API devuelve array de filas; el mockup espera bgRunMatrix[layer][crit] = {cis,opex,inc,heat}
+    const m = {};
+    rows.forEach(row => {
+      if(!m[row.layer]) m[row.layer] = {};
+      m[row.layer][row.crit] = {
+        cis: row.cis, opex: parseFloat(row.opex), inc: row.inc, heat: row.heat
+      };
+    });
+    bgRunMatrix = m;
+  }catch(e){ console.warn('[p96] run/matrix fetch err', e); }
+}
+
+let bgPortfolio = [];
+async function p96LoadBuildPortfolio(){
+  try{
+    const r = await p96Fetch('/api/p96/build/portfolio');
+    if(!r.ok){ console.warn('[p96] build/portfolio', r.status); return; }
+    const data = await r.json();
+    // API devuelve array de objetos con prio en texto. Mockup espera tuplas con prio numérica.
+    const prioMap = {'Crítica':4, 'Critica':4, 'Alta':3, 'Media':2, 'Baja':1};
+    bgPortfolio = data.map(p => [
+      p.id_proyecto,
+      p.nombre,
+      p.silo,
+      p.pm,
+      parseInt(p.bac_k) || 0,
+      p.gate,
+      parseFloat(p.cpi),
+      parseFloat(p.spi),
+      prioMap[p.prio] || 2,
+      parseInt(p.risk) || 0,
+      parseInt(p.prog) || 0,
+      !!p.ai_lead
+    ]);
+  }catch(e){ console.warn('[p96] build/portfolio fetch err', e); }
+}
+
+let bgPulseKPIs = [];
+async function p96LoadPulseKPIs(){
+  try{
+    const r = await p96Fetch('/api/p96/pulse/kpis');
+    if(!r.ok){ console.warn('[p96] pulse/kpis', r.status); return; }
+    bgPulseKPIs = await r.json();   // schema MATCH directo (k,lb,vl,un,rag,sub,tt)
+  }catch(e){ console.warn('[p96] pulse/kpis fetch err', e); }
+}
+
+let bgPulseAlerts = [];
+async function p96LoadPulseAlerts(){
+  try{
+    const r = await p96Fetch('/api/p96/pulse/alerts');
+    if(!r.ok){ console.warn('[p96] pulse/alerts', r.status); return; }
+    const data = await r.json();
+    bgPulseAlerts = data.map(a => ({
+      id: a.id, sev: a.sev, title: a.title,
+      desc: a.descripcion, meta: a.meta || [], ow: a.ow
+    }));
+  }catch(e){ console.warn('[p96] pulse/alerts fetch err', e); }
+}
+
+let bgPulseBlocks = [];
+async function p96LoadPulseBlocks(){
+  try{
+    const r = await p96Fetch('/api/p96/pulse/blocks');
+    if(!r.ok){ console.warn('[p96] pulse/blocks', r.status); return; }
+    const data = await r.json();
+    bgPulseBlocks = data.map(b => ({
+      id: b.id, sev: b.sev, title: b.title,
+      desc: b.descripcion, pj: b.pj, own: b.own, days: b.days
+    }));
+  }catch(e){ console.warn('[p96] pulse/blocks fetch err', e); }
+}
+
+let bgPulseDecs = [];
+async function p96LoadPulseDecisions(){
+  try{
+    const r = await p96Fetch('/api/p96/pulse/decisions');
+    if(!r.ok){ console.warn('[p96] pulse/decisions', r.status); return; }
+    const data = await r.json();
+    bgPulseDecs = data.map(d => ({
+      id: d.id, title: d.title, desc: d.descripcion,
+      own: d.own, amt: d.amt, due: d.due, urg: d.urg
+    }));
+  }catch(e){ console.warn('[p96] pulse/decisions fetch err', e); }
+}
+
+let bgPulseResps = [];
+async function p96LoadPulseResponsables(){
+  try{
+    const r = await p96Fetch('/api/p96/pulse/responsables');
+    if(!r.ok){ console.warn('[p96] pulse/responsables', r.status); return; }
+    const data = await r.json();
+    bgPulseResps = data.map(r => ({
+      nm: r.nm, rl: r.rl, ct: r.ct, ini: r.ini,
+      kpiVl: r.kpi_vl, kpiLb: r.kpi_lb, lg: r.lg
+    }));
+  }catch(e){ console.warn('[p96] pulse/responsables fetch err', e); }
+}
+
+let bgPulseHitos = [];
+async function p96LoadPulseHitos(){
+  try{
+    const r = await p96Fetch('/api/p96/pulse/hitos');
+    if(!r.ok){ console.warn('[p96] pulse/hitos', r.status); return; }
+    const data = await r.json();
+    bgPulseHitos = data.map(h => ({
+      dt: h.dt, wk: h.wk, title: h.title,
+      desc: h.descripcion, tg: h.tg, tgt: h.tgt
+    }));
+  }catch(e){ console.warn('[p96] pulse/hitos fetch err', e); }
+}
+
+let bgStratData = { dafo:null, pestle:null, porter:null, okr:null };
+async function p96LoadStrategy(){
+  const ks = ['dafo','pestle','porter','okr'];
+  try{
+    const results = await Promise.all(ks.map(k =>
+      p96Fetch(`/api/p96/strategy/${k}`)
+        .then(r => r.ok ? r.json() : null)
+        .catch(() => null)
+    ));
+    ks.forEach((k,i) => { bgStratData[k] = results[i]; });
+  }catch(e){ console.warn('[p96] strategy fetch err', e); }
+}
+
+// Lazy loaders (no se ejecutan en bootstrap, sólo on-demand desde clicks)
+async function p96LoadRunCisByLayer(layer){
+  try{
+    const r = await p96Fetch(`/api/p96/run/cis/${encodeURIComponent(layer)}`);
+    return r.ok ? await r.json() : [];
+  }catch(e){ console.warn('[p96] run/cis fetch err', e); return []; }
+}
+async function p96LoadRunIncidents(){
+  try{
+    const r = await p96Fetch('/api/p96/run/incidents');
+    return r.ok ? await r.json() : [];
+  }catch(e){ console.warn('[p96] run/incidents fetch err', e); return []; }
+}
+async function p96LoadProjectDetail(id){
+  try{
+    const r = await p96Fetch(`/api/p96/build/project/${encodeURIComponent(id)}`);
+    return r.ok ? await r.json() : null;
+  }catch(e){ console.warn('[p96] project detail fetch err', e); return null; }
+}
+
+// Bootstrap unificado: se llama tras login en bgApplyRole
+async function p96BootstrapData(){
+  await Promise.all([
+    p96LoadGovernors(),
+    p96LoadRunMatrix(),
+    p96LoadBuildPortfolio(),
+    p96LoadPulseKPIs(),
+    p96LoadPulseAlerts(),
+    p96LoadPulseBlocks(),
+    p96LoadPulseDecisions(),
+    p96LoadPulseResponsables(),
+    p96LoadPulseHitos(),
+    p96LoadStrategy(),
+  ]);
+  // Re-render de las pestañas que se auto-pintan al cargar el script
+  if(typeof bgRenderGobGrid==='function')  bgRenderGobGrid();
+  if(typeof bgRenderHeatmap==='function')  bgRenderHeatmap();
+  if(typeof bgRenderCartera==='function')  bgRenderCartera();
+  if(typeof bgRenderPulso==='function')    bgRenderPulso();
+  console.log('[p96] bootstrap complete: governors=', bgGovernorsData.length,
+              'portfolio=', bgPortfolio.length, 'kpis=', bgPulseKPIs.length);
+}
+// ═══════════════════════════════════════════════════════════════
+// ═══ END P97 FASE 5                                            ═══
+// ═══════════════════════════════════════════════════════════════
+
 
 function bgGobBarColor(v,inv){
   if(inv){if(v>=70)return 'var(--acc-rd)';if(v>=40)return 'var(--acc-or)';return 'var(--acc-gn)';}
@@ -2338,16 +2581,6 @@ const bgRunCrits = [
   {k:'C4', label:'C4', sub:'bajo'}
 ];
 // Matriz [capa][criticidad] = {cis, opex_m(€/mes), inc(abiertas), heat(0-100)}
-const bgRunMatrix = {
-  INFRA: {C1:{cis:8, opex:78000, inc:3, heat:62},  C2:{cis:12,opex:54000,inc:2,heat:45}, C3:{cis:14,opex:28000,inc:1,heat:22}, C4:{cis:6, opex:9000, inc:0,heat:8}},
-  RED:   {C1:{cis:6, opex:52000, inc:2, heat:55},  C2:{cis:9, opex:34000,inc:3,heat:48}, C3:{cis:11,opex:18000,inc:1,heat:20}, C4:{cis:4, opex:5500, inc:0,heat:6}},
-  CLOUD: {C1:{cis:5, opex:92000, inc:4, heat:85},  C2:{cis:8, opex:61000,inc:3,heat:58}, C3:{cis:10,opex:35000,inc:2,heat:30}, C4:{cis:5, opex:12000,inc:1,heat:14}},
-  VIRT:  {C1:{cis:3, opex:41000, inc:1, heat:40},  C2:{cis:7, opex:29000,inc:2,heat:38}, C3:{cis:9, opex:15000,inc:0,heat:16}, C4:{cis:4, opex:6000, inc:0,heat:5}},
-  STO:   {C1:{cis:4, opex:58000, inc:2, heat:52},  C2:{cis:6, opex:38000,inc:1,heat:32}, C3:{cis:8, opex:19000,inc:1,heat:18}, C4:{cis:3, opex:7500, inc:0,heat:7}},
-  SEC:   {C1:{cis:7, opex:64000, inc:3, heat:72},  C2:{cis:5, opex:32000,inc:2,heat:42}, C3:{cis:6, opex:17000,inc:1,heat:19}, C4:{cis:2, opex:4500, inc:0,heat:5}},
-  DATA:  {C1:{cis:4, opex:88000, inc:3, heat:78},  C2:{cis:6, opex:48000,inc:2,heat:44}, C3:{cis:7, opex:21000,inc:1,heat:22}, C4:{cis:3, opex:6800, inc:0,heat:8}},
-  APPS:  {C1:{cis:5, opex:72000, inc:4, heat:80},  C2:{cis:8, opex:42000,inc:3,heat:50}, C3:{cis:9, opex:22000,inc:2,heat:26}, C4:{cis:4, opex:8500, inc:1,heat:12}}
-};
 
 // CIs representativos (una muestra por celda)
 const bgCIsData = {
@@ -2631,77 +2864,6 @@ function bgRenderIncident(id){
 
 // ═══════════════ CARTERA BUILD ═══════════════
 // [id, name, silo, pm, bac(k€), gate, cpi, spi, prio, risk, prog, ai]
-const bgPortfolio = [
-  // Los 5 que ya tenían datos ricos en bgProjectsData
-  ['PRJ-MSF','Microsoft Fabric — nuevo entorno analítico','IT-DATA','Pablo Rivas',1178,'G2',0.94,0.87,4,3,35,true],
-  ['PRJ-BBN','Renovación Backbone Core de red','IT-RED','Javier Iglesias',765,'G3',1.07,1.03,4,2,70,true],
-  ['PRJ-OSP','OpenShift on-premise · plataforma','IT-CLOUD','Sergio Mateos',650,'G2',0.65,0.86,4,4,30,false],
-  ['PRJ-NAC','Clearpass NAC · oficinas','IT-RED','Javier Iglesias',640,'G3',1.05,1.00,3,2,75,false],
-  ['PRJ-SOC','SOC unificado SIEM/SOAR','IT-SEGURIDAD','Elena Marín',512,'G3',1.05,1.00,4,2,70,true],
-  // IT-INFRA (10 nuevos)
-  ['PRJ-HPE','Renovación servidores HPE ProLiant Gen11','IT-INFRA','Beatriz Lago',485,'G3',1.02,0.99,3,2,60,true],
-  ['PRJ-ADF','Upgrade Active Directory forest 2025','IT-INFRA','Javier Iglesias',210,'G4',0.98,1.01,3,2,85,false],
-  ['PRJ-DCI','Implantación DCIM Nlyte','IT-INFRA','Beatriz Lago',320,'G2',0.95,0.92,2,2,40,true],
-  ['PRJ-CAP','Capacity planning automated','IT-INFRA','Beatriz Lago',155,'G1',1.00,1.00,2,1,15,true],
-  ['PRJ-ROC','RHEL 9 → Rocky Linux migration','IT-INFRA','Javier Iglesias',180,'G2',0.97,0.95,3,3,45,false],
-  ['PRJ-PRO','Prometheus + Grafana stack corporate','IT-INFRA','Marta Núñez',145,'G3',1.04,1.02,2,1,70,true],
-  ['PRJ-TAN','Tanium endpoint management','IT-INFRA','Marta Núñez',220,'G4',1.00,0.98,3,2,80,false],
-  ['PRJ-INT','SCCM → Intune migration','IT-INFRA','Marta Núñez',195,'G2',0.92,0.90,2,3,35,false],
-  ['PRJ-PXY','Proxy corporate upgrade','IT-INFRA','Marta Núñez',120,'G3',1.01,1.00,1,1,65,false],
-  ['PRJ-NTP','Stratum NTP redundant','IT-INFRA','Marta Núñez',45,'G5',1.06,1.05,1,1,100,false],
-  // IT-RED (6 nuevos)
-  ['PRJ-SDW','SD-WAN rollout 38 oficinas','IT-RED','Javier Iglesias',420,'G2',0.93,0.91,3,3,40,true],
-  ['PRJ-VPN','VPN GlobalProtect Palo Alto','IT-RED','Rubén Ortiz',185,'G3',1.02,1.00,3,2,65,false],
-  ['PRJ-DNS','Infoblox DDI modernization','IT-RED','Rubén Ortiz',220,'G2',0.98,0.96,2,2,35,false],
-  ['PRJ-WIF','WiFi 6E corporate refresh','IT-RED','Rubén Ortiz',240,'G3',1.03,1.01,2,2,60,false],
-  ['PRJ-ISE','Cisco ISE RADIUS','IT-RED','Carlos Vega',165,'G3',0.99,0.98,2,2,55,false],
-  ['PRJ-F5L','F5 Big-IP load balancer refresh','IT-RED','Carlos Vega',195,'G2',0.95,0.94,3,2,40,false],
-  // IT-CLOUD (8 nuevos)
-  ['PRJ-AZR','Azure landing zone enterprise','IT-CLOUD','Sergio Mateos',580,'G3',0.91,0.93,4,3,55,true],
-  ['PRJ-AWS','AWS pilot digital bank','IT-CLOUD','Hugo Ramos',340,'G1',1.00,1.00,3,3,20,true],
-  ['PRJ-OCI','Oracle Cloud para DW','IT-CLOUD','Hugo Ramos',285,'G2',0.88,0.90,3,3,35,false],
-  ['PRJ-GCP','GCP data lake POC','IT-CLOUD','Sergio Mateos',120,'G1',1.00,1.00,2,3,10,true],
-  ['PRJ-TER','Terraform + IaC governance','IT-CLOUD','Hugo Ramos',165,'G3',1.04,1.02,2,2,65,true],
-  ['PRJ-CST','FinOps · Cloud cost optimization','IT-CLOUD','Sergio Mateos',85,'G4',1.08,1.05,2,1,85,true],
-  ['PRJ-CFN','CloudFront CDN enterprise','IT-CLOUD','Hugo Ramos',95,'G3',1.00,0.99,2,1,60,false],
-  ['PRJ-SAA','SaaS catalog rationalization','IT-CLOUD','Sergio Mateos',75,'G2',0.96,0.95,1,2,40,false],
-  // IT-VIRTUAL (5 nuevos)
-  ['PRJ-VMW','Broadcom vSphere migration strategy','IT-VIRTUAL','Nuria Beltrán',385,'G2',0.92,0.93,4,4,30,true],
-  ['PRJ-OSV','OpenShift Virtualization POC','IT-VIRTUAL','Nuria Beltrán',145,'G1',1.00,1.00,3,3,15,true],
-  ['PRJ-PMX','Proxmox VE pilot','IT-VIRTUAL','Nuria Beltrán',85,'G2',1.00,0.98,2,3,35,false],
-  ['PRJ-VDI','Citrix VDI refresh 500 usuarios','IT-VIRTUAL','Nuria Beltrán',245,'G3',0.97,0.96,3,2,60,false],
-  ['PRJ-HCI','Nutanix HCI evaluación','IT-VIRTUAL','Nuria Beltrán',110,'G1',1.00,1.00,2,2,12,false],
-  // IT-STORAGE (6 nuevos)
-  ['PRJ-NTA','NetApp AFF A900 upgrade','IT-STORAGE','Inés Carmona',320,'G3',1.03,1.01,3,2,65,false],
-  ['PRJ-DEL','Dell PowerStore consolidation','IT-STORAGE','Inés Carmona',285,'G2',0.98,0.97,3,3,45,false],
-  ['PRJ-BKP','Rubrik backup modernization','IT-STORAGE','Inés Carmona',220,'G3',1.02,1.00,3,2,60,true],
-  ['PRJ-RAN','Ransomware immutable storage','IT-STORAGE','Inés Carmona',195,'G4',1.04,1.02,4,2,80,true],
-  ['PRJ-OBJ','Object storage S3-compat','IT-STORAGE','Inés Carmona',140,'G2',0.97,0.96,2,2,40,false],
-  ['PRJ-ARC','Archive cold storage tier','IT-STORAGE','Inés Carmona',95,'G1',1.00,1.00,1,1,15,false],
-  // IT-SEGURIDAD (7 nuevos)
-  ['PRJ-PAM','CyberArk PAM rollout','IT-SEGURIDAD','Elena Marín',340,'G2',0.94,0.95,4,3,40,true],
-  ['PRJ-EDR','CrowdStrike Falcon EDR','IT-SEGURIDAD','Diego Soler',285,'G4',1.05,1.03,4,2,85,true],
-  ['PRJ-DLP','Symantec DLP refresh','IT-SEGURIDAD','Diego Soler',180,'G3',0.99,0.98,3,2,60,false],
-  ['PRJ-ZTN','Zero Trust Network Access','IT-SEGURIDAD','Elena Marín',265,'G2',0.92,0.93,4,3,35,true],
-  ['PRJ-WAF','Imperva WAF upgrade','IT-SEGURIDAD','Nuria Gil',140,'G3',1.01,1.00,3,2,65,false],
-  ['PRJ-CMP','DORA compliance program','IT-SEGURIDAD','Elena Marín',220,'G3',0.96,0.97,4,3,55,true],
-  ['PRJ-MFA','MFA Okta enterprise','IT-SEGURIDAD','Nuria Gil',165,'G4',1.03,1.02,3,2,80,false],
-  // IT-DATA (7 nuevos)
-  ['PRJ-DBT','dbt transformation framework','IT-DATA','Pablo Rivas',185,'G3',1.02,1.00,3,2,65,true],
-  ['PRJ-CAT','Collibra data catalog','IT-DATA','Tomás Aranda',240,'G2',0.95,0.94,3,3,40,true],
-  ['PRJ-GOV','Data governance program','IT-DATA','Tomás Aranda',195,'G2',0.93,0.92,4,3,35,true],
-  ['PRJ-ETL','Informatica → Fabric migration','IT-DATA','Sandra Ortega',265,'G2',0.90,0.88,3,3,30,true],
-  ['PRJ-ODS','ODS real-time refactor','IT-DATA','Daniel Pérez',185,'G3',0.98,0.97,3,3,55,false],
-  ['PRJ-MDM','Master Data Management','IT-DATA','Tomás Aranda',220,'G1',1.00,1.00,3,3,15,true],
-  ['PRJ-DLK','Data lake modernization','IT-DATA','Sandra Ortega',310,'G2',0.95,0.94,3,3,40,true],
-  // IT-APPS (6 nuevos)
-  ['PRJ-T24','T24 Temenos R24 upgrade','IT-APPS','Raúl Santos',820,'G2',0.89,0.90,4,4,35,true],
-  ['PRJ-CRM','Salesforce FS Cloud rollout','IT-APPS','Raúl Santos',485,'G2',0.92,0.93,4,3,40,true],
-  ['PRJ-EBN','eBanking UX refresh','IT-APPS','Raúl Santos',385,'G3',1.00,0.99,4,2,65,true],
-  ['PRJ-MOB','Mobile app V5 rollout','IT-APPS','Raúl Santos',320,'G3',1.03,1.02,4,2,75,true],
-  ['PRJ-API','API gateway Kong','IT-APPS','Raúl Santos',195,'G3',1.01,1.00,3,2,60,false],
-  ['PRJ-PAY','Payment gateway upgrade','IT-APPS','Raúl Santos',240,'G2',0.94,0.95,4,3,40,false]
-];
 
 // Merge con bgProjectsData: los 5 ricos quedan, el resto se sintetiza
 bgPortfolio.forEach(p=>{
@@ -2917,58 +3079,11 @@ function bgRenderMatrixCell(p,r){
 
 // ═══════════════ PULSO ESTRATÉGICO ═══════════════
 
-const bgPulseKPIs = [
-  {k:'cart',  lb:'Cartera BUILD',     vl:'0.93', un:'CPI',  rag:'am', sub:'60 proys · 15.77 M€ BAC', tt:'CPI medio ponderado por BAC. Umbral verde ≥0.95, ámbar 0.85–0.95, rojo <0.85. Refleja la eficiencia global de la cartera de inversión.'},
-  {k:'run',   lb:'Estabilidad RUN',   vl:'99.82', un:'%',   rag:'gn', sub:'MTTR 4h12m · 47 inc abiertas', tt:'Uptime ponderado del CMDB (226 CIs). Por encima del SLA 99.8% comprometido al comité. Vigilar zona caliente CLOUD×C1.'},
-  {k:'gov',   lb:'Gobernanza',        vl:'11/15', un:'verdes', rag:'am', sub:'3 ámbar · 1 rojo', tt:'Gobernadores con CPI≥0.95 y riesgo<3. Sergio Mateos (IT-CLOUD) en rojo por sobrecarga y CPI 0.65.'},
-  {k:'cmp',   lb:'Compliance',        vl:'94', un:'/100',    rag:'gn', sub:'RGPD · DORA · PCI', tt:'Score compuesto legal/regulatorio. Auditoría DORA programada 2026-05-04. Hallazgos menores resueltos.'},
-  {k:'ia',    lb:'Adopción IA',       vl:'68', un:'%',       rag:'gn', sub:'meta 2026 = 60%', tt:'Porcentaje de proyectos BUILD con componente IA productivo o en gate G3+. Supera meta anual.'},
-  {k:'eq',    lb:'Equipo',            vl:'88', un:'/100',    rag:'am', sub:'4 saturados · eNPS 42', tt:'Score compuesto capacidad+rotación+eNPS. 4 gobernadores por encima del 100% de capacidad: riesgo de burnout.'}
-];
 
-const bgPulseAlerts = [
-  {id:'ALT-001', sev:'rd', title:'Sergio Mateos (IT-CLOUD) saturado al 110%', desc:'Gestiona 6 proyectos con CPI 0.65 y SPI 0.70. Riesgo alto de burnout y de deslizamiento de PRJ-AZR y PRJ-AWS. Requiere redistribución inmediata o refuerzo externo.', meta:['GOV-08','PRJ-AZR','PRJ-AWS','CPI 0.65'], ow:'Ana Torres (COO)'},
-  {id:'ALT-002', sev:'rd', title:'Zona caliente CLOUD×C1 en mapa RUN', desc:'14 incidencias abiertas en CIs críticos de capa CLOUD en los últimos 30 días. 2 con impacto en core banking T24. MTTR ha subido a 5h48m vs objetivo 4h.', meta:['CLOUD×C1','14 inc','MTTR 5h48'], ow:'Sergio Mateos (IT-CLOUD)'},
-  {id:'ALT-003', sev:'am', title:'5 proyectos en gate G4 sin fecha de cierre', desc:'PRJ-NAC, PRJ-WAF, PRJ-DLP, PRJ-MDM y PRJ-CRM llevan +90 días en G4. Riesgo de quedar atrapados antes del cierre fiscal 2026.', meta:['G4','5 proys','+90 días'], ow:'Carmen Delgado (CTO)'},
-  {id:'ALT-004', sev:'am', title:'Presupuesto IT-SEGURIDAD agotado al 87% (Q1)', desc:'Con 3 trimestres por delante ya se ha consumido el 87% del BAC. PRJ-ZTN y PRJ-PAM requerirán ampliación presupuestaria en el próximo comité.', meta:['IT-SEG','87% BAC','Q1'], ow:'Luis Navarro (CFO)'},
-  {id:'ALT-005', sev:'gn', title:'PRJ-SOC listo para cerrar en gate G5', desc:'Primer proyecto del año en cerrar G5 con CPI 1.04 y SPI 1.02. Comité puede aprobar cierre y liberar el capital para reasignación en próxima cartera.', meta:['PRJ-SOC','G5','CPI 1.04'], ow:'Elena Ruiz (PMO)'}
-];
 
-const bgPulseBlocks = [
-  {id:'BLK-001', sev:'rd', title:'Licencias Azure bloqueadas por legal',   desc:'Cláusula DPA no aprobada por asesoría jurídica. PRJ-AZR parado en gate G2.', pj:'PRJ-AZR', own:'Legal', days:18},
-  {id:'BLK-002', sev:'rd', title:'Certificado raíz CA interno caducado',   desc:'Bloquea despliegue de PRJ-ZTN y afecta 12 CIs en capa SEC.', pj:'PRJ-ZTN', own:'IT-SEG', days:12},
-  {id:'BLK-003', sev:'am', title:'Vendor Dell no confirma entrega storage', desc:'PRJ-DEL esperando 3 bandejas. Slack en proveedor, impacto en G3.', pj:'PRJ-DEL', own:'Compras', days:9},
-  {id:'BLK-004', sev:'am', title:'PRJ-T24 esperando firma de Consejo',    desc:'Aprobación del Consejo de Administración para upgrade core pendiente desde 03-Abr.', pj:'PRJ-T24', own:'Consejo', days:7},
-  {id:'BLK-005', sev:'am', title:'Entrevistas PMO IT-CLOUD sin candidatos', desc:'Refuerzo para Sergio Mateos: 0/3 finalistas pasaron última ronda.', pj:'GOV-08', own:'RRHH', days:6}
-];
 
-const bgPulseDecs = [
-  {id:'DEC-001', title:'Aprobar ampliación presupuestaria IT-SEGURIDAD +380 k€', desc:'Para cubrir PRJ-ZTN y PRJ-PAM hasta cierre fiscal 2026. Sin ampliación ambos proyectos paran en G3.', own:'CFO · CEO', amt:'+380 k€', due:'2026-04-14', urg:'near'},
-  {id:'DEC-002', title:'Validar cierre PRJ-SOC en gate G5', desc:'CPI 1.04, SPI 1.02, todos los KPIs en verde. Comité debe firmar cierre formal y liberar 420 k€ de contingencia.', own:'CEO · PMO', amt:'cierre', due:'2026-04-14', urg:'near'},
-  {id:'DEC-003', title:'Decisión go/no-go PRJ-ZTN (Zero Trust)', desc:'Reevaluar viabilidad tras bloqueo de cert CA. 2 alternativas sobre la mesa: Cisco Duo vs Zscaler. Riesgo compliance DORA si no se decide.', own:'CIO · CISO', amt:'1.2 M€', due:'2026-04-21', urg:'over'},
-  {id:'DEC-004', title:'Reprioritizar PRJ-ISE vs PRJ-WAF', desc:'Ambos compiten por equipo y presupuesto Q2. PMO propone priorizar WAF por exposición a fraude online reciente.', own:'CIO · CTO', amt:'640 k€', due:'2026-04-28', urg:''},
-  {id:'DEC-005', title:'Fichaje PMO refuerzo IT-CLOUD', desc:'Aprobar incorporación externa (perfil senior PMO Cloud) mientras RRHH no encuentra candidato interno.', own:'COO · CFO', amt:'85 k€/año', due:'2026-05-05', urg:''}
-];
 
-const bgPulseResps = [
-  {nm:'Ana Torres',     rl:'COO',  ct:'Operaciones · RUN + Gobernanza', ini:'AT', kpiVl:'99.82%', kpiLb:'uptime', lg:'gn'},
-  {nm:'Carmen Delgado', rl:'CTO',  ct:'Tecnología · Arquitectura BUILD', ini:'CD', kpiVl:'0.93',   kpiLb:'CPI',    lg:'am'},
-  {nm:'Luis Navarro',   rl:'CFO',  ct:'Finanzas · Presupuesto + RBAC',   ini:'LN', kpiVl:'87%',    kpiLb:'BAC cons', lg:'am'},
-  {nm:'Elena Ruiz',     rl:'PMO',  ct:'Oficina proyectos · 60 BUILD',    ini:'ER', kpiVl:'11/15',  kpiLb:'gov verdes', lg:'am'},
-  {nm:'Javier Soto',    rl:'CISO', ct:'Seguridad · Compliance',          ini:'JS', kpiVl:'94',     kpiLb:'cmp',    lg:'gn'},
-  {nm:'Marta Lorca',    rl:'CDO',  ct:'Datos · Gobierno del dato + IA',  ini:'ML', kpiVl:'68%',    kpiLb:'IA',     lg:'gn'}
-];
 
-const bgPulseHitos = [
-  {dt:'14-Abr', wk:'SEM 16', title:'Comité Dirección semanal',         desc:'Aprobar DEC-001, DEC-002 y revisar alertas ALT-001/002', tg:'cmt', tgt:'COMITÉ'},
-  {dt:'15-Abr', wk:'SEM 16', title:'Gate G5 PRJ-SOC',                  desc:'Cierre formal del SOC managed · 420 k€ liberados',       tg:'g5',  tgt:'GATE G5'},
-  {dt:'21-Abr', wk:'SEM 17', title:'Legacy Kanban borrado definitivo', desc:'Scope #kg-root sustituye al legacy en producción',        tg:'aud', tgt:'RELEASE'},
-  {dt:'28-Abr', wk:'SEM 18', title:'Revisión cartera Q2 · Comité',     desc:'Reprioritizar PRJ-ISE vs PRJ-WAF y aprobar DEC-004',     tg:'cmt', tgt:'COMITÉ'},
-  {dt:'04-May', wk:'SEM 19', title:'Auditoría DORA kick-off',          desc:'Arranque auditoría externa compliance DORA 2026',        tg:'aud', tgt:'AUDITORÍA'},
-  {dt:'05-May', wk:'SEM 19', title:'DEC-005 fichaje PMO IT-CLOUD',     desc:'Deadline decisión refuerzo Sergio Mateos',                tg:'cmt', tgt:'DECISIÓN'},
-  {dt:'12-May', wk:'SEM 20', title:'Presentación presupuesto 2027',    desc:'CFO presenta al Consejo el budget IT 2027',               tg:'bgt', tgt:'PRESUPUESTO'},
-  {dt:'19-May', wk:'SEM 21', title:'Gate G2 PRJ-AZR (condicional)',    desc:'Sujeto a desbloqueo legal de licencias Azure',            tg:'g5',  tgt:'GATE G2'}
-];
 
 function bgRenderPulso(){
   // KPI strip
@@ -3223,76 +3338,6 @@ function bgRenderPulseKPI(k){
 }
 
 // ─── Marco Estratégico (guiño asignatura MUDEP) ───
-const bgStratData = {
-  dafo: {
-    eyebrow:'HERRAMIENTA · DAFO',
-    title:'Análisis DAFO de Cognitive PMO',
-    sub:'Diagnóstico interno (D/F) + externo (A/O) aplicado al banco',
-    tag:'2×2',
-    tagCol:'var(--acc-bl)',
-    intro:'El DAFO sintetiza en cuatro cuadrantes la posición competitiva de Cognitive PMO. Las dos columnas internas (Fortalezas y Debilidades) describen capacidades propias del programa; las dos externas (Oportunidades y Amenazas) describen el entorno bancario y regulatorio.',
-    f:['Plataforma multi-agente IA (15 agentes) ya en producción','Gobernanza unificada RUN+BUILD en una sola UI','Trazabilidad RBAC económica con 23 roles y 175 usuarios','TFM MUDEP como aval académico del modelo'],
-    d:['Equipo gobernanza saturado (Sergio Mateos al 110%)','Dependencia de un único hosting NAS para producción','Documentación de operación incompleta para 5 agentes','CPI medio cartera 0.93 — eficiencia mejorable'],
-    o:['Regulación DORA exige observabilidad: encaja con el RUN','60% bancos europeos sin cuadro mando IT integrado','Adopción IA generativa para automatizar gates PMI','Consolidar como producto interno reusable en grupo'],
-    a:['Vendors hyperscaler con suites equivalentes (ServiceNow)','Endurecimiento RGPD/AI Act sobre datos económicos','Burnout del equipo gobernanza si no se refuerza','Recortes presupuestarios IT 2027 si baja BNP de la entidad']
-  },
-  pestle: {
-    eyebrow:'HERRAMIENTA · PESTLE',
-    title:'Análisis PESTLE del entorno',
-    sub:'Macro-factores que condicionan al sector financiero IT en 2026',
-    tag:'MACRO',
-    tagCol:'var(--acc-cy)',
-    intro:'PESTLE descompone el entorno macro en seis dimensiones independientes para detectar riesgos y oportunidades estratégicas que escapan al control interno del programa.',
-    items:[
-      {k:'P', nm:'Político',     ds:'Inestabilidad geopolítica europea, presión por soberanía digital y banca pública. Posibles sanciones contra hyperscalers no-UE.', lv:'med', ic:'pu'},
-      {k:'E', nm:'Económico',    ds:'Tipos de interés en lateral, márgenes bancarios bajo presión, recortes de OPEX IT del 5% en grupo Q3 2026.',                       lv:'alta',ic:'cy'},
-      {k:'S', nm:'Social',       ds:'Cliente bancario exige IA conversacional, transparencia algorítmica y contacto humano híbrido. Talento IT escaso (eNPS 42).',     lv:'med', ic:'pk'},
-      {k:'T', nm:'Tecnológico',  ds:'Aceleración IA generativa, FinOps y observabilidad como capacidades core. Cierre del gap multi-cloud cada 6 meses.',              lv:'alta',ic:'cy'},
-      {k:'L', nm:'Legal',        ds:'DORA, AI Act, RGPD reforzado y NIS2 obligan a trazabilidad económica de cada decisión IT. Auditoría DORA 2026-05-04.',            lv:'alta',ic:'pu'},
-      {k:'E', nm:'Entorno',      ds:'Compromiso net-zero del banco arrastra a IT: medir kgCO₂ por servicio CMDB y reportar al regulador anualmente.',                  lv:'med', ic:'pk'}
-    ]
-  },
-  porter: {
-    eyebrow:'HERRAMIENTA · 5 FUERZAS DE PORTER',
-    title:'5 Fuerzas de Porter — banca digital',
-    sub:'Intensidad competitiva del sector donde opera el banco',
-    tag:'5F',
-    tagCol:'var(--acc-pu)',
-    intro:'Las 5 fuerzas miden la atractividad estructural del sector. Cuanto mayor la intensidad de cada fuerza, menor el margen sostenible. Cognitive PMO actúa como respuesta interna a varias de estas presiones.',
-    items:[
-      {k:'F1', nm:'Amenaza de nuevos entrantes',  ds:'Neobancos UE (N26, Revolut, Bunq) y fintechs con licencia EMI/PI. Barreras de entrada bajas en pagos pero altas en crédito regulado.', lv:'alta',ic:'pu'},
-      {k:'F2', nm:'Amenaza de productos sustitutos', ds:'Wallets Big Tech (Apple Pay, Google Pay), DeFi y stablecoins reguladas tras MiCA. Sustituyen ingresos de comisiones core.',          lv:'alta',ic:'pu'},
-      {k:'F3', nm:'Poder de los clientes',         ds:'Comparadores online y portabilidad inmediata bajan switching costs. Clientes corporativos exigen APIs abiertas y SLA estrictos.',         lv:'med', ic:'pu'},
-      {k:'F4', nm:'Poder de los proveedores',      ds:'Concentración en 3 hyperscalers (AWS/Azure/GCP), Temenos T24 como core único, vendor lock-in en seguridad. Riesgo bloqueo PRJ-AZR demuestra esta fuerza.', lv:'alta',ic:'pu'},
-      {k:'F5', nm:'Rivalidad competitiva',         ds:'Bancos tradicionales españoles (Santander, BBVA, CaixaBank) compitiendo en IA, sostenibilidad y experiencia digital. Margen NIM bajo presión.', lv:'alta',ic:'pu'}
-    ]
-  },
-  okr: {
-    eyebrow:'HERRAMIENTA · OKR',
-    title:'OKRs Cognitive PMO — Q2 2026',
-    sub:'3 objetivos trimestrales · 9 key results medibles',
-    tag:'Q2',
-    tagCol:'var(--acc-pk)',
-    intro:'Los OKRs traducen la estrategia anual en compromisos trimestrales medibles. Los Objetivos describen el "qué" inspirador y los Key Results el "cómo medirlo". Cadencia: anual estratégica + trimestral táctica.',
-    objs:[
-      {n:'O1', t:'Convertir Cognitive PMO en la fuente única de verdad económica IT del banco', krs:[
-        {t:'KR1.1 — Migrar el 100% de los 60 proyectos BUILD al módulo P96 antes del 30-jun', p:78},
-        {t:'KR1.2 — Reducir el gap entre cifras CFO y PMO de 12% a <3% (mensual)',             p:55},
-        {t:'KR1.3 — Conseguir adopción del CEO Dashboard por los 6 C-level (uso semanal)',     p:66}
-      ]},
-      {n:'O2', t:'Estabilizar la operación RUN bajo objetivos DORA', krs:[
-        {t:'KR2.1 — Mantener uptime ≥99.85% en CIs C1 (core banking)',                          p:88},
-        {t:'KR2.2 — Reducir MTTR de 4h12 a <3h en zonas calientes (CLOUD×C1)',                  p:42},
-        {t:'KR2.3 — Pasar la auditoría DORA 2026-05-04 sin hallazgos críticos',                 p:70}
-      ]},
-      {n:'O3', t:'Hacer de la IA gobernanza una ventaja sostenible', krs:[
-        {t:'KR3.1 — Llevar adopción IA en cartera de 68% a 80% antes del cierre Q2',            p:60},
-        {t:'KR3.2 — Lanzar 3 agentes IA nuevos (FinOps, Compliance, Wellbeing) en producción',  p:33},
-        {t:'KR3.3 — Publicar 2 papers MUDEP/Anthropic sobre el modelo multi-agente',            p:50}
-      ]}
-    ]
-  }
-};
 
 // Helper para enlaces cruzados clickables dentro del marco estratégico
 function bgXLink(type,id,label,color){
