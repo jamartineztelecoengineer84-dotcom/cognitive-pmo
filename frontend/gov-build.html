@@ -985,6 +985,8 @@ html{--text:var(--text-primary);--text2:var(--text-secondary);--text3:var(--text
 <div class="toast" id="tst"></div>
 
 <script>
+// LEGACY P95-F7: redirect de enlaces antiguos #projects/#kanban → /gov-kanban-global.html
+if(location.hash==='#projects'||location.hash==='#kanban'){location.href='/gov-kanban-global.html';}
 var AB=window.location.origin,TK=localStorage.getItem('cpm_token')||'';
 function toggleTheme(){var h=document.documentElement,n=h.getAttribute('data-theme')==='dark'?'light':'dark';h.setAttribute('data-theme',n);localStorage.setItem('cpm_theme',n);}
 (function(){var t=localStorage.getItem('cpm_theme');if(t)document.documentElement.setAttribute('data-theme',t);})();

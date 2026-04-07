@@ -313,7 +313,10 @@ html{--text:var(--text-primary);--text2:var(--text-secondary);--text3:var(--text
 <div class="tabs">
   <button class="tb a" data-t="incidencias" onclick="sw('incidencias')"><svg viewBox="0 0 40 40" fill="none"><path d="M20 4L35 12V28L20 36L5 28V12L20 4Z" fill="rgba(248,81,73,.12)" stroke="var(--accent-red)" stroke-width="1.2"/><path d="M20 13v7M20 24v1" stroke="var(--accent-red)" stroke-width="2.5" stroke-linecap="round"/></svg>Incidencias</button>
   <button class="tb" data-t="tecnicos" onclick="sw('tecnicos')"><svg viewBox="0 0 40 40" fill="none"><path d="M20 4L35 12V28L20 36L5 28V12L20 4Z" fill="rgba(188,140,255,.12)" stroke="var(--accent-purple)" stroke-width="1.2"/><circle cx="16" cy="16" r="3.5" stroke="var(--accent-purple)" stroke-width="1.2" fill="none"/><circle cx="26" cy="16" r="3.5" stroke="var(--accent-purple)" stroke-width="1.2" fill="none"/></svg>T&eacute;cnicos</button>
+  <!-- LEGACY P95-F7 — eliminar tras 2 semanas (2026-04-21). Reemplazado por /gov-kanban-global.html
   <button class="tb" data-t="kanban" onclick="sw('kanban')"><svg viewBox="0 0 40 40" fill="none"><path d="M20 4L35 12V28L20 36L5 28V12L20 4Z" fill="rgba(57,210,192,.12)" stroke="var(--accent-cyan)" stroke-width="1.2"/><rect x="10" y="12" width="5" height="16" rx="1" stroke="var(--accent-cyan)" stroke-width="1" fill="none"/><rect x="17.5" y="12" width="5" height="10" rx="1" stroke="var(--accent-cyan)" stroke-width="1" fill="none"/><rect x="25" y="12" width="5" height="13" rx="1" stroke="var(--accent-cyan)" stroke-width="1" fill="none"/></svg>Kanban</button>
+  -->
+  <button class="tb" onclick="window.location.href='/gov-kanban-global.html'" title="Kanban global RUN+BUILD"><svg viewBox="0 0 40 40" fill="none"><path d="M20 4L35 12V28L20 36L5 28V12L20 4Z" fill="rgba(57,210,192,.12)" stroke="var(--accent-cyan)" stroke-width="1.2"/><rect x="10" y="12" width="5" height="16" rx="1" stroke="var(--accent-cyan)" stroke-width="1" fill="none"/><rect x="17.5" y="12" width="5" height="10" rx="1" stroke="var(--accent-cyan)" stroke-width="1" fill="none"/><rect x="25" y="12" width="5" height="13" rx="1" stroke="var(--accent-cyan)" stroke-width="1" fill="none"/></svg>Kanban global &rarr;</button>
 </div>
 
 <div class="cnt">
@@ -542,6 +545,7 @@ html{--text:var(--text-primary);--text2:var(--text-secondary);--text3:var(--text
   </div>
 
   <!-- TAB 3: KANBAN OPERATIVO RUN -->
+  <!-- LEGACY P95-F7 — eliminar tras 2 semanas (2026-04-21). Reemplazado por /gov-kanban-global.html
   <div class="tp" id="p-kanban">
   <div class="kanban-page">
     <div class="kanban-header">
@@ -609,6 +613,7 @@ html{--text:var(--text-primary);--text2:var(--text-secondary);--text3:var(--text
     </div>
   </div>
   </div>
+  -->
 </div>
 </div>
 
@@ -818,6 +823,8 @@ html{--text:var(--text-primary);--text2:var(--text-secondary);--text3:var(--text
 <div class="toast" id="tst"></div>
 
 <script>
+// LEGACY P95-F7: redirect de enlaces antiguos #kanban → /gov-kanban-global.html
+if(location.hash==='#kanban'){location.href='/gov-kanban-global.html';}
 var AB=window.location.origin,TK=localStorage.getItem('cpm_token')||'';
 var CATALOGO_DATA=[];
 
@@ -838,10 +845,18 @@ setInterval(function(){if(TK)loadNotif();},30000);
 document.addEventListener('click',function(e){var p=document.getElementById('notif-panel');if(p&&p.classList.contains('open')&&!e.target.closest('.notif-bell'))p.classList.remove('open');});
 if(TK){af('/health').then(function(d){if(d&&d.status==='ok'){document.getElementById('login-overlay').style.display='none';document.getElementById('app').style.display='block';init();loadNotif();}}).catch(function(){});}
 document.getElementById('lp').addEventListener('keypress',function(e){if(e.key==='Enter')doLogin();});
-function sw(n){document.querySelectorAll('.tb').forEach(function(b){b.classList.remove('a');});document.querySelector('.tb[data-t="'+n+'"]').classList.add('a');document.querySelectorAll('.tp').forEach(function(p){p.classList.remove('a');});document.getElementById('p-'+n).classList.add('a');if(n==='tecnicos'&&ALL_TEAM.length===0)loadTeam();if(n==='kanban'&&ALL_RUN_TASKS.length===0)loadKanbanRun();}
+function sw(n){
+  // LEGACY P95-F7: el tab "kanban" fue retirado. Redirigir al kanban global.
+  if(n==='kanban'){window.location.href='/gov-kanban-global.html';return;}
+  document.querySelectorAll('.tb').forEach(function(b){b.classList.remove('a');});
+  var btn=document.querySelector('.tb[data-t="'+n+'"]');if(btn)btn.classList.add('a');
+  document.querySelectorAll('.tp').forEach(function(p){p.classList.remove('a');});
+  var pp=document.getElementById('p-'+n);if(pp)pp.classList.add('a');
+  if(n==='tecnicos'&&ALL_TEAM.length===0)loadTeam();
+}
 function toast(m,t){var e=document.getElementById('tst');e.textContent=m;e.className='toast '+(t||'ok')+' show';setTimeout(function(){e.classList.remove('show');},3000);}
 
-function init(){loadCatalogo();loadCMDB();loadInc();loadTeam();loadKanbanRun();loadCABAlerts();}
+function init(){loadCatalogo();loadCMDB();loadInc();loadTeam();/* LEGACY P95-F7: loadKanbanRun() retirado */loadCABAlerts();}
 
 // ═══ ITSM CATALOGO — exact logic from mother ═══
 function loadCatalogo(){
@@ -1480,8 +1495,14 @@ var _cfdChart=null,_ctrlChart=null;
 
 function mapCol(c){var cl=(c||'Backlog').toLowerCase();if(cl.indexOf('completad')>=0||cl==='done')return'Completado';if(cl.indexOf('testing')>=0||cl.indexOf('despliegue')>=0||cl.indexOf('review')>=0)return'Testing';if(cl.indexOf('progreso')>=0)return'En Progreso';if(cl.indexOf('an\u00e1lisis')>=0||cl.indexOf('analisis')>=0)return'An\u00e1lisis';return'Backlog';}
 
+// LEGACY P95-F7 — loadKanbanRun convertida en stub no-op tras eliminar tab Kanban.
+// Eliminar tras 2 semanas (2026-04-21). Reemplazado por /gov-kanban-global.html
 async function loadKanbanRun(){
+  ALL_RUN_TASKS=[];
+  return;
+  // legacy body (panel HTML comentado, no hay #kanban-body):
   var body=document.getElementById('kanban-body');
+  if(!body)return;
   body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;width:100%;color:var(--text2);gap:8px;"><span class="loading-spinner"></span>Cargando tablero...</div>';
   try{
     var data=await af('/kanban/tareas');

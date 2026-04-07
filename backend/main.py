@@ -245,6 +245,10 @@ async def _sync_tecnico_estado(conn, id_tecnico: str):
     )
 
 
+# TODO-DEPRECATE P95-F7 (eliminar tras 2026-04-21):
+# Endpoint legacy del kanban 8-columnas. Mantenido como alias durante 2 semanas
+# para no romper consumidores existentes (gov-build loadTeam, jobs, dist/*).
+# El reemplazo es GET /api/kanban/tareas con schema unificado RUN+BUILD.
 @app.get("/kanban/tareas")
 async def get_kanban():
     pool = get_pool()
