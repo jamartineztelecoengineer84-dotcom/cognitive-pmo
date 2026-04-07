@@ -3144,6 +3144,140 @@ async def crear_notificacion(conn, id_usuario: int, tipo: str, titulo: str, mens
     """, id_usuario, tipo, titulo, mensaje, referencia_tipo, referencia_id)
 
 
+# ── Kanban Global — Flow Metrics ──────────────────────────────────────────
+
+@app.get("/api/kanban/flow-metrics")
+async def kanban_flow_metrics():
+    """Métricas Kanban transversales (RUN+BUILD) para panel de flujo. Ventana 30 días."""
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(503, "DB no disponible")
+    async with pool.acquire() as conn:
+        # Totales globales (no solo 30d)
+        total = await conn.fetchval("SELECT COUNT(*) FROM kanban_tareas")
+        # Completadas en 30d
+        completadas = await conn.fetchval("""
+            SELECT COUNT(*) FROM kanban_tareas
+            WHERE columna='Completado' AND fecha_cierre >= NOW() - INTERVAL '30 days'
+        """)
+        # Throughput / semana (completadas / 4.3)
+        throughput = round((completadas or 0) / 4.3, 1)
+        # Lead Time medio (h): fecha_creacion → fecha_cierre
+        lead_time = await conn.fetchval("""
+            SELECT COALESCE(AVG(EXTRACT(EPOCH FROM (fecha_cierre - fecha_creacion))/3600), 0)
+            FROM kanban_tareas
+            WHERE columna='Completado' AND fecha_cierre >= NOW() - INTERVAL '30 days'
+              AND fecha_cierre IS NOT NULL AND fecha_creacion IS NOT NULL
+        """)
+        # Cycle Time medio (h): fecha_inicio_ejecucion → fecha_cierre
+        cycle_time = await conn.fetchval("""
+            SELECT COALESCE(AVG(EXTRACT(EPOCH FROM (fecha_cierre - fecha_inicio_ejecucion))/3600), 0)
+            FROM kanban_tareas
+            WHERE columna='Completado' AND fecha_cierre >= NOW() - INTERVAL '30 days'
+              AND fecha_cierre IS NOT NULL AND fecha_inicio_ejecucion IS NOT NULL
+        """)
+        flow_eff = round(float(cycle_time) / float(lead_time) * 100, 1) if lead_time and float(lead_time) > 0 else 0.0
+
+        # WIP: tareas en curso (no Backlog ni Completado)
+        wip = await conn.fetchval("""
+            SELECT COUNT(*) FROM kanban_tareas
+            WHERE columna NOT IN ('Backlog','Completado')
+        """)
+        bloqueadas = await conn.fetchval("""
+            SELECT COUNT(*) FROM kanban_tareas WHERE columna='Bloqueado'
+        """)
+
+        # CFD: 30 puntos diarios. Para cada día, snapshot del estado de cada tarea
+        # creada antes del día y no cerrada antes del día.
+        cfd_rows = await conn.fetch("""
+            WITH dias AS (
+                SELECT generate_series(NOW()::date - INTERVAL '29 days', NOW()::date, INTERVAL '1 day')::date AS dia
+            )
+            SELECT d.dia,
+                   COUNT(*) FILTER (WHERE k.columna='Backlog') AS backlog,
+                   COUNT(*) FILTER (WHERE k.columna='Análisis') AS analisis,
+                   COUNT(*) FILTER (WHERE k.columna='En Progreso') AS en_progreso,
+                   COUNT(*) FILTER (WHERE k.columna IN ('Code Review','Testing')) AS review_test,
+                   COUNT(*) FILTER (WHERE k.columna='Despliegue') AS deploy,
+                   COUNT(*) FILTER (WHERE k.columna='Completado') AS completado,
+                   COUNT(*) AS total
+            FROM dias d
+            LEFT JOIN kanban_tareas k
+              ON k.fecha_creacion::date <= d.dia
+              AND (k.fecha_cierre IS NULL OR k.fecha_cierre::date > d.dia OR k.columna != 'Completado')
+            GROUP BY d.dia ORDER BY d.dia
+        """)
+        cfd = [{"dia": r['dia'].isoformat(), "backlog": r['backlog'], "analisis": r['analisis'],
+                "en_progreso": r['en_progreso'], "review_test": r['review_test'],
+                "deploy": r['deploy'], "completado": r['completado'], "total": r['total']} for r in cfd_rows]
+
+        # Control chart: cada tarea completada en 30d con su lead time
+        cc_rows = await conn.fetch("""
+            SELECT fecha_cierre::date AS dia,
+                   EXTRACT(EPOCH FROM (fecha_cierre - fecha_creacion))/3600 AS lt_h,
+                   id, titulo
+            FROM kanban_tareas
+            WHERE columna='Completado' AND fecha_cierre >= NOW() - INTERVAL '30 days'
+              AND fecha_cierre IS NOT NULL AND fecha_creacion IS NOT NULL
+            ORDER BY fecha_cierre
+        """)
+        control_chart = [{"dia": r['dia'].isoformat(), "lt_h": round(float(r['lt_h']), 1),
+                          "id": r['id'], "titulo": r['titulo']} for r in cc_rows]
+        # UCL = avg + 3*stdev (aproximado: max observado * 1.2 si pocos datos)
+        if control_chart:
+            lts = [c['lt_h'] for c in control_chart]
+            avg_lt = sum(lts) / len(lts)
+            if len(lts) > 1:
+                var = sum((x - avg_lt) ** 2 for x in lts) / len(lts)
+                std = var ** 0.5
+                ucl = round(avg_lt + 3 * std, 1)
+            else:
+                ucl = round(avg_lt * 2, 1)
+        else:
+            ucl = 0
+            avg_lt = 0
+
+        # Distribución WIP
+        dist_tipo = await conn.fetch("""
+            SELECT tipo, COUNT(*) AS cnt FROM kanban_tareas
+            WHERE columna NOT IN ('Backlog','Completado') GROUP BY tipo
+        """)
+        dist_prio = await conn.fetch("""
+            SELECT prioridad, COUNT(*) AS cnt FROM kanban_tareas
+            WHERE columna NOT IN ('Backlog','Completado') GROUP BY prioridad
+        """)
+        # Departamento desde silo del técnico
+        dist_dept = await conn.fetch("""
+            SELECT COALESCE(p.silo_especialidad,'Sin asignar') AS dept, COUNT(*) AS cnt
+            FROM kanban_tareas k
+            LEFT JOIN pmo_staff_skills p ON k.id_tecnico = p.id_recurso
+            WHERE k.columna NOT IN ('Backlog','Completado')
+            GROUP BY dept ORDER BY cnt DESC
+        """)
+        wip_dist = {
+            "por_tipo": {r['tipo']: r['cnt'] for r in dist_tipo},
+            "por_prioridad": {r['prioridad']: r['cnt'] for r in dist_prio},
+            "por_dept": [{"dept": r['dept'], "cnt": r['cnt']} for r in dist_dept],
+        }
+
+        return {
+            "total": total or 0,
+            "completadas": completadas or 0,
+            "throughput": throughput,
+            "leadTime": round(float(lead_time or 0), 1),
+            "cycleTime": round(float(cycle_time or 0), 1),
+            "flowEff": flow_eff,
+            "cfd": cfd,
+            "controlChart": control_chart,
+            "ucl": ucl,
+            "avgLt": round(avg_lt, 1),
+            "wipDist": wip_dist,
+            "wip": wip or 0,
+            "bloqueadas": bloqueadas or 0,
+            "ventana_dias": 30,
+        }
+
+
 # ── War Room Cognitivo (Sub-App) ───────────────────────────────────────────
 from war_room_api import war_room_app
 app.mount("/cognitive", war_room_app)

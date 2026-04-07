@@ -35,8 +35,60 @@ body{background:var(--bg);color:var(--tx);font-family:var(--font);font-size:12px
 .tb-date .pulse{width:8px;height:8px;background:var(--acc-gn);border-radius:50%;animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
-/* ═══════════════ FLOW METRICS PANEL (vacío en FASE 1) ═══════════════ */
-.flow-panel{background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;transition:max-height .35s ease;overflow:hidden;max-height:460px;position:relative;min-height:38px}
+/* ═══════════════ FLOW METRICS PANEL ═══════════════ */
+.flow-panel{background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;transition:max-height .35s ease;overflow:hidden;max-height:460px;position:relative}
+.flow-panel.collapsed{max-height:38px}
+.flow-head{padding:9px 18px;display:flex;align-items:center;gap:10px;user-select:none;border-bottom:1px solid var(--border);transition:.2s;cursor:pointer;height:38px;box-sizing:border-box}
+.flow-panel.collapsed .flow-head{border-bottom-color:transparent}
+.flow-head:hover{background:rgba(88,166,255,.04)}
+.flow-head h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--tx);display:flex;align-items:center;gap:8px;margin:0}
+.flow-head h3 svg{color:var(--acc-cy)}
+.flow-head .hint{font-size:10px;color:var(--tx3);font-weight:500;text-transform:none;letter-spacing:0}
+.flow-panel.collapsed .flow-head .hint{color:var(--tx2)}
+.flow-toggle-btn{margin-left:auto;background:var(--bg-el);border:1px solid var(--border);color:var(--tx2);height:22px;padding:0 10px;border-radius:5px;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:9px;font-weight:700;transition:.15s;font-family:var(--font);text-transform:uppercase;letter-spacing:.3px}
+.flow-toggle-btn:hover{background:var(--bg-l3);border-color:var(--border-hi);color:var(--tx)}
+.flow-toggle-btn .chev{display:inline-block;transition:transform .3s ease;font-size:9px}
+.flow-panel.collapsed .flow-toggle-btn .chev{transform:rotate(-180deg)}
+.flow-panel:not(.collapsed) .flow-toggle-btn .txt-open{display:none}
+.flow-panel.collapsed .flow-toggle-btn .txt-close{display:none}
+.flow-panel.collapsed .flow-toggle-btn{background:linear-gradient(135deg,rgba(57,210,192,.12),rgba(88,166,255,.12));border-color:rgba(57,210,192,.4);color:var(--acc-cy)}
+.flow-body{padding:10px 14px 0;display:flex;flex-direction:column;gap:8px}
+.fkpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.fkpi{background:var(--bg-card);border:1px solid var(--border);border-radius:7px;padding:9px 12px 8px;position:relative;overflow:hidden;text-align:left}
+.fkpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px}
+.fkpi.cy::before{background:var(--acc-cy)}
+.fkpi.bl::before{background:var(--acc-bl)}
+.fkpi.gn::before{background:var(--acc-gn)}
+.fkpi.or::before{background:var(--acc-or)}
+.fkpi.pu::before{background:var(--acc-pu)}
+.fkpi.rd::before{background:var(--acc-rd)}
+.fkpi-value{font-size:22px;font-weight:800;font-family:var(--mono);line-height:1;display:flex;align-items:baseline;gap:1px;margin-bottom:4px}
+.fkpi-value .u{font-size:11px;font-weight:700;opacity:.8}
+.fkpi.cy .fkpi-value{color:var(--acc-cy)}
+.fkpi.bl .fkpi-value{color:var(--acc-bl)}
+.fkpi.gn .fkpi-value{color:var(--acc-gn)}
+.fkpi.or .fkpi-value{color:var(--acc-or)}
+.fkpi.pu .fkpi-value{color:var(--acc-pu)}
+.fkpi.rd .fkpi-value{color:var(--acc-rd)}
+.fkpi-label{font-size:8px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.3px}
+.charts-row{display:grid;grid-template-columns:1.2fr 1.2fr 1fr;gap:8px}
+.dist-group{margin-bottom:9px}
+.dist-group:last-child{margin-bottom:0}
+.dist-label{font-size:9px;color:var(--tx3);text-transform:uppercase;font-weight:700;margin-bottom:4px;display:flex;align-items:center;letter-spacing:.3px}
+.dist-label span{margin-left:auto;font-family:var(--mono);color:var(--tx2);font-weight:600}
+.dist-row{display:flex;height:18px;border-radius:4px;overflow:hidden;background:var(--bg-el)}
+.dist-seg{display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#0d1117;font-family:var(--mono);overflow:hidden;white-space:nowrap}
+.chart-box{background:var(--bg-card);border:1px solid var(--border);border-radius:7px;padding:8px 10px;display:flex;flex-direction:column}
+.chart-title{font-size:9px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.chart-title .note{margin-left:auto;font-size:8px;font-weight:500;color:var(--tx3);text-transform:none;letter-spacing:0;font-family:var(--mono)}
+.chart-body{flex:1;position:relative;min-height:130px;max-height:150px}
+.flow-footer{display:flex;align-items:center;gap:14px;padding:5px 14px;font-family:var(--mono);font-size:10px;color:var(--tx2);background:var(--bg2);border-top:1px solid var(--border)}
+.flow-footer .ff-item{display:flex;align-items:center;gap:5px}
+.flow-footer .ff-item b{font-weight:800}
+.flow-footer .ff-item.wip b{color:var(--acc-pu)}
+.flow-footer .ff-item.blk b{color:var(--acc-rd)}
+.flow-footer .ff-item.done b{color:var(--acc-gn)}
+.flow-footer .ff-sp{flex:1}
 
 /* ═══════════════ KANBAN TOOLBAR (vacío en FASE 1) ═══════════════ */
 .kb-toolbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:8px 18px;display:flex;align-items:center;gap:10px;flex-shrink:0;min-height:38px}
@@ -72,7 +124,52 @@ body{background:var(--bg);color:var(--tx);font-family:var(--font);font-size:12px
 </div>
 
 <!-- ═══════════════ FLOW METRICS PANEL ═══════════════ -->
-<div class="flow-panel" id="flow-panel"></div>
+<div class="flow-panel" id="flow-panel">
+  <div class="flow-head" onclick="toggleFlow()">
+    <h3>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      M&eacute;tricas de Flujo &amp; Analytics
+      <span class="hint">&middot; CFD &middot; Control Chart &middot; Distribuci&oacute;n del WIP &middot; 30 d&iacute;as</span>
+    </h3>
+    <button class="flow-toggle-btn" onclick="event.stopPropagation();toggleFlow()" title="Minimizar / Expandir panel">
+      <span class="txt-close">Minimizar</span>
+      <span class="txt-open">Expandir</span>
+      <span class="chev">&#9650;</span>
+    </button>
+  </div>
+  <div class="flow-body">
+    <!-- 6 KPIs -->
+    <div class="fkpi-row" id="fkpi-row">
+      <div class="fkpi bl"><div class="fkpi-value" id="kpi-total">0</div><div class="fkpi-label">Total tareas</div></div>
+      <div class="fkpi gn"><div class="fkpi-value" id="kpi-done">0</div><div class="fkpi-label">Completadas (30d)</div></div>
+      <div class="fkpi pu"><div class="fkpi-value" id="kpi-thr">0</div><div class="fkpi-label">Throughput / sem</div></div>
+      <div class="fkpi or"><div class="fkpi-value" id="kpi-lt">0<span class="u">h</span></div><div class="fkpi-label">Avg Lead Time</div></div>
+      <div class="fkpi cy"><div class="fkpi-value" id="kpi-ct">0<span class="u">h</span></div><div class="fkpi-label">Avg Cycle Time</div></div>
+      <div class="fkpi gn"><div class="fkpi-value" id="kpi-fe">0<span class="u">%</span></div><div class="fkpi-label">Flow Efficiency</div></div>
+    </div>
+    <!-- Charts -->
+    <div class="charts-row">
+      <div class="chart-box">
+        <div class="chart-title">Diagrama de flujo acumulado (CFD)</div>
+        <div class="chart-body" id="chart-cfd"></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">Control Chart (Lead Time)<span class="note" id="cc-note">UCL 0h &middot; AVG 0h</span></div>
+        <div class="chart-body" id="chart-cc"></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">Distribuci&oacute;n del WIP<span class="note" id="wip-note">0 tareas</span></div>
+        <div class="chart-body" id="chart-wip" style="min-height:130px;padding-top:2px"></div>
+      </div>
+    </div>
+  </div>
+  <div class="flow-footer">
+    <div class="ff-sp"></div>
+    <div class="ff-item wip">WIP: <b id="ff-wip">0</b></div>
+    <div class="ff-item blk">Bloqueadas: <b id="ff-blk">0</b></div>
+    <div class="ff-item done">Completadas: <b id="ff-done">0</b></div>
+  </div>
+</div>
 
 <!-- ═══════════════ KANBAN TOOLBAR ═══════════════ -->
 <div class="kb-toolbar" id="kb-toolbar"></div>
@@ -81,7 +178,7 @@ body{background:var(--bg);color:var(--tx);font-family:var(--font);font-size:12px
 <div class="kanban" id="kanban"></div>
 
 <script>
-// FASE 1 — solo reloj. El resto se añade en fases siguientes.
+// ── Reloj live ──
 (function tick(){
   var n=new Date();
   var p=function(x){return x<10?'0'+x:x};
@@ -90,6 +187,184 @@ body{background:var(--bg);color:var(--tx);font-family:var(--font);font-size:12px
   if(el) el.textContent=s;
   setTimeout(tick,1000);
 })();
+
+// ── Toggle del panel de flujo ──
+function toggleFlow(){
+  document.getElementById('flow-panel').classList.toggle('collapsed');
+}
+
+// ── Fetch + render métricas de flujo ──
+async function loadFlowMetrics(){
+  try {
+    var r = await fetch('/api/kanban/flow-metrics');
+    if (!r.ok) return;
+    var d = await r.json();
+    // KPIs
+    document.getElementById('kpi-total').textContent = d.total;
+    document.getElementById('kpi-done').textContent = d.completadas;
+    document.getElementById('kpi-thr').textContent = d.throughput;
+    document.getElementById('kpi-lt').innerHTML = d.leadTime + '<span class="u">h</span>';
+    document.getElementById('kpi-ct').innerHTML = d.cycleTime + '<span class="u">h</span>';
+    document.getElementById('kpi-fe').innerHTML = d.flowEff + '<span class="u">%</span>';
+    // Footer
+    document.getElementById('ff-wip').textContent = d.wip;
+    document.getElementById('ff-blk').textContent = d.bloqueadas;
+    document.getElementById('ff-done').textContent = d.completadas;
+    // Charts
+    renderCFD(d.cfd);
+    renderControlChart(d.controlChart, d.ucl, d.avgLt);
+    renderWipDist(d.wipDist, d.wip);
+  } catch(e) { console.error('flow-metrics fetch error', e); }
+}
+
+// ── Render CFD (área apilada) ──
+function renderCFD(cfd){
+  if (!cfd || !cfd.length) return;
+  var W=400,H=170,M={l:36,r:2,t:15,b:20};
+  var maxTotal = Math.max.apply(null, cfd.map(function(c){return c.total||1}));
+  var n = cfd.length;
+  function x(i){ return M.l + (i/(n-1))*(W-M.l-M.r); }
+  function y(v){ return M.t + (1 - v/maxTotal) * (H-M.t-M.b); }
+  // Capas en orden (de arriba abajo en valor): backlog, analisis, en_progreso, review_test, deploy, completado
+  var keys = [
+    {k:'backlog',c:'rgba(248,81,73,.55)'},
+    {k:'analisis',c:'rgba(88,166,255,.7)'},
+    {k:'en_progreso',c:'rgba(180,120,30,.85)'},
+    {k:'review_test',c:'rgba(120,130,140,.7)'},
+    {k:'deploy',c:'rgba(57,210,192,.75)'},
+    {k:'completado',c:'rgba(63,185,80,.85)'},
+  ];
+  // Acumulado descendente: la primera capa va arriba (mayor y), la última abajo
+  var stacks = cfd.map(function(c){
+    var acc=0, layers={};
+    keys.forEach(function(kk){ acc += (c[kk.k]||0); layers[kk.k]=acc; });
+    return layers;
+  });
+  function pathFor(idx){
+    // El path es el área entre y(layer_anterior) y y(layer_actual)
+    var top = stacks.map(function(s,i){
+      var prev = idx===0 ? 0 : stacks[i][keys[idx-1].k];
+      return x(i)+','+y(prev);
+    });
+    var bot = stacks.map(function(s,i){
+      return x(i)+','+y(s[keys[idx].k]);
+    }).reverse();
+    // Wait — we want stacked from bottom: completed at the bottom, backlog on top.
+    // Reorder approach: cumulative from completado upwards.
+    return null;
+  }
+  // Better: stack from bottom up. Build cumulative where completado=base.
+  var orderBottomUp = ['completado','deploy','review_test','en_progreso','analisis','backlog'];
+  var colors = {completado:'rgba(63,185,80,.85)',deploy:'rgba(57,210,192,.75)',review_test:'rgba(120,130,140,.7)',en_progreso:'rgba(180,120,30,.85)',analisis:'rgba(88,166,255,.7)',backlog:'rgba(248,81,73,.55)'};
+  var cum = cfd.map(function(){return 0});
+  var layerPaths = '';
+  orderBottomUp.forEach(function(k){
+    var topPts = cfd.map(function(c,i){ cum[i] += (c[k]||0); return x(i)+','+y(cum[i]); });
+    var basePts = cfd.map(function(c,i){ var prev = cum[i]-(c[k]||0); return x(i)+','+y(prev); }).reverse();
+    var d = 'M'+topPts.join(' L')+' L'+basePts.join(' L')+' Z';
+    layerPaths += '<path d="'+d+'" fill="'+colors[k]+'"/>';
+  });
+  // Eje Y labels
+  var yLabels = '';
+  for (var i=0;i<=4;i++){
+    var yy = M.t + (i/4)*(H-M.t-M.b);
+    var vv = Math.round(maxTotal*(1-i/4));
+    yLabels += '<line x1="'+M.l+'" y1="'+yy+'" x2="'+(W-M.r)+'" y2="'+yy+'" stroke="rgba(139,148,158,.08)" stroke-width="0.5"/>';
+    yLabels += '<text x="'+(M.l-4)+'" y="'+(yy+3)+'" text-anchor="end" font-size="9" fill="#8b949e">'+vv+'</text>';
+  }
+  // Eje X labels (cada 5 días)
+  var xLabels = '';
+  [0,5,10,15,20,25,29].forEach(function(i){
+    if (i<n) {
+      var dt = new Date(cfd[i].dia);
+      var lbl = dt.getDate()+'/'+(dt.getMonth()+1);
+      xLabels += '<text x="'+x(i)+'" y="'+(H-5)+'" font-size="9" fill="#8b949e">'+lbl+'</text>';
+    }
+  });
+  document.getElementById('chart-cfd').innerHTML =
+    '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" style="width:100%;height:100%;font-family:monospace">' +
+    yLabels + layerPaths + xLabels + '</svg>';
+}
+
+// ── Render Control Chart ──
+function renderControlChart(cc, ucl, avgLt){
+  document.getElementById('cc-note').textContent = 'UCL '+ucl+'h · AVG '+avgLt+'h';
+  if (!cc || !cc.length) {
+    document.getElementById('chart-cc').innerHTML = '<div style="text-align:center;color:var(--tx3);padding:50px 0;font-size:10px;">Sin datos en 30d</div>';
+    return;
+  }
+  var W=400,H=170,M={l:36,r:2,t:15,b:20};
+  var maxLt = Math.max(ucl*1.1, Math.max.apply(null, cc.map(function(c){return c.lt_h})));
+  function x(i){ return M.l + (i/(Math.max(cc.length-1,1)))*(W-M.l-M.r); }
+  function y(v){ return M.t + (1 - v/maxLt) * (H-M.t-M.b); }
+  var yLabels = '';
+  for (var i=0;i<=4;i++){
+    var yy = M.t + (i/4)*(H-M.t-M.b);
+    var vv = Math.round(maxLt*(1-i/4));
+    yLabels += '<line x1="'+M.l+'" y1="'+yy+'" x2="'+(W-M.r)+'" y2="'+yy+'" stroke="rgba(139,148,158,.08)" stroke-width="0.5"/>';
+    yLabels += '<text x="'+(M.l-4)+'" y="'+(yy+3)+'" text-anchor="end" font-size="9" fill="#8b949e">'+vv+'h</text>';
+  }
+  // UCL line
+  var uclY = y(ucl);
+  var avgY = y(avgLt);
+  var lines = '<line x1="'+M.l+'" y1="'+uclY+'" x2="'+(W-M.r)+'" y2="'+uclY+'" stroke="#f85149" stroke-width="1.2" stroke-dasharray="5,4"/>'+
+    '<text x="'+(W-M.r-2)+'" y="'+(uclY-3)+'" text-anchor="end" font-size="9" fill="#f85149" font-weight="700">UCL '+ucl+'h</text>'+
+    '<line x1="'+M.l+'" y1="'+avgY+'" x2="'+(W-M.r)+'" y2="'+avgY+'" stroke="#58a6ff" stroke-width="1.2" stroke-dasharray="5,4"/>'+
+    '<text x="'+(W-M.r-2)+'" y="'+(avgY-3)+'" text-anchor="end" font-size="9" fill="#58a6ff" font-weight="700">AVG '+avgLt+'h</text>';
+  // Polyline
+  var pts = cc.map(function(c,i){ return x(i)+','+y(c.lt_h); }).join(' ');
+  var poly = '<polyline points="'+pts+'" fill="none" stroke="rgba(139,148,158,.55)" stroke-width="1"/>';
+  // Scatter (rojo si > UCL)
+  var dots = cc.map(function(c,i){
+    var clr = c.lt_h > ucl ? '#f85149' : '#3fb950';
+    var rr = c.lt_h > ucl ? 3 : 2.5;
+    return '<circle cx="'+x(i)+'" cy="'+y(c.lt_h)+'" r="'+rr+'" fill="'+clr+'"><title>'+c.id+': '+c.lt_h+'h</title></circle>';
+  }).join('');
+  document.getElementById('chart-cc').innerHTML =
+    '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" style="width:100%;height:100%;font-family:monospace">' +
+    yLabels + lines + poly + dots + '</svg>';
+}
+
+// ── Render WIP Distribution ──
+function renderWipDist(wd, wipTotal){
+  document.getElementById('wip-note').textContent = wipTotal + ' tareas';
+  if (!wd) return;
+  var html = '';
+  // Por tipo
+  var run = wd.por_tipo.RUN || 0, build = wd.por_tipo.BUILD || 0, tot = run+build || 1;
+  html += '<div class="dist-group"><div class="dist-label">Por tipo <span>RUN '+run+' &middot; BUILD '+build+'</span></div>';
+  html += '<div class="dist-row">';
+  if (run>0) html += '<div class="dist-seg" style="width:'+(run/tot*100)+'%;background:var(--acc-rd)">RUN '+Math.round(run/tot*100)+'%</div>';
+  if (build>0) html += '<div class="dist-seg" style="width:'+(build/tot*100)+'%;background:var(--acc-pu)">BUILD '+Math.round(build/tot*100)+'%</div>';
+  html += '</div></div>';
+  // Por prioridad
+  var pp = wd.por_prioridad || {};
+  var p1=pp['Crítica']||0, p2=pp['Alta']||0, p3=pp['Media']||0, p4=pp['Baja']||0;
+  var ptot = p1+p2+p3+p4 || 1;
+  html += '<div class="dist-group"><div class="dist-label">Por prioridad <span>P1:'+p1+' P2:'+p2+' P3:'+p3+' P4:'+p4+'</span></div>';
+  html += '<div class="dist-row">';
+  if (p1>0) html += '<div class="dist-seg" style="width:'+(p1/ptot*100)+'%;background:var(--acc-rd)">'+(p1/ptot>=.08?'P1':'')+'</div>';
+  if (p2>0) html += '<div class="dist-seg" style="width:'+(p2/ptot*100)+'%;background:var(--acc-or)">'+(p2/ptot>=.08?'P2':'')+'</div>';
+  if (p3>0) html += '<div class="dist-seg" style="width:'+(p3/ptot*100)+'%;background:var(--acc-bl)">'+(p3/ptot>=.08?'P3':'')+'</div>';
+  if (p4>0) html += '<div class="dist-seg" style="width:'+(p4/ptot*100)+'%;background:var(--tx2)">'+(p4/ptot>=.08?'P4':'')+'</div>';
+  html += '</div></div>';
+  // Por departamento
+  var depts = wd.por_dept || [];
+  var dtot = depts.reduce(function(a,b){return a+b.cnt},0) || 1;
+  var deptColors = ['var(--acc-bl)','var(--acc-pu)','var(--acc-pk)','var(--acc-cy)','var(--acc-ye)','var(--acc-gn)','var(--tx2)'];
+  html += '<div class="dist-group"><div class="dist-label">Por departamento <span>'+depts.length+' deptos</span></div>';
+  html += '<div class="dist-row">';
+  depts.slice(0,7).forEach(function(d,i){
+    var pct = d.cnt/dtot*100;
+    html += '<div class="dist-seg" style="width:'+pct+'%;background:'+deptColors[i]+'" title="'+d.dept+': '+d.cnt+'">'+(pct>=12?d.dept.substring(0,4):'')+'</div>';
+  });
+  html += '</div></div>';
+  document.getElementById('chart-wip').innerHTML = html;
+}
+
+// Initial + refresh
+loadFlowMetrics();
+setInterval(loadFlowMetrics, 60000);
 </script>
 </body>
 </html>
