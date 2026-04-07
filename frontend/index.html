@@ -1106,16 +1106,38 @@ footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;disp
 /* ═══ P95 FASE 8 — KANBAN GLOBAL kg-* (scope: #kg-root) ═══ */
 /* ════════════════════════════════════════════════════ */
 
-/* ═══════════════ TOKENS (heredados de tech-dashboard v4 / mockup_kanban_global_v2) ═══════════════ */
+/* ═══════════════ TOKENS — heredados del shell (P95 FASE 11) ═══════════════ */
+/* Cada --kg-* delega a la var equivalente del shell con fallback dark.
+   Así el toggle :root.light del shell propaga automáticamente al kanban. */
 #kg-root {
-  --kg-bg:#0d1117;--kg-bg2:#161b22;--kg-bg-card:#1c2128;--kg-bg-el:#22272e;--kg-bg-l3:#2d333b;
-  --kg-border:#30363d;--kg-border-hi:#484f58;
-  --kg-tx:#e6edf3;--kg-tx2:#8b949e;--kg-tx3:#6e7681;
-  --kg-acc-bl:#58a6ff;--kg-acc-gn:#3fb950;--kg-acc-rd:#f85149;--kg-acc-or:#d29922;
-  --kg-acc-cy:#39d2c0;--kg-acc-pu:#bc8cff;--kg-acc-pk:#f778ba;--kg-acc-ye:#eab308;
-  --kg-shd:rgba(0,0,0,.3);--kg-shd-lg:rgba(0,0,0,.5);
-  --kg-font:'DM Sans',-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;
-  --kg-mono:'JetBrains Mono',Consolas,monospace;
+  --kg-bg:        var(--bg, #0d1117);
+  --kg-bg2:       var(--bg2, #161b22);
+  --kg-bg-card:   var(--bg3, #1c2128);
+  --kg-bg-el:     var(--bg4, #22272e);
+  --kg-bg-l3:     var(--bg4, #2d333b);
+  --kg-border:    var(--border, #30363d);
+  --kg-border-hi: #484f58;          /* sin equivalente directo, override en .light */
+  --kg-tx:        var(--text, #e6edf3);
+  --kg-tx2:       var(--text2, #8b949e);
+  --kg-tx3:       var(--text3, #6e7681);
+  --kg-acc-bl:    var(--blue, #58a6ff);
+  --kg-acc-gn:    var(--green, #3fb950);
+  --kg-acc-rd:    var(--red, #f85149);
+  --kg-acc-or:    var(--orange, #d29922);
+  --kg-acc-cy:    var(--cyan, #39d2c0);
+  --kg-acc-pu:    var(--purple, #bc8cff);
+  --kg-acc-pk:    var(--pink, #f778ba);
+  --kg-acc-ye:    var(--yellow, #eab308);
+  --kg-shd:       rgba(0,0,0,.3);   /* sombras dark por defecto */
+  --kg-shd-lg:    rgba(0,0,0,.5);
+  --kg-font:      var(--font, 'DM Sans',-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif);
+  --kg-mono:      var(--mono, 'JetBrains Mono',Consolas,monospace);
+}
+/* Override: tokens sin equivalente directo en el shell para modo claro */
+:root.light #kg-root {
+  --kg-border-hi: #94a3b8;
+  --kg-shd:       rgba(15,23,42,.08);
+  --kg-shd-lg:    rgba(15,23,42,.18);
 }
 #kg-root * {margin:0;padding:0;box-sizing:border-box}
 #kg-root {background:var(--kg-bg);color:var(--kg-tx);font-family:var(--kg-font);font-size:12px;line-height:1.5;height:calc(100vh - 100px);width:100%;flex:1;min-width:0;box-sizing:border-box;display:flex;flex-direction:column}
@@ -17624,8 +17646,8 @@ function kg_renderCFD(cfd){
   for (var i=0;i<=4;i++){
     var yy = M.t + (i/4)*(H-M.t-M.b);
     var vv = Math.round(maxTotal*(1-i/4));
-    yLabels += '<line x1="'+M.l+'" y1="'+yy+'" x2="'+(W-M.r)+'" y2="'+yy+'" stroke="rgba(139,148,158,.08)" stroke-width="0.5"/>';
-    yLabels += '<text x="'+(M.l-4)+'" y="'+(yy+3)+'" text-anchor="end" font-size="9" fill="#8b949e">'+vv+'</text>';
+    yLabels += '<line x1="'+M.l+'" y1="'+yy+'" x2="'+(W-M.r)+'" y2="'+yy+'" stroke="var(--kg-border)" stroke-opacity=".4" stroke-width="0.5"/>';
+    yLabels += '<text x="'+(M.l-4)+'" y="'+(yy+3)+'" text-anchor="end" font-size="9" fill="var(--kg-tx2)">'+vv+'</text>';
   }
   // Eje X labels (cada 5 días)
   var xLabels = '';
@@ -17633,7 +17655,7 @@ function kg_renderCFD(cfd){
     if (i<n) {
       var dt = new Date(cfd[i].dia);
       var lbl = dt.getDate()+'/'+(dt.getMonth()+1);
-      xLabels += '<text x="'+x(i)+'" y="'+(H-5)+'" font-size="9" fill="#8b949e">'+lbl+'</text>';
+      xLabels += '<text x="'+x(i)+'" y="'+(H-5)+'" font-size="9" fill="var(--kg-tx2)">'+lbl+'</text>';
     }
   });
   // WIP limit overlay: línea horizontal punteada por cada límite definido
@@ -17673,8 +17695,8 @@ function kg_renderControlChart(cc, ucl, avgLt){
   for (var i=0;i<=4;i++){
     var yy = M.t + (i/4)*(H-M.t-M.b);
     var vv = Math.round(maxLt*(1-i/4));
-    yLabels += '<line x1="'+M.l+'" y1="'+yy+'" x2="'+(W-M.r)+'" y2="'+yy+'" stroke="rgba(139,148,158,.08)" stroke-width="0.5"/>';
-    yLabels += '<text x="'+(M.l-4)+'" y="'+(yy+3)+'" text-anchor="end" font-size="9" fill="#8b949e">'+vv+'h</text>';
+    yLabels += '<line x1="'+M.l+'" y1="'+yy+'" x2="'+(W-M.r)+'" y2="'+yy+'" stroke="var(--kg-border)" stroke-opacity=".4" stroke-width="0.5"/>';
+    yLabels += '<text x="'+(M.l-4)+'" y="'+(yy+3)+'" text-anchor="end" font-size="9" fill="var(--kg-tx2)">'+vv+'h</text>';
   }
   // UCL line
   var uclY = y(ucl);
@@ -17685,7 +17707,7 @@ function kg_renderControlChart(cc, ucl, avgLt){
     '<text x="'+(W-M.r-2)+'" y="'+(avgY-3)+'" text-anchor="end" font-size="9" fill="#58a6ff" font-weight="700">AVG '+avgLt+'h</text>';
   // Polyline
   var pts = cc.map(function(c,i){ return x(i)+','+y(c.lt_h); }).join(' ');
-  var poly = '<polyline points="'+pts+'" fill="none" stroke="rgba(139,148,158,.55)" stroke-width="1"/>';
+  var poly = '<polyline points="'+pts+'" fill="none" stroke="var(--kg-tx2)" stroke-opacity=".55" stroke-width="1"/>';
   // Scatter (rojo si > UCL)
   var dots = cc.map(function(c,i){
     var clr = c.lt_h > ucl ? '#f85149' : '#3fb950';
