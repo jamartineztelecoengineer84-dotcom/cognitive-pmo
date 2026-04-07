@@ -1118,7 +1118,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;disp
   --kg-mono:'JetBrains Mono',Consolas,monospace;
 }
 #kg-root * {margin:0;padding:0;box-sizing:border-box}
-#kg-root {background:var(--kg-bg);color:var(--kg-tx);font-family:var(--kg-font);font-size:12px;line-height:1.5;height:calc(100vh - 100px);display:flex;flex-direction:column}
+#kg-root {background:var(--kg-bg);color:var(--kg-tx);font-family:var(--kg-font);font-size:12px;line-height:1.5;height:calc(100vh - 100px);width:100%;flex:1;min-width:0;box-sizing:border-box;display:flex;flex-direction:column}
 
 /* ═══════════════ TOPBAR ═══════════════ */
 
@@ -17663,13 +17663,15 @@ var kg_kbFilters = {tipo:'all', pri:'', tech:'', dept:'', search:''};
 
 async function kg_loadKanbanGlobal(){
   try {
+    console.log('[kg] kg_loadKanbanGlobal: fetching /api/kanban/tareas');
     var r = await fetch('/api/kanban/tareas');
-    if (!r.ok) return;
+    if (!r.ok) { console.warn('[kg] fetch failed', r.status); return; }
     var d = await r.json();
     kg_kbAll = d.tareas || [];
+    console.log('[kg] tareas recibidas:', kg_kbAll.length, 'by_estado:', d.by_estado);
     kg_populateFilterOptions(kg_kbAll);
     kg_renderKanban();
-  } catch(e){ console.error('kanban fetch error', e); }
+  } catch(e){ console.error('[kg] kanban fetch error', e); }
 }
 
 function kg_populateFilterOptions(tareas){
@@ -17739,8 +17741,8 @@ function kg_renderKanban(){
     totalShown++;
   });
   states.forEach(function(s){
-    document.getElementById('body-'+s).innerHTML = bodies[s].join('') || '<div style="text-align:center;color:var(--kg-tx3);font-size:10px;padding:20px 0;">— vac&iacute;o —</div>';
-    document.getElementById('cnt-'+s).textContent = counts[s];
+    document.getElementById('kg-body-'+s).innerHTML = bodies[s].join('') || '<div style="text-align:center;color:var(--kg-tx3);font-size:10px;padding:20px 0;">— vac&iacute;o —</div>';
+    document.getElementById('kg-cnt-'+s).textContent = counts[s];
   });
   document.getElementById('kg-kb-total').textContent = totalShown + ' tareas';
 }
@@ -18008,7 +18010,7 @@ function kg_refreshCounters(){
   document.querySelectorAll('.kg-kb-col').forEach(function(c){
     var st = c.getAttribute('data-st');
     var n = c.querySelectorAll('.kg-kk').length;
-    var el = document.getElementById('cnt-'+st);
+    var el = document.getElementById('kg-cnt-'+st);
     if (el) el.textContent = n;
   });
   var total = document.querySelectorAll('.kg-kk').length;
