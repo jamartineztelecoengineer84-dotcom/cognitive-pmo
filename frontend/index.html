@@ -1205,12 +1205,12 @@ footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;disp
 
 /* ═══════════════ KANBAN BOARD ═══════════════ */
 #kg-root .kg-kanban {flex:1;overflow-x:auto;overflow-y:hidden;display:flex;gap:10px;padding:12px 18px;background:var(--kg-bg)}
-#kg-root .kg-kb-col {background:var(--kg-bg2);border:1px solid var(--kg-border);border-radius:10px;flex:1;min-width:260px;display:flex;flex-direction:column;max-height:100%}
+#kg-root .kg-kb-col {background:var(--kg-bg2);border:1px solid var(--kg-border);border-radius:10px;flex:1 1 0;min-width:260px;min-height:0;display:flex;flex-direction:column;max-height:100%}
 #kg-root .kg-kb-col-h {padding:10px 12px;border-bottom:1px solid var(--kg-border);display:flex;align-items:center;gap:8px;flex-shrink:0}
 #kg-root .kg-kb-col-h h4 {font-size:11px;font-weight:700;display:flex;align-items:center;gap:6px;text-transform:uppercase;letter-spacing:.3px}
 #kg-root .kg-kb-col-h .kg-dot {width:8px;height:8px;border-radius:50%}
 #kg-root .kg-kb-col-h .kg-kcnt {margin-left:auto;font-family:var(--kg-mono);font-size:10px;background:var(--kg-bg-el);border:1px solid var(--kg-border);padding:2px 7px;border-radius:4px;color:var(--kg-tx2)}
-#kg-root .kg-kb-body {flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:8px}
+#kg-root .kg-kb-body {flex:1 1 0;min-height:calc(100vh - 380px);overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:8px}
 #kg-root .kg-kb-body::-webkit-scrollbar {width:6px}
 #kg-root .kg-kb-body::-webkit-scrollbar-track {background:transparent}
 #kg-root .kg-kb-body::-webkit-scrollbar-thumb {background:var(--kg-border);border-radius:3px}
@@ -1245,8 +1245,8 @@ footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;disp
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.55}}
 #kg-root .kg-kk.kg-highlight {outline:2px solid var(--kg-acc-ye);outline-offset:-1px;box-shadow:0 0 0 4px rgba(234,179,8,.25);animation:kk-pulse 1.5s ease-in-out 2}
 @keyframes kk-pulse{0%,100%{box-shadow:0 0 0 4px rgba(234,179,8,.25)}50%{box-shadow:0 0 0 8px rgba(234,179,8,.4)}}
-#kg-root .kg-kk.kg-dragging {opacity:.4;transform:rotate(1.5deg)}
-#kg-root .kg-kb-col.kg-over {border-color:var(--kg-acc-bl);background:var(--kg-bg-card)}
+#kg-root .kg-kk.kg-dragging {opacity:.4;pointer-events:none}
+#kg-root .kg-kb-col.kg-over {background:var(--kg-bg-card);box-shadow:inset 0 0 0 2px var(--kg-acc-bl)}
 /* ═══════════════ MODAL FICHA ═══════════════ */
 #kg-root .kg-modal-overlay {position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:200;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px)}
 #kg-root .kg-modal-overlay.kg-on {display:flex}
@@ -2416,23 +2416,23 @@ footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;disp
 </div>
 <div class="kg-kanban" id="kg-kanban">
   <div class="kg-kb-col" data-st="unassigned" ondragover="kg_kbOver(event)" ondragleave="kg_kbLeave(event)" ondrop="kg_kbDrop(event)">
-    <div class="kg-kb-col-h"><h4><span class="kg-dot" style="background:var(--tx3)"></span>Sin asignar</h4><span class="kg-kcnt" id="kg-cnt-unassigned">0</span></div>
+    <div class="kg-kb-col-h"><h4><span class="kg-dot" style="background:var(--kg-tx3)"></span>Sin asignar</h4><span class="kg-kcnt" id="kg-cnt-unassigned">0</span></div>
     <div class="kg-kb-body" id="kg-body-unassigned"></div>
   </div>
   <div class="kg-kb-col" data-st="asignada" ondragover="kg_kbOver(event)" ondragleave="kg_kbLeave(event)" ondrop="kg_kbDrop(event)">
-    <div class="kg-kb-col-h"><h4><span class="kg-dot" style="background:var(--acc-bl)"></span>Asignada</h4><span class="kg-kcnt" id="kg-cnt-asignada">0</span></div>
+    <div class="kg-kb-col-h"><h4><span class="kg-dot" style="background:var(--kg-acc-bl)"></span>Asignada</h4><span class="kg-kcnt" id="kg-cnt-asignada">0</span></div>
     <div class="kg-kb-body" id="kg-body-asignada"></div>
   </div>
   <div class="kg-kb-col" data-st="en_curso" ondragover="kg_kbOver(event)" ondragleave="kg_kbLeave(event)" ondrop="kg_kbDrop(event)">
-    <div class="kg-kb-col-h"><h4><span class="kg-dot" style="background:var(--acc-or)"></span>En curso</h4><span class="kg-kcnt" id="kg-cnt-en_curso">0</span></div>
+    <div class="kg-kb-col-h"><h4><span class="kg-dot" style="background:var(--kg-acc-or)"></span>En curso</h4><span class="kg-kcnt" id="kg-cnt-en_curso">0</span></div>
     <div class="kg-kb-body" id="kg-body-en_curso"></div>
   </div>
   <div class="kg-kb-col" data-st="pte_tercero" ondragover="kg_kbOver(event)" ondragleave="kg_kbLeave(event)" ondrop="kg_kbDrop(event)">
-    <div class="kg-kb-col-h"><h4><span class="kg-dot" style="background:var(--tx3)"></span>Pte. tercero</h4><span class="kg-kcnt" id="kg-cnt-pte_tercero">0</span></div>
+    <div class="kg-kb-col-h"><h4><span class="kg-dot" style="background:var(--kg-tx3)"></span>Pte. tercero</h4><span class="kg-kcnt" id="kg-cnt-pte_tercero">0</span></div>
     <div class="kg-kb-body" id="kg-body-pte_tercero"></div>
   </div>
   <div class="kg-kb-col" data-st="resuelta" ondragover="kg_kbOver(event)" ondragleave="kg_kbLeave(event)" ondrop="kg_kbDrop(event)">
-    <div class="kg-kb-col-h"><h4><span class="kg-dot" style="background:var(--acc-gn)"></span>Resuelta</h4><span class="kg-kcnt" id="kg-cnt-resuelta">0</span></div>
+    <div class="kg-kb-col-h"><h4><span class="kg-dot" style="background:var(--kg-acc-gn)"></span>Resuelta</h4><span class="kg-kcnt" id="kg-cnt-resuelta">0</span></div>
     <div class="kg-kb-body" id="kg-body-resuelta"></div>
   </div>
 </div>
@@ -17733,6 +17733,7 @@ function kg_renderKanban(){
   var bodies = {}, counts = {};
   states.forEach(function(s){ bodies[s]=[]; counts[s]=0; });
   var totalShown = 0;
+  var hasFilter = kg_kbFilters.tipo!=='all' || kg_kbFilters.pri || kg_kbFilters.tech || kg_kbFilters.dept || kg_kbFilters.search;
   kg_kbAll.forEach(function(t){
     if (!kg_passFilters(t)) return;
     if (!bodies[t.estado]) return;
@@ -17740,11 +17741,15 @@ function kg_renderKanban(){
     counts[t.estado]++;
     totalShown++;
   });
+  console.log('[kg] kg_renderKanban: total array='+kg_kbAll.length+' shown='+totalShown+' counts='+JSON.stringify(counts));
   states.forEach(function(s){
-    document.getElementById('kg-body-'+s).innerHTML = bodies[s].join('') || '<div style="text-align:center;color:var(--kg-tx3);font-size:10px;padding:20px 0;">— vac&iacute;o —</div>';
-    document.getElementById('kg-cnt-'+s).textContent = counts[s];
+    var bodyEl = document.getElementById('kg-body-'+s);
+    var cntEl = document.getElementById('kg-cnt-'+s);
+    if (bodyEl) bodyEl.innerHTML = bodies[s].join('') || '<div style="text-align:center;color:var(--kg-tx3);font-size:10px;padding:20px 0;">— vac&iacute;o —</div>';
+    if (cntEl) cntEl.textContent = counts[s];
   });
-  document.getElementById('kg-kb-total').textContent = totalShown + ' tareas';
+  var totalEl = document.getElementById('kg-kb-total');
+  if (totalEl) totalEl.textContent = hasFilter ? (totalShown + ' / ' + kg_kbAll.length + ' tareas') : (kg_kbAll.length + ' tareas');
 }
 
 // Gradiente determinista por id de técnico (paleta del mockup)
@@ -17845,16 +17850,16 @@ function kg_renderCard(t){
   if (t.tipo === 'BUILD' && t.proyecto) ciOrPrj = '<span class="kg-kk-prj" title="'+kg_escAt(t.proyecto.nombre)+'">'+kg_escAt(t.proyecto.id)+'</span>';
   var idShort = t.id.length > 16 ? t.id.substring(0,16)+'\u2026' : t.id;
   var opacity = t.estado === 'resuelta' ? 'opacity:.75' : '';
-  return '<div class="kg-kk'+t.tipo.toLowerCase()+'" data-id="'+kg_escAt(t.id)+'" draggable="true" ondragstart="kg_kbStart(event)" ondragend="kg_kbEnd(event)" onclick="kg_openFicha(\''+kg_escAt(t.id)+'\')" style="'+opacity+'">'+
+  return '<div class="kg-kk kg-'+t.tipo.toLowerCase()+'" data-id="'+kg_escAt(t.id)+'" draggable="true" ondragstart="kg_kbStart(event)" ondragend="kg_kbEnd(event)" onclick="kg_openFicha(\''+kg_escAt(t.id)+'\')" style="'+opacity+'">'+
     '<div class="kg-kk-top">'+
-      '<span class="kg-kk-type'+t.tipo.toLowerCase()+'">'+t.tipo+'</span>'+
+      '<span class="kg-kk-type kg-'+t.tipo.toLowerCase()+'">'+t.tipo+'</span>'+
       '<span class="kg-kk-id" title="'+kg_escAt(t.id)+'">'+kg_escAt(idShort)+'</span>'+
       kg_originBadge(t) +
     '</div>'+
     '<div class="kg-kk-title">'+kg_escAt(t.titulo)+'</div>'+
     '<div class="kg-kk-pct" style="color:'+pctColor+'">'+t.pct+'%</div>'+
     '<div class="kg-kk-meta">'+
-      '<span class="kg-kk-pri'+t.pri+'">'+t.pri.toUpperCase()+'</span>'+
+      '<span class="kg-kk-pri kg-'+t.pri+'">'+t.pri.toUpperCase()+'</span>'+
       slaHtml + ciOrPrj + depsHtml +
     '</div>'+
     techHtml +
@@ -17991,15 +17996,14 @@ async function kg_kbDrop(e){
       var colName = col.querySelector('h4').textContent.trim();
       kg_showToast('✓ ' + taskId + ' → ' + colName);
     }
-    // Actualizar contadores y refrescar métricas
-    kg_refreshCounters();
-    kg_loadFlowMetrics();
-    // Actualizar el estado en kg_kbAll para que el siguiente render no revierta
+    // Actualizar el estado en kg_kbAll y re-renderizar para reflejar contadores
     var idx = kg_kbAll.findIndex(function(x){return x.id===taskId});
     if (idx >= 0) {
       kg_kbAll[idx].estado = nuevoEstado;
       if (nuevoEstado === 'resuelta') kg_kbAll[idx].pct = 100;
     }
+    kg_renderKanban();
+    kg_loadFlowMetrics();
   } catch(err) {
     kg_showToast('✗ Error de red', true);
     setTimeout(kg_loadKanbanGlobal, 500);
