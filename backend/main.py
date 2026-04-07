@@ -3146,6 +3146,123 @@ async def crear_notificacion(conn, id_usuario: int, tipo: str, titulo: str, mens
 
 # ── Kanban Global — Flow Metrics ──────────────────────────────────────────
 
+@app.get("/api/kanban/tareas")
+async def kanban_tareas_global():
+    """Devuelve TODAS las tareas (RUN+BUILD) normalizadas para el Kanban global.
+    Schema común: {id, tipo, pri, titulo, estado, sla, deadline, tecnico, depto, agente_origen, deps[], pct, ci, proyecto, sprint, columna_origen}.
+    AG-004 Buffer Gatekeeper marca cruces RUN↔BUILD via deps[].
+    """
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(503, "DB no disponible")
+    pri_map = {"Crítica": "p1", "Alta": "p2", "Media": "p3", "Baja": "p4"}
+    def map_estado(columna, id_tecnico):
+        if columna == 'Completado':
+            return 'resuelta'
+        if columna == 'Bloqueado':
+            return 'pte_tercero'
+        if columna in ('En Progreso', 'Code Review', 'Testing', 'Despliegue'):
+            return 'en_curso'
+        if not id_tecnico:
+            return 'unassigned'
+        return 'asignada'
+
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT k.id, k.titulo, k.tipo, k.prioridad, k.columna, k.id_tecnico,
+                   k.id_proyecto, k.id_incidencia, k.bloqueador,
+                   k.horas_estimadas, k.horas_reales, k.fecha_creacion,
+                   k.fecha_inicio_ejecucion, k.fecha_cierre,
+                   p.nombre AS tecnico_nombre, p.silo_especialidad AS depto, p.carga_actual,
+                   ir.ticket_id AS run_ticket, ir.sla_limite AS sla_horas, ir.timestamp_creacion AS run_creada,
+                   cb.id_proyecto AS prj_id, cb.nombre_proyecto AS prj_nombre,
+                   cb.horas_estimadas AS prj_horas, cb.fecha_creacion AS prj_creada
+            FROM kanban_tareas k
+            LEFT JOIN pmo_staff_skills p ON k.id_tecnico = p.id_recurso
+            LEFT JOIN incidencias_run ir ON k.id_incidencia = ir.ticket_id
+            LEFT JOIN cartera_build cb ON k.id_proyecto = cb.id_proyecto
+            ORDER BY k.fecha_creacion DESC
+            LIMIT 500
+        """)
+
+        # Construir índice id→tarea para resolver deps
+        out = []
+        by_id = {}
+        for r in rows:
+            estado = map_estado(r['columna'], r['id_tecnico'])
+            pct = 0
+            if r['horas_estimadas'] and float(r['horas_estimadas']) > 0:
+                pct = min(100, int(float(r['horas_reales'] or 0) / float(r['horas_estimadas']) * 100))
+            elif estado == 'resuelta':
+                pct = 100
+            elif estado == 'en_curso':
+                pct = 50
+            # SLA / deadline
+            sla_seg = None
+            deadline_iso = None
+            from datetime import timezone, timedelta
+            if r['tipo'] == 'RUN' and r['sla_horas']:
+                creada = r['run_creada'] or r['fecha_creacion']
+                if creada:
+                    if creada.tzinfo is None:
+                        creada = creada.replace(tzinfo=timezone.utc)
+                    fin = creada.timestamp() + (float(r['sla_horas']) * 3600)
+                    sla_seg = int(fin - datetime.now(timezone.utc).timestamp())
+            if r['tipo'] == 'BUILD' and r['prj_creada'] and r['prj_horas']:
+                # deadline aproximado: creación + (horas_estimadas / 8h por día laboral)
+                base = r['prj_creada']
+                if base.tzinfo is None:
+                    base = base.replace(tzinfo=timezone.utc)
+                dias = max(1, int(float(r['prj_horas']) / 8))
+                deadline_iso = (base + timedelta(days=dias)).date().isoformat()
+            tecnico = None
+            if r['id_tecnico']:
+                tecnico = {
+                    "id": r['id_tecnico'],
+                    "nombre": r['tecnico_nombre'] or r['id_tecnico'],
+                    "carga": r['carga_actual'] or 0,
+                }
+            tarea = {
+                "id": r['id'],
+                "tipo": r['tipo'],  # RUN | BUILD
+                "pri": pri_map.get(r['prioridad'], 'p3'),
+                "titulo": r['titulo'],
+                "estado": estado,
+                "sla_seg": sla_seg,
+                "deadline": deadline_iso,
+                "tecnico": tecnico,
+                "depto": r['depto'] or 'Sin asignar',
+                "agente_origen": "AG-002" if r['tipo'] == 'RUN' else "AG-013",
+                "deps": [],
+                "pct": pct,
+                "ci": r['run_ticket'],
+                "proyecto": {"id": r['prj_id'], "nombre": r['prj_nombre']} if r['prj_id'] else None,
+                "sprint": None,
+                "columna_origen": r['columna'],
+                "bloqueador": r['bloqueador'],
+            }
+            out.append(tarea)
+            by_id[r['id']] = tarea
+
+        # AG-004 Buffer Gatekeeper: detectar deps cruzadas RUN↔BUILD
+        # Heurística: si una RUN crítica/alta toca un CI presente en una BUILD activa, se cruzan.
+        # Para datos reales: usar bloqueador como referencia textual al ID destino.
+        for t in out:
+            if t.get('bloqueador'):
+                # Buscar IDs de tareas mencionadas en el campo bloqueador
+                txt = str(t['bloqueador'])
+                for other_id in by_id:
+                    if other_id != t['id'] and other_id in txt:
+                        t['deps'].append({"target_id": other_id, "tipo": "bloquea_a", "agente": "AG-004"})
+
+        return {
+            "tareas": out,
+            "total": len(out),
+            "by_estado": {est: sum(1 for t in out if t['estado'] == est)
+                          for est in ['unassigned', 'asignada', 'en_curso', 'pte_tercero', 'resuelta']},
+        }
+
+
 @app.get("/api/kanban/flow-metrics")
 async def kanban_flow_metrics():
     """Métricas Kanban transversales (RUN+BUILD) para panel de flujo. Ventana 30 días."""
