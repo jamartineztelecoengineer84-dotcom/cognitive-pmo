@@ -3263,6 +3263,220 @@ async def kanban_tareas_global():
         }
 
 
+# Mapeo estado lógico → columna kanban_tareas
+_KB_ESTADO_TO_COLUMNA = {
+    "unassigned": "Backlog",
+    "asignada": "Análisis",
+    "en_curso": "En Progreso",
+    "pte_tercero": "Bloqueado",
+    "resuelta": "Completado",
+}
+# Matriz de transiciones permitidas (estado_origen → set de destinos)
+_KB_TRANSICIONES = {
+    "unassigned":  {"asignada", "pte_tercero"},
+    "asignada":    {"en_curso", "pte_tercero", "unassigned"},
+    "en_curso":    {"pte_tercero", "resuelta", "asignada"},
+    "pte_tercero": {"en_curso", "asignada", "resuelta"},
+    "resuelta":    {"en_curso"},  # solo se puede reabrir
+}
+
+
+def _kb_estado_actual(columna: str, id_tecnico: Optional[str]) -> str:
+    if columna == 'Completado': return 'resuelta'
+    if columna == 'Bloqueado': return 'pte_tercero'
+    if columna in ('En Progreso', 'Code Review', 'Testing', 'Despliegue'): return 'en_curso'
+    if not id_tecnico: return 'unassigned'
+    return 'asignada'
+
+
+class KanbanEstadoUpdate(BaseModel):
+    estado: str
+
+
+@app.patch("/api/kanban/tareas/{task_id}")
+async def kanban_patch_estado(task_id: str, body: KanbanEstadoUpdate):
+    """Cambia el estado lógico de una tarea (DnD entre columnas).
+    Valida transición, persiste columna + fechas + nota sys automática en tech_chat_mensajes.
+    """
+    nuevo = body.estado
+    if nuevo not in _KB_ESTADO_TO_COLUMNA:
+        raise HTTPException(400, f"Estado inválido: {nuevo}")
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(503, "DB no disponible")
+    async with pool.acquire() as conn:
+        old = await conn.fetchrow("SELECT * FROM kanban_tareas WHERE id=$1", task_id)
+        if not old:
+            raise HTTPException(404, "Tarea no encontrada")
+        actual = _kb_estado_actual(old['columna'], old['id_tecnico'])
+        if actual == nuevo:
+            return {"ok": True, "task_id": task_id, "estado": actual, "noop": True}
+        permitidos = _KB_TRANSICIONES.get(actual, set())
+        if nuevo not in permitidos:
+            raise HTTPException(409, f"Transición no permitida: {actual} → {nuevo}. Permitidas: {sorted(permitidos)}")
+        nueva_col = _KB_ESTADO_TO_COLUMNA[nuevo]
+        fe = old['fecha_inicio_ejecucion']
+        fc = old['fecha_cierre']
+        if nuevo == 'en_curso' and not fe:
+            fe = datetime.now()
+        if nuevo == 'resuelta':
+            fc = datetime.now()
+            if not fe:
+                fe = datetime.now()
+        if nuevo != 'resuelta' and old['columna'] == 'Completado':
+            fc = None  # reabrir
+        hist = old['historial_columnas'] or []
+        if isinstance(hist, str):
+            hist = json.loads(hist)
+        hist.append({"columna": nueva_col, "estado": nuevo, "timestamp": datetime.now().isoformat()})
+        await conn.execute(
+            """UPDATE kanban_tareas SET columna=$2, fecha_inicio_ejecucion=$3, fecha_cierre=$4,
+               historial_columnas=$5::jsonb WHERE id=$1""",
+            task_id, nueva_col, fe, fc, json.dumps(hist))
+        # Nota sys automática en tech_chat_mensajes (zona congelada: solo INSERT)
+        try:
+            tipo_sala = 'run' if old['tipo'] == 'RUN' else 'build'
+            ref = old['id_incidencia'] or old['id_proyecto'] or task_id
+            sala_id = await conn.fetchval(
+                """INSERT INTO tech_chat_salas (tipo, id_referencia, nombre)
+                   VALUES ($1,$2,$3) ON CONFLICT (tipo,id_referencia) DO UPDATE SET activa=TRUE
+                   RETURNING id""",
+                tipo_sala, ref, f"{ref} · {(old['titulo'] or '')[:80]}")
+            await conn.execute(
+                """INSERT INTO tech_chat_mensajes (id_sala, id_autor, rol_autor, mensaje)
+                   VALUES ($1,$2,'agente',$3)""",
+                sala_id, 'AG-SYS', f"Tarea movida {actual} → {nuevo} (columna: {old['columna']} → {nueva_col})")
+        except Exception as e:
+            logger.warning(f"No se pudo crear nota sys para {task_id}: {e}")
+        return {"ok": True, "task_id": task_id, "estado": nuevo, "columna": nueva_col}
+
+
+@app.get("/api/kanban/tareas/{task_id}/detalle")
+async def kanban_tarea_detalle(task_id: str):
+    """Detalle completo: tarea + tiempos + subtareas + notas tipificadas."""
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(503, "DB no disponible")
+    async with pool.acquire() as conn:
+        r = await conn.fetchrow("""
+            SELECT k.*, p.nombre AS tecnico_nombre, p.silo_especialidad AS depto, p.carga_actual,
+                   ir.ticket_id AS run_ticket, ir.sla_limite AS sla_horas, ir.timestamp_creacion AS run_creada,
+                   cb.id_proyecto AS prj_id, cb.nombre_proyecto AS prj_nombre
+            FROM kanban_tareas k
+            LEFT JOIN pmo_staff_skills p ON k.id_tecnico = p.id_recurso
+            LEFT JOIN incidencias_run ir ON k.id_incidencia = ir.ticket_id
+            LEFT JOIN cartera_build cb ON k.id_proyecto = cb.id_proyecto
+            WHERE k.id=$1
+        """, task_id)
+        if not r:
+            raise HTTPException(404, "Tarea no encontrada")
+
+        # Tiempos de ciclo
+        from datetime import timezone
+        now_utc = datetime.now(timezone.utc)
+        def _to_utc(dt):
+            if dt is None: return None
+            if dt.tzinfo is None: return dt.replace(tzinfo=timezone.utc)
+            return dt
+        creada = _to_utc(r['fecha_creacion'])
+        inicio = _to_utc(r['fecha_inicio_ejecucion'])
+        cierre = _to_utc(r['fecha_cierre'])
+        # En espera: creación → primera asignación (proxy: hasta inicio_ejecucion o ahora)
+        if inicio:
+            espera_min = int((inicio - creada).total_seconds() / 60) if creada else 0
+        else:
+            espera_min = int((now_utc - creada).total_seconds() / 60) if creada else 0
+        # Activo: inicio → cierre (o ahora)
+        if inicio:
+            ref_fin = cierre or now_utc
+            activo_min = int((ref_fin - inicio).total_seconds() / 60)
+        else:
+            activo_min = 0
+        def _fmt_dur(m):
+            if m < 60: return f"{m} min"
+            h = m // 60
+            mm = m % 60
+            return f"{h}h {mm}m" if mm else f"{h}h"
+        def _fmt_hhmm(dt):
+            if not dt: return "—"
+            return dt.strftime("%H:%M")
+
+        # Subtareas
+        subtareas = []
+        if r['tipo'] == 'BUILD':
+            sub_rows = await conn.fetch(
+                "SELECT id, titulo, estado, horas_estimadas, criterio_exito FROM build_subtasks WHERE id_tarea_padre=$1 ORDER BY orden", task_id)
+            for s in sub_rows:
+                est = (s['estado'] or 'PENDIENTE').upper()
+                tag = 'todo'
+                tag_lbl = 'Pendiente'
+                if est in ('COMPLETADA', 'COMPLETADO', 'DONE'):
+                    tag = 'done'; tag_lbl = '✓ Completada'
+                elif est in ('EN_PROGRESO', 'EN PROGRESO', 'DOING', 'EN_CURSO'):
+                    tag = 'doing'; tag_lbl = '⚡ En curso'
+                subtareas.append({
+                    "id": s['id'], "titulo": s['titulo'], "tag": tag, "tag_lbl": tag_lbl,
+                    "horas": float(s['horas_estimadas'] or 0), "nota": s['criterio_exito'] or '',
+                })
+
+        # Notas: leer de tech_chat_mensajes via sala (tipo+ref)
+        notas = []
+        try:
+            tipo_sala = 'run' if r['tipo'] == 'RUN' else 'build'
+            ref = r['id_incidencia'] or r['id_proyecto'] or task_id
+            sala_id = await conn.fetchval(
+                "SELECT id FROM tech_chat_salas WHERE tipo=$1 AND id_referencia=$2", tipo_sala, ref)
+            if sala_id:
+                msg_rows = await conn.fetch(
+                    "SELECT id_autor, rol_autor, mensaje, created_at FROM tech_chat_mensajes WHERE id_sala=$1 ORDER BY created_at ASC LIMIT 200",
+                    sala_id)
+                for m in msg_rows:
+                    autor = m['id_autor'] or '?'
+                    rol = m['rol_autor']
+                    if rol == 'agente':
+                        if autor.startswith('AG-SYS') or 'SYSTEM' in autor.upper():
+                            cls = 'sys'; lbl = 'Sistema'
+                        elif 'SLA' in autor.upper() or 'MONITOR' in autor.upper():
+                            cls = 'alert'; lbl = '⚠ '+autor
+                        else:
+                            cls = 'ag'; lbl = '⬢ '+autor
+                    else:
+                        cls = ''; lbl = autor
+                    notas.append({
+                        "cls": cls, "autor": lbl, "mensaje": m['mensaje'],
+                        "time": m['created_at'].strftime("%H:%M:%S") if m['created_at'] else '',
+                    })
+        except Exception as e:
+            logger.warning(f"No se pudieron cargar notas para {task_id}: {e}")
+
+        # Construir respuesta
+        return {
+            "id": r['id'],
+            "tipo": r['tipo'],
+            "titulo": r['titulo'],
+            "prioridad": r['prioridad'],
+            "estado_logico": _kb_estado_actual(r['columna'], r['id_tecnico']),
+            "columna": r['columna'],
+            "tecnico": ({"id": r['id_tecnico'], "nombre": r['tecnico_nombre'], "carga": r['carga_actual'] or 0}
+                        if r['id_tecnico'] else None),
+            "depto": r['depto'] or 'Sin asignar',
+            "ci": r['run_ticket'],
+            "proyecto": ({"id": r['prj_id'], "nombre": r['prj_nombre']} if r['prj_id'] else None),
+            "horas_estimadas": float(r['horas_estimadas'] or 0),
+            "horas_reales": float(r['horas_reales'] or 0),
+            "fecha_creacion": creada.isoformat() if creada else None,
+            "tiempos": {
+                "en_espera": _fmt_dur(espera_min),
+                "asignacion": _fmt_hhmm(inicio) if inicio else _fmt_hhmm(creada),
+                "primer_toque": _fmt_hhmm(inicio) if inicio else "—",
+                "activo": _fmt_dur(activo_min),
+            },
+            "subtareas": subtareas,
+            "notas": notas,
+            "agente_origen": "AG-002" if r['tipo'] == 'RUN' else "AG-013",
+        }
+
+
 @app.get("/api/kanban/flow-metrics")
 async def kanban_flow_metrics():
     """Métricas Kanban transversales (RUN+BUILD) para panel de flujo. Ventana 30 días."""

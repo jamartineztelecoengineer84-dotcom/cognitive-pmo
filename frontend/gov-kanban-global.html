@@ -144,6 +144,64 @@ body{background:var(--bg);color:var(--tx);font-family:var(--font);font-size:12px
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.55}}
 .kk.highlight{outline:2px solid var(--acc-ye);outline-offset:-1px;box-shadow:0 0 0 4px rgba(234,179,8,.25);animation:kk-pulse 1.5s ease-in-out 2}
 @keyframes kk-pulse{0%,100%{box-shadow:0 0 0 4px rgba(234,179,8,.25)}50%{box-shadow:0 0 0 8px rgba(234,179,8,.4)}}
+.kk.dragging{opacity:.4;transform:rotate(1.5deg)}
+.kb-col.over{border-color:var(--acc-bl);background:var(--bg-card)}
+/* ═══════════════ MODAL FICHA ═══════════════ */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:200;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px)}
+.modal-overlay.on{display:flex}
+.detail-modal{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;width:94%;max-width:820px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 48px var(--shd-lg)}
+.dm-hdr{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;position:sticky;top:0;background:var(--bg-card);z-index:2}
+.dm-hdr-left{flex:1}
+.dm-hdr h2{font-size:15px;font-weight:700;margin-bottom:4px;line-height:1.3}
+.dm-hdr .dm-id{font-family:var(--mono);font-size:10px;color:var(--tx3);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.dm-hdr .dm-id .dm-type{font-weight:800;padding:1px 5px;border-radius:3px}
+.dm-hdr .dm-id .dm-type.run{background:rgba(248,81,73,.2);color:var(--acc-rd)}
+.dm-hdr .dm-id .dm-type.build{background:rgba(188,140,255,.2);color:var(--acc-pu)}
+.dm-close{width:30px;height:30px;border-radius:8px;background:var(--bg-el);border:1px solid var(--border);color:var(--tx2);cursor:pointer;font-size:14px;flex-shrink:0}
+.dm-close:hover{background:var(--acc-rd);color:#fff}
+.dm-body{padding:16px 20px}
+.dm-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px}
+.dm-field label{display:block;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--tx3);margin-bottom:3px}
+.dm-field .val{font-size:11px;font-weight:600;color:var(--tx)}
+.dm-field .val.rd{color:var(--acc-rd)}
+.dm-field .val.or{color:var(--acc-or)}
+.dm-field .val.gn{color:var(--acc-gn)}
+.dm-field .val.cy{color:var(--acc-cy)}
+.dm-times{background:var(--bg-el);border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:4px;margin-bottom:14px}
+.dm-times-h{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--tx2);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.dm-times-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.dm-time-cell{background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:7px 9px}
+.dm-time-cell .l{font-size:8px;font-weight:700;color:var(--tx3);text-transform:uppercase;margin-bottom:2px}
+.dm-time-cell .v{font-family:var(--mono);font-size:14px;font-weight:800}
+.dm-subtasks{margin-top:14px}
+.dm-subtasks h4{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--tx2);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border)}
+.dm-st{background:var(--bg-el);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-bottom:6px;position:relative}
+.dm-st-title{font-size:11px;font-weight:600;margin-bottom:3px;padding-right:60px}
+.dm-st-meta{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.dm-st-tag{font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px}
+.dm-st-tag.done{background:rgba(63,185,80,.15);color:var(--acc-gn)}
+.dm-st-tag.doing{background:rgba(210,153,34,.15);color:var(--acc-or)}
+.dm-st-tag.todo{background:var(--bg-l3);color:var(--tx2)}
+.dm-st-h{font-family:var(--mono);font-size:9px;font-weight:700;position:absolute;top:8px;right:10px;color:var(--tx2)}
+.dm-notes{margin-top:14px;background:var(--bg-el);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.dm-notes-h{padding:10px 14px;border-bottom:1px solid var(--border);font-size:10px;font-weight:700;text-transform:uppercase;color:var(--tx2);display:flex;align-items:center;gap:6px}
+.dm-notes-body{padding:10px 14px;max-height:280px;overflow-y:auto}
+.dm-note{margin-bottom:8px;padding:8px 10px;border-radius:6px;font-size:11px;line-height:1.5;border-left:2px solid var(--acc-cy);background:var(--bg-card);position:relative}
+.dm-note.sys{border-left-color:var(--acc-bl)}
+.dm-note.ag{border-left-color:var(--acc-pu)}
+.dm-note.alert{border-left-color:var(--acc-or)}
+.dm-note .note-author{font-size:9px;font-weight:700;color:var(--acc-cy);margin-bottom:3px;display:block}
+.dm-note.sys .note-author{color:var(--acc-bl)}
+.dm-note.ag .note-author{color:var(--acc-pu)}
+.dm-note.alert .note-author{color:var(--acc-or)}
+.dm-note .note-time{font-size:8px;color:var(--tx3);font-family:var(--mono);position:absolute;top:8px;right:10px}
+.dm-input-row{display:flex;gap:6px;padding:8px 14px;border-top:1px solid var(--border)}
+.dm-input-row input{flex:1;background:var(--bg-card);border:1px solid var(--border);color:var(--tx);padding:6px 10px;border-radius:5px;font-size:11px;font-family:var(--font);outline:none}
+.dm-input-row button{background:var(--acc-bl);border:none;color:#fff;padding:6px 12px;border-radius:5px;font-size:10px;font-weight:700;cursor:pointer}
+/* ═══════════════ TOAST ═══════════════ */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--bg-card);border:1px solid var(--border);border-left:3px solid var(--acc-gn);padding:10px 18px;border-radius:8px;font-size:11px;z-index:300;box-shadow:0 8px 24px var(--shd-lg);display:none}
+.toast.on{display:block}
+.toast.err{border-left-color:var(--acc-rd)}
 .kk-deadline{font-size:9px;font-family:var(--mono);font-weight:700;display:flex;align-items:center;gap:3px;padding:1px 5px;border-radius:3px;background:var(--bg-el)}
 .kk-deadline.ok{color:var(--acc-gn)}
 .kk-deadline.warn{color:var(--acc-or);background:rgba(210,153,34,.1)}
@@ -268,27 +326,50 @@ body{background:var(--bg);color:var(--tx);font-family:var(--font);font-size:12px
 
 <!-- ═══════════════ KANBAN BOARD ═══════════════ -->
 <div class="kanban" id="kanban">
-  <div class="kb-col" data-st="unassigned">
+  <div class="kb-col" data-st="unassigned" ondragover="kbOver(event)" ondragleave="kbLeave(event)" ondrop="kbDrop(event)">
     <div class="kb-col-h"><h4><span class="dot" style="background:var(--tx3)"></span>Sin asignar</h4><span class="kcnt" id="cnt-unassigned">0</span></div>
     <div class="kb-body" id="body-unassigned"></div>
   </div>
-  <div class="kb-col" data-st="asignada">
+  <div class="kb-col" data-st="asignada" ondragover="kbOver(event)" ondragleave="kbLeave(event)" ondrop="kbDrop(event)">
     <div class="kb-col-h"><h4><span class="dot" style="background:var(--acc-bl)"></span>Asignada</h4><span class="kcnt" id="cnt-asignada">0</span></div>
     <div class="kb-body" id="body-asignada"></div>
   </div>
-  <div class="kb-col" data-st="en_curso">
+  <div class="kb-col" data-st="en_curso" ondragover="kbOver(event)" ondragleave="kbLeave(event)" ondrop="kbDrop(event)">
     <div class="kb-col-h"><h4><span class="dot" style="background:var(--acc-or)"></span>En curso</h4><span class="kcnt" id="cnt-en_curso">0</span></div>
     <div class="kb-body" id="body-en_curso"></div>
   </div>
-  <div class="kb-col" data-st="pte_tercero">
+  <div class="kb-col" data-st="pte_tercero" ondragover="kbOver(event)" ondragleave="kbLeave(event)" ondrop="kbDrop(event)">
     <div class="kb-col-h"><h4><span class="dot" style="background:var(--tx3)"></span>Pte. tercero</h4><span class="kcnt" id="cnt-pte_tercero">0</span></div>
     <div class="kb-body" id="body-pte_tercero"></div>
   </div>
-  <div class="kb-col" data-st="resuelta">
+  <div class="kb-col" data-st="resuelta" ondragover="kbOver(event)" ondragleave="kbLeave(event)" ondrop="kbDrop(event)">
     <div class="kb-col-h"><h4><span class="dot" style="background:var(--acc-gn)"></span>Resuelta</h4><span class="kcnt" id="cnt-resuelta">0</span></div>
     <div class="kb-body" id="body-resuelta"></div>
   </div>
 </div>
+
+<!-- ═══════════════ MODAL FICHA ═══════════════ -->
+<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeFicha()">
+  <div class="detail-modal">
+    <div class="dm-hdr">
+      <div class="dm-hdr-left">
+        <h2 id="dm-title">&mdash;</h2>
+        <div class="dm-id">
+          <span class="dm-type" id="dm-type">&mdash;</span>
+          <span id="dm-id">&mdash;</span>
+          <span>&middot;</span>
+          <span id="dm-creada">&mdash;</span>
+        </div>
+      </div>
+      <button class="dm-close" onclick="closeFicha()">&times;</button>
+    </div>
+    <div class="dm-body" id="dm-body">
+      <div style="text-align:center;color:var(--tx3);padding:30px 0;">Cargando&hellip;</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
 
 <script>
 // ── Reloj live ──
@@ -661,7 +742,7 @@ function renderCard(t){
   if (t.tipo === 'BUILD' && t.proyecto) ciOrPrj = '<span class="kk-prj" title="'+escAt(t.proyecto.nombre)+'">'+escAt(t.proyecto.id)+'</span>';
   var idShort = t.id.length > 16 ? t.id.substring(0,16)+'\u2026' : t.id;
   var opacity = t.estado === 'resuelta' ? 'opacity:.75' : '';
-  return '<div class="kk '+t.tipo.toLowerCase()+'" data-id="'+escAt(t.id)+'" style="'+opacity+'">'+
+  return '<div class="kk '+t.tipo.toLowerCase()+'" data-id="'+escAt(t.id)+'" draggable="true" ondragstart="kbStart(event)" ondragend="kbEnd(event)" onclick="openFicha(\''+escAt(t.id)+'\')" style="'+opacity+'">'+
     '<div class="kk-top">'+
       '<span class="kk-type '+t.tipo.toLowerCase()+'">'+t.tipo+'</span>'+
       '<span class="kk-id" title="'+escAt(t.id)+'">'+escAt(idShort)+'</span>'+
@@ -729,6 +810,180 @@ function formatTime(s){
 function formatDate(d){
   var p=function(x){return x<10?'0'+x:x};
   return p(d.getDate())+'/'+p(d.getMonth()+1);
+}
+
+// ── Toast ──
+function showToast(msg, isErr){
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast on' + (isErr ? ' err' : '');
+  setTimeout(function(){ t.className = 'toast'; }, 2800);
+}
+
+// ── Drag & Drop ──
+var _dragEl = null;
+function kbStart(e){
+  _dragEl = e.currentTarget;
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', e.currentTarget.getAttribute('data-id'));
+}
+function kbEnd(e){
+  if (e && e.currentTarget) e.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('.kb-col.over').forEach(function(c){c.classList.remove('over');});
+  _dragEl = null;
+}
+function kbOver(e){
+  e.preventDefault();
+  e.currentTarget.classList.add('over');
+}
+function kbLeave(e){
+  if (e.currentTarget.contains(e.relatedTarget)) return;
+  e.currentTarget.classList.remove('over');
+}
+async function kbDrop(e){
+  e.preventDefault();
+  var col = e.currentTarget;
+  col.classList.remove('over');
+  if (!_dragEl) return;
+  var taskId = _dragEl.getAttribute('data-id');
+  var nuevoEstado = col.getAttribute('data-st');
+  // Optimistic UI: mover la card al nuevo body
+  var body = col.querySelector('.kb-body');
+  body.insertBefore(_dragEl, body.firstChild);
+  _dragEl.classList.remove('dragging');
+  // Persistir en backend
+  try {
+    var r = await fetch('/api/kanban/tareas/'+encodeURIComponent(taskId), {
+      method: 'PATCH',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({estado: nuevoEstado}),
+    });
+    var d = await r.json();
+    if (!r.ok) {
+      showToast('✗ ' + (d.detail || 'Transición no permitida'), true);
+      // Recargar para revertir
+      setTimeout(loadKanbanGlobal, 500);
+      return;
+    }
+    if (d.noop) {
+      showToast('• Sin cambios');
+    } else {
+      var colName = col.querySelector('h4').textContent.trim();
+      showToast('✓ ' + taskId + ' → ' + colName);
+    }
+    // Actualizar contadores y refrescar métricas
+    refreshCounters();
+    loadFlowMetrics();
+    // Actualizar el estado en _kbAll para que el siguiente render no revierta
+    var idx = _kbAll.findIndex(function(x){return x.id===taskId});
+    if (idx >= 0) {
+      _kbAll[idx].estado = nuevoEstado;
+      if (nuevoEstado === 'resuelta') _kbAll[idx].pct = 100;
+    }
+  } catch(err) {
+    showToast('✗ Error de red', true);
+    setTimeout(loadKanbanGlobal, 500);
+  }
+  _dragEl = null;
+}
+function refreshCounters(){
+  document.querySelectorAll('.kb-col').forEach(function(c){
+    var st = c.getAttribute('data-st');
+    var n = c.querySelectorAll('.kk').length;
+    var el = document.getElementById('cnt-'+st);
+    if (el) el.textContent = n;
+  });
+  var total = document.querySelectorAll('.kk').length;
+  document.getElementById('kb-total').textContent = total + ' tareas';
+}
+
+// ── Modal ficha ──
+async function openFicha(id){
+  document.getElementById('dm-id').textContent = id;
+  document.getElementById('dm-body').innerHTML = '<div style="text-align:center;color:var(--tx3);padding:30px 0;">Cargando&hellip;</div>';
+  document.getElementById('modal').classList.add('on');
+  try {
+    var r = await fetch('/api/kanban/tareas/'+encodeURIComponent(id)+'/detalle');
+    if (!r.ok) {
+      document.getElementById('dm-body').innerHTML = '<div style="color:var(--acc-rd);padding:20px;">Error cargando detalle</div>';
+      return;
+    }
+    var d = await r.json();
+    renderFicha(d);
+  } catch(e) {
+    document.getElementById('dm-body').innerHTML = '<div style="color:var(--acc-rd);padding:20px;">'+escAt(e.message)+'</div>';
+  }
+}
+function closeFicha(){
+  document.getElementById('modal').classList.remove('on');
+}
+document.addEventListener('keydown', function(e){
+  if (e.key === 'Escape') closeFicha();
+});
+
+function renderFicha(d){
+  document.getElementById('dm-title').textContent = d.titulo;
+  var typeEl = document.getElementById('dm-type');
+  typeEl.textContent = d.tipo;
+  typeEl.className = 'dm-type ' + d.tipo.toLowerCase();
+  var creadaTxt = d.fecha_creacion ? new Date(d.fecha_creacion).toLocaleString('es-ES') : '—';
+  document.getElementById('dm-creada').textContent = 'Creada ' + creadaTxt + ' por ' + d.agente_origen;
+  // Body
+  var priCls = ({'Crítica':'rd','Alta':'or','Media':'cy','Baja':''})[d.prioridad] || '';
+  var techVal = d.tecnico ? (escAt(d.tecnico.nombre)+' ('+(d.tecnico.carga||0)+'% carga)') : '<span class="rd">Sin asignar</span>';
+  var ciOrPrj = d.tipo==='RUN' && d.ci ? d.ci : (d.proyecto ? (d.proyecto.id+' · '+escAt(d.proyecto.nombre)) : '—');
+  var pct = d.horas_estimadas > 0 ? Math.min(100, Math.round(d.horas_reales / d.horas_estimadas * 100)) : (d.estado_logico==='resuelta'?100:0);
+  var html = '';
+  html += '<div class="dm-row">';
+  html += '<div class="dm-field"><label>Prioridad</label><div class="val '+priCls+'">'+escAt(d.prioridad||'—')+'</div></div>';
+  html += '<div class="dm-field"><label>T&eacute;cnico</label><div class="val">'+techVal+'</div></div>';
+  html += '<div class="dm-field"><label>Departamento</label><div class="val">'+escAt(d.depto)+'</div></div>';
+  html += '</div>';
+  html += '<div class="dm-row">';
+  html += '<div class="dm-field"><label>'+(d.tipo==='RUN'?'CI afectado':'Proyecto')+'</label><div class="val">'+escAt(ciOrPrj)+'</div></div>';
+  html += '<div class="dm-field"><label>Estado</label><div class="val cy">'+escAt(d.estado_logico)+' &middot; '+escAt(d.columna)+'</div></div>';
+  html += '<div class="dm-field"><label>Progreso</label><div class="val">'+pct+'% &middot; '+d.horas_reales+'h / '+d.horas_estimadas+'h</div></div>';
+  html += '</div>';
+  // Tiempos
+  html += '<div class="dm-times">';
+  html += '<div class="dm-times-h">&#9201; Tiempos de ciclo</div>';
+  html += '<div class="dm-times-grid">';
+  html += '<div class="dm-time-cell"><div class="l">En espera</div><div class="v">'+escAt(d.tiempos.en_espera)+'</div></div>';
+  html += '<div class="dm-time-cell"><div class="l">Asignaci&oacute;n</div><div class="v">'+escAt(d.tiempos.asignacion)+'</div></div>';
+  html += '<div class="dm-time-cell"><div class="l">Primer toque</div><div class="v">'+escAt(d.tiempos.primer_toque)+'</div></div>';
+  html += '<div class="dm-time-cell"><div class="l">Activo</div><div class="v">'+escAt(d.tiempos.activo)+'</div></div>';
+  html += '</div></div>';
+  // Subtareas
+  if (d.subtareas && d.subtareas.length) {
+    html += '<div class="dm-subtasks"><h4>Subtareas ('+d.subtareas.length+')</h4>';
+    d.subtareas.forEach(function(s){
+      html += '<div class="dm-st">';
+      html += '<div class="dm-st-title">'+escAt(s.titulo)+'</div>';
+      html += '<div class="dm-st-meta"><span class="dm-st-tag '+s.tag+'">'+escAt(s.tag_lbl)+'</span>';
+      if (s.nota) html += '<span style="font-size:9px;color:var(--tx3)">'+escAt(s.nota)+'</span>';
+      html += '</div><div class="dm-st-h">'+s.horas+'h</div></div>';
+    });
+    html += '</div>';
+  }
+  // Notas
+  html += '<div class="dm-notes">';
+  html += '<div class="dm-notes-h">&#128203; Hist&oacute;rico completo de la tarjeta</div>';
+  html += '<div class="dm-notes-body">';
+  if (!d.notas || !d.notas.length) {
+    html += '<div style="color:var(--tx3);text-align:center;padding:20px 0;font-size:11px;">Sin notas registradas</div>';
+  } else {
+    d.notas.forEach(function(n){
+      html += '<div class="dm-note '+(n.cls||'')+'">';
+      html += '<span class="note-author">'+escAt(n.autor)+'</span>';
+      html += '<span class="note-time">'+escAt(n.time)+'</span>';
+      html += '<div>'+escAt(n.mensaje)+'</div></div>';
+    });
+  }
+  html += '</div>';
+  html += '<div class="dm-input-row"><input placeholder="A&ntilde;adir nota al hist&oacute;rico..." disabled><button disabled>Enviar</button></div>';
+  html += '</div>';
+  document.getElementById('dm-body').innerHTML = html;
 }
 
 // Initial + refresh
