@@ -2234,7 +2234,24 @@ async function p96LoadGovernors(){
   }catch(e){ console.warn('[p96] governors fetch err', e); }
 }
 
-let bgRunMatrix = {};
+// FIX BUG 1 (P97 F5.2): bgRunMatrix necesita shape válida ANTES del auto-render
+// del heatmap (línea ~2691: bgRenderHeatmap() corre al cargar el script y hace
+// bgRunMatrix[lay.k][cr.k]). Sin pre-inicialización lanza TypeError → el script
+// aborta desde la línea 2691 → todas las declaraciones posteriores (incluido
+// `let bgCartFS=...` en línea 2905) NUNCA se ejecutan → BUGS 2 y 3 en cascada
+// (TDZ de bgCartFS al hacer bgRenderCartera, y bgRenderPulso nunca se autoejecuta).
+// Pre-inicializamos con 8 layers × 4 crits vacías para que el auto-render NO
+// crashee. Tras el bootstrap, los datos reales del API sobrescriben.
+let bgRunMatrix = (function(){
+  const empty = {cis:0, opex:0, inc:0, heat:0};
+  const m = {};
+  ['INFRA','RED','CLOUD','VIRT','STO','SEC','DATA','APPS'].forEach(l => {
+    m[l] = {};
+    ['C1','C2','C3','C4'].forEach(c => { m[l][c] = Object.assign({}, empty); });
+  });
+  return m;
+})();
+
 async function p96LoadRunMatrix(){
   try{
     const r = await p96Fetch('/api/p96/run/matrix');
