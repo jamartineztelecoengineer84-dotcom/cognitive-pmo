@@ -205,20 +205,18 @@ async def p96_run_cis(
 
 
 # ─────────────────────────────────────────────────────────────────────
-# 4. GET /api/p96/run/incidents/{layer}
+# 4. GET /api/p96/run/incidents
+#    Devuelve TODAS las incidencias (top 100 por fecha). El frontend filtra
+#    client-side por la celda activa del heatmap (decisión estratega F3).
+#    Alias /run/incidents/{layer} mantenido por compat: ignora el parámetro.
 # ─────────────────────────────────────────────────────────────────────
-@router.get("/run/incidents/{layer}")
-async def p96_run_incidents(
-    layer: str,
+async def _p96_run_incidents_impl(
     request: Request,
-    user: Optional[UserInfo] = Depends(get_current_user),
+    user: Optional[UserInfo],
 ):
     user, scope = _require_scope(user)
     pool = get_pool()
     async with pool.acquire() as conn:
-        # v_p96_run_incidents no tiene columna 'layer' directa.
-        # Filtramos por ci JOIN cmdb_activos.silo si es posible.
-        # Para simplificar: devolvemos todas las incidencias, frontend agrupa por layer.
         rows = await conn.fetch(
             "SELECT * FROM v_p96_run_incidents ORDER BY opened DESC NULLS LAST LIMIT 100"
         )
@@ -232,6 +230,25 @@ async def p96_run_incidents(
                 r['opened'] = r['opened'].isoformat()
         await _log_econ_access(conn, user, request.url.path, scope, len(result))
         return result
+
+
+@router.get("/run/incidents")
+async def p96_run_incidents(
+    request: Request,
+    user: Optional[UserInfo] = Depends(get_current_user),
+):
+    """Endpoint canónico (sin parámetro). El frontend filtra por celda en cliente."""
+    return await _p96_run_incidents_impl(request, user)
+
+
+@router.get("/run/incidents/{layer}")
+async def p96_run_incidents_legacy(
+    layer: str,
+    request: Request,
+    user: Optional[UserInfo] = Depends(get_current_user),
+):
+    """Alias de compatibilidad: ignora `layer` y delega al canónico."""
+    return await _p96_run_incidents_impl(request, user)
 
 
 # ─────────────────────────────────────────────────────────────────────
