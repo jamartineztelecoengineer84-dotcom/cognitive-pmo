@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import uuid
 import logging
@@ -3501,15 +3502,67 @@ async def kanban_tarea_detalle(task_id: str):
         except Exception as e:
             logger.warning(f"No se pudieron cargar notas para {task_id}: {e}")
 
+        # Sintetizar notas desde historial_columnas (P95 FASE 10 fix)
+        # para tareas que no tienen entradas en tech_chat_mensajes
+        try:
+            hist = r['historial_columnas']
+            if isinstance(hist, str):
+                hist = json.loads(hist)
+            if hist and isinstance(hist, list) and not notas:
+                for h in hist:
+                    ts = h.get('timestamp', '')
+                    col = h.get('columna', '?')
+                    est = h.get('estado', '')
+                    time_str = ''
+                    if ts:
+                        try:
+                            dt = datetime.fromisoformat(ts.replace('Z', '+00:00'))
+                            time_str = dt.strftime("%d/%m %H:%M")
+                        except Exception:
+                            time_str = ts[:16]
+                    msg = f"Transición a columna {col}" + (f" (estado: {est})" if est else "")
+                    notas.append({
+                        "cls": "sys",
+                        "autor": "Sistema · historial",
+                        "mensaje": msg,
+                        "time": time_str,
+                    })
+        except Exception as e:
+            logger.warning(f"No se pudo sintetizar historial para {task_id}: {e}")
+
+        # Descripción: kanban_tareas.descripcion
+        descripcion = r['descripcion'] if 'descripcion' in r.keys() and r['descripcion'] else None
+
+        # SLA segundos restantes (igual que /api/kanban/tareas)
+        sla_seg = None
+        if r['tipo'] == 'RUN' and r['sla_horas']:
+            base_sla = r['run_creada'] or r['fecha_creacion']
+            if base_sla:
+                if base_sla.tzinfo is None:
+                    base_sla = base_sla.replace(tzinfo=timezone.utc)
+                fin_sla = base_sla.timestamp() + (float(r['sla_horas']) * 3600)
+                sla_seg = int(fin_sla - now_utc.timestamp())
+
+        # Dependencias (heurística por bloqueador)
+        deps = []
+        if r['bloqueador']:
+            txt = str(r['bloqueador'])
+            ids_match = re.findall(r'(KT-[A-Z0-9-]+|INC-[A-Z0-9-]+|PRJ-?\d+|BLD-[A-Z0-9-]+)', txt)
+            for did in ids_match:
+                if did != task_id:
+                    deps.append({"target_id": did, "tipo": "bloqueado_por", "agente": "AG-004"})
+
         # Construir respuesta
         return {
             "id": r['id'],
             "tipo": r['tipo'],
             "titulo": r['titulo'],
+            "descripcion": descripcion,
             "prioridad": r['prioridad'],
             "estado_logico": _kb_estado_actual(r['columna'], r['id_tecnico']),
             "columna": r['columna'],
-            "tecnico": ({"id": r['id_tecnico'], "nombre": r['tecnico_nombre'], "carga": r['carga_actual'] or 0}
+            "tecnico": ({"id": r['id_tecnico'], "nombre": r['tecnico_nombre'], "carga": r['carga_actual'] or 0,
+                         "departamento": r['depto']}
                         if r['id_tecnico'] else None),
             "depto": r['depto'] or 'Sin asignar',
             "ci": r['run_ticket'],
@@ -3517,6 +3570,9 @@ async def kanban_tarea_detalle(task_id: str):
             "horas_estimadas": float(r['horas_estimadas'] or 0),
             "horas_reales": float(r['horas_reales'] or 0),
             "fecha_creacion": creada.isoformat() if creada else None,
+            "sla_seg": sla_seg,
+            "bloqueador": r['bloqueador'],
+            "deps": deps,
             "tiempos": {
                 "en_espera": _fmt_dur(espera_min),
                 "asignacion": _fmt_hhmm(inicio) if inicio else _fmt_hhmm(creada),
@@ -3526,6 +3582,127 @@ async def kanban_tarea_detalle(task_id: str):
             "subtareas": subtareas,
             "notas": notas,
             "agente_origen": "AG-002" if r['tipo'] == 'RUN' else "AG-013",
+        }
+
+
+# ── Kanban: departamentos / técnicos / asignación cascada (P95 FASE 10) ──
+
+@app.get("/api/kanban/departamentos")
+async def kanban_departamentos():
+    """Lista de departamentos (silos) disponibles para asignación."""
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(503, "DB no disponible")
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT DISTINCT silo_especialidad
+            FROM pmo_staff_skills
+            WHERE silo_especialidad IS NOT NULL
+            ORDER BY silo_especialidad
+        """)
+        return [r['silo_especialidad'] for r in rows]
+
+
+@app.get("/api/kanban/tecnicos")
+async def kanban_tecnicos_por_dpto(departamento: Optional[str] = None):
+    """Técnicos del departamento solicitado, con su carga actual."""
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(503, "DB no disponible")
+    async with pool.acquire() as conn:
+        if departamento:
+            rows = await conn.fetch("""
+                SELECT id_recurso, nombre, nivel, carga_actual, estado_run
+                FROM pmo_staff_skills
+                WHERE silo_especialidad = $1 AND estado_run NOT IN ('BAJA','VACACIONES')
+                ORDER BY carga_actual ASC, nombre ASC
+            """, departamento)
+        else:
+            rows = await conn.fetch("""
+                SELECT id_recurso, nombre, nivel, carga_actual, estado_run, silo_especialidad
+                FROM pmo_staff_skills
+                WHERE estado_run NOT IN ('BAJA','VACACIONES')
+                ORDER BY silo_especialidad, carga_actual ASC LIMIT 200
+            """)
+        return [dict(r) for r in rows]
+
+
+class KanbanAsignacion(BaseModel):
+    departamento: Optional[str] = None
+    id_tecnico: Optional[str] = None
+
+
+@app.patch("/api/kanban/tareas/{task_id}/asignacion")
+async def kanban_patch_asignacion(task_id: str, body: KanbanAsignacion):
+    """Cambia la asignación de técnico (y por extensión, departamento) de una tarea.
+    Inserta nota sys automática en tech_chat_mensajes con detalle del cambio.
+    """
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(503, "DB no disponible")
+    async with pool.acquire() as conn:
+        old = await conn.fetchrow(
+            "SELECT id, titulo, tipo, id_tecnico, id_incidencia, id_proyecto FROM kanban_tareas WHERE id=$1",
+            task_id)
+        if not old:
+            raise HTTPException(404, "Tarea no encontrada")
+
+        # Validar técnico si se proporciona
+        tec_info = None
+        if body.id_tecnico:
+            tec_info = await conn.fetchrow(
+                "SELECT id_recurso, nombre, silo_especialidad, carga_actual FROM pmo_staff_skills WHERE id_recurso=$1",
+                body.id_tecnico)
+            if not tec_info:
+                raise HTTPException(400, f"Técnico no encontrado: {body.id_tecnico}")
+            # Si se proporciona departamento, debe coincidir con el silo del técnico
+            if body.departamento and body.departamento != tec_info['silo_especialidad']:
+                raise HTTPException(400, f"El técnico {body.id_tecnico} no pertenece al dpto {body.departamento} (silo real: {tec_info['silo_especialidad']})")
+
+        # Actualizar id_tecnico en kanban_tareas
+        nuevo_tec_id = body.id_tecnico  # puede ser None (desasignar)
+        await conn.execute(
+            "UPDATE kanban_tareas SET id_tecnico=$2 WHERE id=$1",
+            task_id, nuevo_tec_id)
+
+        # Sincronizar carga del técnico (suma horas estimadas pendientes)
+        try:
+            await _sync_tecnico_estado(conn, nuevo_tec_id)
+            if old['id_tecnico'] and old['id_tecnico'] != nuevo_tec_id:
+                await _sync_tecnico_estado(conn, old['id_tecnico'])
+        except Exception:
+            pass
+
+        # Insertar nota sys en tech_chat_mensajes
+        try:
+            tipo_sala = 'run' if old['tipo'] == 'RUN' else 'build'
+            ref = old['id_incidencia'] or old['id_proyecto'] or task_id
+            sala_id = await conn.fetchval(
+                """INSERT INTO tech_chat_salas (tipo, id_referencia, nombre)
+                   VALUES ($1,$2,$3) ON CONFLICT (tipo,id_referencia) DO UPDATE SET activa=TRUE
+                   RETURNING id""",
+                tipo_sala, ref, f"{ref} · {(old['titulo'] or '')[:80]}")
+            if tec_info:
+                msg = f"Tarea asignada a {tec_info['nombre']} ({tec_info['silo_especialidad']})"
+            else:
+                msg = "Tarea desasignada (sin técnico)"
+            await conn.execute(
+                """INSERT INTO tech_chat_mensajes (id_sala, id_autor, rol_autor, mensaje)
+                   VALUES ($1,'AG-SYS','agente',$2)""",
+                sala_id, msg)
+        except Exception as e:
+            logger.warning(f"No se pudo crear nota sys de asignación para {task_id}: {e}")
+
+        return {
+            "ok": True,
+            "task_id": task_id,
+            "id_tecnico": nuevo_tec_id,
+            "tecnico": {
+                "id": tec_info['id_recurso'],
+                "nombre": tec_info['nombre'],
+                "departamento": tec_info['silo_especialidad'],
+                "carga": tec_info['carga_actual'] or 0,
+            } if tec_info else None,
         }
 
 

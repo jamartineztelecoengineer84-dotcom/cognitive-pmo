@@ -1314,6 +1314,46 @@ footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;disp
 #kg-root .kg-dm-input-row {display:flex;gap:6px;padding:8px 14px;border-top:1px solid var(--kg-border)}
 #kg-root .kg-dm-input-row input {flex:1;background:var(--kg-bg-card);border:1px solid var(--kg-border);color:var(--kg-tx);padding:6px 10px;border-radius:5px;font-size:11px;font-family:var(--kg-font);outline:none}
 #kg-root .kg-dm-input-row button {background:var(--kg-acc-bl);border:none;color:#fff;padding:6px 12px;border-radius:5px;font-size:10px;font-weight:700;cursor:pointer}
+/* Asignación cascada (FASE 10) */
+#kg-root .kg-dm-assign {background:var(--kg-bg-el);border:1px solid var(--kg-border);border-radius:10px;padding:12px;margin-top:4px;margin-bottom:14px}
+#kg-root .kg-dm-assign-h {font-size:10px;font-weight:700;text-transform:uppercase;color:var(--kg-tx2);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+#kg-root .kg-dm-assign-grid {display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end}
+#kg-root .kg-dm-assign label {display:block;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--kg-tx3);margin-bottom:3px}
+#kg-root .kg-dm-assign select {width:100%;background:var(--kg-bg-card);border:1px solid var(--kg-border);color:var(--kg-tx);padding:6px 10px;border-radius:5px;font-size:11px;font-family:var(--kg-font);outline:none;cursor:pointer}
+#kg-root .kg-dm-assign select:focus {border-color:var(--kg-acc-cy)}
+#kg-root .kg-dm-assign select:disabled {opacity:.5;cursor:not-allowed}
+#kg-root .kg-dm-assign .kg-btn-save {background:var(--kg-acc-gn);border:none;color:#0d1117;padding:7px 14px;border-radius:5px;font-size:10px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
+#kg-root .kg-dm-assign .kg-btn-save:hover {filter:brightness(1.1)}
+#kg-root .kg-dm-assign .kg-btn-save:disabled {opacity:.4;cursor:not-allowed}
+#kg-root .kg-dm-tec-info {grid-column:1/-1;font-size:10px;color:var(--kg-tx2);margin-top:4px;font-family:var(--kg-mono)}
+#kg-root .kg-dm-tec-info b {color:var(--kg-acc-cy)}
+/* Descripción */
+#kg-root .kg-dm-desc {background:var(--kg-bg-el);border:1px solid var(--kg-border);border-radius:10px;padding:12px;margin-bottom:14px}
+#kg-root .kg-dm-desc-h {font-size:10px;font-weight:700;text-transform:uppercase;color:var(--kg-tx2);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+#kg-root .kg-dm-desc-body {font-size:12px;line-height:1.55;color:var(--kg-tx);white-space:pre-wrap}
+/* SLA countdown grande */
+#kg-root .kg-dm-sla {background:linear-gradient(135deg,rgba(248,81,73,.08),rgba(210,153,34,.06));border:1px solid var(--kg-border);border-radius:10px;padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;gap:14px}
+#kg-root .kg-dm-sla-icon {font-size:24px;line-height:1}
+#kg-root .kg-dm-sla-info {flex:1}
+#kg-root .kg-dm-sla-label {font-size:9px;font-weight:700;text-transform:uppercase;color:var(--kg-tx3);letter-spacing:.5px;margin-bottom:2px}
+#kg-root .kg-dm-sla-value {font-family:var(--kg-mono);font-size:24px;font-weight:800;line-height:1}
+#kg-root .kg-dm-sla-value.kg-ok {color:var(--kg-acc-gn)}
+#kg-root .kg-dm-sla-value.kg-warn {color:var(--kg-acc-or)}
+#kg-root .kg-dm-sla-value.kg-danger {color:var(--kg-acc-rd);animation:kg-wip-pulse 1.5s infinite}
+#kg-root .kg-dm-sla-value.kg-paused {color:var(--kg-tx2)}
+#kg-root .kg-dm-sla-value.kg-done {color:var(--kg-acc-gn)}
+/* Dependencias chips */
+#kg-root .kg-dm-deps {background:var(--kg-bg-el);border:1px solid var(--kg-border);border-radius:10px;padding:12px;margin-bottom:14px}
+#kg-root .kg-dm-deps-h {font-size:10px;font-weight:700;text-transform:uppercase;color:var(--kg-tx2);margin-bottom:8px}
+#kg-root .kg-dm-deps-list {display:flex;flex-wrap:wrap;gap:6px}
+#kg-root .kg-dm-dep-chip {display:inline-flex;align-items:center;gap:4px;padding:4px 9px;background:rgba(234,179,8,.1);border:1px solid rgba(234,179,8,.3);border-radius:14px;font-family:var(--kg-mono);font-size:10px;font-weight:700;color:var(--kg-acc-ye);cursor:pointer;transition:.15s}
+#kg-root .kg-dm-dep-chip:hover {background:rgba(234,179,8,.2);transform:translateY(-1px)}
+/* Botones de acción top-right */
+#kg-root .kg-dm-actions {display:flex;gap:6px;margin-right:8px}
+#kg-root .kg-dm-action-btn {background:var(--kg-bg-el);border:1px solid var(--kg-border);color:var(--kg-tx2);padding:5px 11px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;font-family:var(--kg-font);text-transform:uppercase;letter-spacing:.3px;transition:.15s;display:flex;align-items:center;gap:4px}
+#kg-root .kg-dm-action-btn:hover {color:var(--kg-tx);border-color:var(--kg-border-hi)}
+#kg-root .kg-dm-action-btn.kg-escalar:hover {background:rgba(210,153,34,.15);border-color:var(--kg-acc-or);color:var(--kg-acc-or)}
+#kg-root .kg-dm-action-btn.kg-cerrar:hover {background:rgba(63,185,80,.15);border-color:var(--kg-acc-gn);color:var(--kg-acc-gn)}
 /* ═══════════════ TOAST ═══════════════ */
 #kg-root .kg-toast {position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--kg-bg-card);border:1px solid var(--kg-border);border-left:3px solid var(--kg-acc-gn);padding:10px 18px;border-radius:8px;font-size:11px;z-index:300;box-shadow:0 8px 24px var(--kg-shd-lg);display:none}
 #kg-root .kg-toast.kg-on {display:block}
@@ -2463,6 +2503,10 @@ footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;disp
           <span>&middot;</span>
           <span id="kg-dm-creada">&mdash;</span>
         </div>
+      </div>
+      <div class="kg-dm-actions">
+        <button class="kg-dm-action-btn kg-escalar" onclick="kg_modalEscalar()" title="Escalar prioridad">&uarr; Escalar</button>
+        <button class="kg-dm-action-btn kg-cerrar" onclick="kg_modalCerrar()" title="Marcar como resuelta">&#10003; Cerrar</button>
       </div>
       <button class="kg-dm-close" onclick="kg_closeFicha()">&times;</button>
     </div>
@@ -18192,28 +18236,55 @@ document.addEventListener('keydown', function(e){
   if (e.key === 'Escape') kg_closeFicha();
 });
 
+// Estado para la cascada departamento → técnico
+var kg_modalCurrentTask = null;
+var kg_modalTecCache = {};
+
 function kg_renderFicha(d){
+  kg_modalCurrentTask = d;
   document.getElementById('kg-dm-title').textContent = d.titulo;
   var typeEl = document.getElementById('kg-dm-type');
   typeEl.textContent = d.tipo;
-  typeEl.className = 'kg-dm-type' + d.tipo.toLowerCase();
+  typeEl.className = 'kg-dm-type kg-' + d.tipo.toLowerCase();
   var creadaTxt = d.fecha_creacion ? new Date(d.fecha_creacion).toLocaleString('es-ES') : '—';
   document.getElementById('kg-dm-creada').textContent = 'Creada ' + creadaTxt + ' por ' + d.agente_origen;
   // Body
-  var priCls = ({'Crítica':'rd','Alta':'or','Media':'cy','Baja':''})[d.prioridad] || '';
-  var techVal = d.tecnico ? (kg_escAt(d.tecnico.nombre)+' ('+(d.tecnico.carga||0)+'% carga)') : '<span class="kg-rd">Sin asignar</span>';
+  var priCls = ({'Crítica':'kg-rd','Alta':'kg-or','Media':'kg-cy','Baja':''})[d.prioridad] || '';
   var ciOrPrj = d.tipo==='RUN' && d.ci ? d.ci : (d.proyecto ? (d.proyecto.id+' · '+kg_escAt(d.proyecto.nombre)) : '—');
   var pct = d.horas_estimadas > 0 ? Math.min(100, Math.round(d.horas_reales / d.horas_estimadas * 100)) : (d.estado_logico==='resuelta'?100:0);
   var html = '';
+  // Datos básicos (sin técnico/depto, que ahora viven en bloque cascada)
   html += '<div class="kg-dm-row">';
-  html += '<div class="kg-dm-field"><label>Prioridad</label><div class="kg-val'+priCls+'">'+kg_escAt(d.prioridad||'—')+'</div></div>';
-  html += '<div class="kg-dm-field"><label>T&eacute;cnico</label><div class="kg-val">'+techVal+'</div></div>';
-  html += '<div class="kg-dm-field"><label>Departamento</label><div class="kg-val">'+kg_escAt(d.depto)+'</div></div>';
-  html += '</div>';
-  html += '<div class="kg-dm-row">';
+  html += '<div class="kg-dm-field"><label>Prioridad</label><div class="kg-val '+priCls+'">'+kg_escAt(d.prioridad||'—')+'</div></div>';
   html += '<div class="kg-dm-field"><label>'+(d.tipo==='RUN'?'CI afectado':'Proyecto')+'</label><div class="kg-val">'+kg_escAt(ciOrPrj)+'</div></div>';
   html += '<div class="kg-dm-field"><label>Estado</label><div class="kg-val kg-cy">'+kg_escAt(d.estado_logico)+' &middot; '+kg_escAt(d.columna)+'</div></div>';
+  html += '</div>';
+  // SLA countdown grande live (RUN) o deadline (BUILD)
+  html += kg_renderModalSLA(d);
+  // Descripción
+  if (d.descripcion) {
+    html += '<div class="kg-dm-desc">';
+    html += '<div class="kg-dm-desc-h">&#9998; Descripci&oacute;n</div>';
+    html += '<div class="kg-dm-desc-body">'+kg_escAt(d.descripcion)+'</div>';
+    html += '</div>';
+  }
+  // Asignación cascada (departamento → técnico)
+  html += kg_renderModalAssign(d);
+  // Dependencias
+  if (d.deps && d.deps.length) {
+    html += '<div class="kg-dm-deps">';
+    html += '<div class="kg-dm-deps-h">&#9901; Dependencias</div>';
+    html += '<div class="kg-dm-deps-list">';
+    d.deps.forEach(function(dep){
+      html += '<span class="kg-dm-dep-chip" onclick="kg_jumpTo(\''+kg_escAt(dep.target_id)+'\');kg_closeFicha()" title="'+kg_escAt(dep.tipo)+' (resuelto por '+kg_escAt(dep.agente)+')">&rarr; '+kg_escAt(dep.target_id)+'</span>';
+    });
+    html += '</div></div>';
+  }
+  // Progreso compacto
+  html += '<div class="kg-dm-row">';
   html += '<div class="kg-dm-field"><label>Progreso</label><div class="kg-val">'+pct+'% &middot; '+d.horas_reales+'h / '+d.horas_estimadas+'h</div></div>';
+  html += '<div class="kg-dm-field"><label>Bloqueador</label><div class="kg-val">'+kg_escAt(d.bloqueador||'—')+'</div></div>';
+  html += '<div class="kg-dm-field"><label>Origen</label><div class="kg-val">'+kg_escAt(d.agente_origen)+'</div></div>';
   html += '</div>';
   // Tiempos
   html += '<div class="kg-dm-times">';
@@ -18230,7 +18301,7 @@ function kg_renderFicha(d){
     d.subtareas.forEach(function(s){
       html += '<div class="kg-dm-st">';
       html += '<div class="kg-dm-st-title">'+kg_escAt(s.titulo)+'</div>';
-      html += '<div class="kg-dm-st-meta"><span class="kg-dm-st-tag'+s.tag+'">'+kg_escAt(s.tag_lbl)+'</span>';
+      html += '<div class="kg-dm-st-meta"><span class="kg-dm-st-tag kg-'+s.tag+'">'+kg_escAt(s.tag_lbl)+'</span>';
       if (s.nota) html += '<span style="font-size:9px;color:var(--kg-tx3)">'+kg_escAt(s.nota)+'</span>';
       html += '</div><div class="kg-dm-st-h">'+s.horas+'h</div></div>';
     });
@@ -18244,7 +18315,7 @@ function kg_renderFicha(d){
     html += '<div style="color:var(--kg-tx3);text-align:center;padding:20px 0;font-size:11px;">Sin notas registradas</div>';
   } else {
     d.notas.forEach(function(n){
-      html += '<div class="kg-dm-note'+(n.cls||'')+'">';
+      html += '<div class="kg-dm-note kg-'+(n.cls||'')+'">';
       html += '<span class="kg-note-author">'+kg_escAt(n.autor)+'</span>';
       html += '<span class="kg-note-time">'+kg_escAt(n.time)+'</span>';
       html += '<div>'+kg_escAt(n.mensaje)+'</div></div>';
@@ -18254,6 +18325,167 @@ function kg_renderFicha(d){
   html += '<div class="kg-dm-input-row"><input placeholder="A&ntilde;adir nota al hist&oacute;rico..." disabled><button disabled>Enviar</button></div>';
   html += '</div>';
   document.getElementById('kg-dm-body').innerHTML = html;
+  // Cargar dropdowns de departamentos/técnicos tras render
+  kg_loadModalAssignOptions(d);
+}
+
+function kg_renderModalSLA(d){
+  // Para RUN: data-sla con timestamp absoluto, kg_tickSLA lo actualiza
+  if (d.tipo === 'RUN' && d.sla_seg !== null && d.sla_seg !== undefined) {
+    var endAt = Date.now() + (d.sla_seg * 1000);
+    var s = d.sla_seg;
+    var cls = s < 0 ? 'kg-danger' : (s < 3600 ? 'kg-danger' : (s < 14400 ? 'kg-warn' : 'kg-ok'));
+    if (d.estado_logico === 'pte_tercero') cls = 'kg-paused';
+    if (d.estado_logico === 'resuelta') cls = 'kg-done';
+    var lbl = s < 0 ? ('VENCIDO ' + kg_formatTime(-s)) : kg_formatTime(s);
+    if (d.estado_logico === 'pte_tercero') lbl = '⏸ Pausado · ' + kg_formatTime(Math.max(0,s)) + ' rest.';
+    if (d.estado_logico === 'resuelta') lbl = '✓ Cerrado en SLA';
+    var attr = (d.estado_logico === 'pte_tercero' || d.estado_logico === 'resuelta') ? '' : ' data-sla="'+endAt+'"';
+    return '<div class="kg-dm-sla">'+
+      '<div class="kg-dm-sla-icon">&#9201;</div>'+
+      '<div class="kg-dm-sla-info">'+
+        '<div class="kg-dm-sla-label">SLA restante (live)</div>'+
+        '<div class="kg-dm-sla-value '+cls+'" id="kg-dm-sla-cd"'+attr+'>'+lbl+'</div>'+
+      '</div></div>';
+  }
+  // BUILD: no countdown live, mostrar deadline si existe (solo informativo)
+  return '';
+}
+
+function kg_renderModalAssign(d){
+  var html = '<div class="kg-dm-assign">';
+  html += '<div class="kg-dm-assign-h">&#128100; Asignaci&oacute;n cascada</div>';
+  html += '<div class="kg-dm-assign-grid">';
+  html += '<div><label>Departamento</label><select id="kg-dm-dpto" onchange="kg_loadTecnicosPorDpto(this.value)"></select></div>';
+  html += '<div><label>T&eacute;cnico</label><select id="kg-dm-tec" disabled><option value="">— elige primero un departamento —</option></select></div>';
+  html += '<button class="kg-btn-save" id="kg-dm-save-asig" onclick="kg_saveAsignacion()" disabled>&#9889; Guardar asignaci&oacute;n</button>';
+  html += '<div class="kg-dm-tec-info" id="kg-dm-tec-info">';
+  if (d.tecnico) {
+    html += 'Actual: <b>'+kg_escAt(d.tecnico.nombre)+'</b> ('+kg_escAt(d.tecnico.departamento||d.depto)+') &middot; carga '+(d.tecnico.carga||0)+'%';
+  } else {
+    html += 'Sin asignar';
+  }
+  html += '</div></div></div>';
+  return html;
+}
+
+async function kg_loadModalAssignOptions(d){
+  // Cargar departamentos
+  try {
+    var r = await fetch('/api/kanban/departamentos');
+    var deptos = await r.json();
+    var sD = document.getElementById('kg-dm-dpto');
+    if (!sD) return;
+    sD.innerHTML = '<option value="">— elige departamento —</option>';
+    deptos.forEach(function(dp){
+      var sel = (d.tecnico && d.tecnico.departamento === dp) || d.depto === dp ? ' selected' : '';
+      sD.innerHTML += '<option value="'+kg_escAt(dp)+'"'+sel+'>'+kg_escAt(dp)+'</option>';
+    });
+    // Si ya hay departamento seleccionado, cargar técnicos automáticamente
+    if (sD.value) {
+      await kg_loadTecnicosPorDpto(sD.value);
+    }
+  } catch(e) { console.warn('[kg] load deptos error', e); }
+}
+
+async function kg_loadTecnicosPorDpto(departamento){
+  var sT = document.getElementById('kg-dm-tec');
+  var btn = document.getElementById('kg-dm-save-asig');
+  if (!sT) return;
+  if (!departamento) {
+    sT.innerHTML = '<option value="">— elige primero un departamento —</option>';
+    sT.disabled = true;
+    if (btn) btn.disabled = true;
+    return;
+  }
+  sT.innerHTML = '<option>Cargando...</option>';
+  sT.disabled = true;
+  try {
+    var r = await fetch('/api/kanban/tecnicos?departamento='+encodeURIComponent(departamento));
+    var tecs = await r.json();
+    kg_modalTecCache[departamento] = tecs;
+    sT.innerHTML = '<option value="">— elige técnico —</option>';
+    var currentTec = kg_modalCurrentTask && kg_modalCurrentTask.tecnico ? kg_modalCurrentTask.tecnico.id : null;
+    tecs.forEach(function(t){
+      var sel = t.id_recurso === currentTec ? ' selected' : '';
+      var loadIcon = t.carga_actual > 100 ? '⚠ ' : (t.carga_actual > 80 ? '◔ ' : '◯ ');
+      sT.innerHTML += '<option value="'+kg_escAt(t.id_recurso)+'"'+sel+'>'+loadIcon+kg_escAt(t.nombre)+' ('+t.nivel+', '+t.carga_actual+'%)</option>';
+    });
+    sT.disabled = false;
+    if (btn) btn.disabled = false;
+  } catch(e) {
+    sT.innerHTML = '<option>Error cargando</option>';
+    console.warn('[kg] load tecnicos error', e);
+  }
+}
+
+async function kg_saveAsignacion(){
+  if (!kg_modalCurrentTask) return;
+  var dpto = document.getElementById('kg-dm-dpto').value;
+  var tecId = document.getElementById('kg-dm-tec').value;
+  if (!dpto || !tecId) { kg_showToast('✗ Selecciona departamento y técnico', true); return; }
+  var btn = document.getElementById('kg-dm-save-asig');
+  btn.disabled = true;
+  btn.textContent = 'Guardando...';
+  try {
+    var r = await fetch('/api/kanban/tareas/'+encodeURIComponent(kg_modalCurrentTask.id)+'/asignacion', {
+      method: 'PATCH',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({departamento: dpto, id_tecnico: tecId}),
+    });
+    var d = await r.json();
+    if (!r.ok) { kg_showToast('✗ ' + (d.detail || 'Error'), true); btn.disabled = false; btn.textContent = '⚡ Guardar asignación'; return; }
+    kg_showToast('✓ Asignado a ' + d.tecnico.nombre);
+    // Refrescar el modal con el detalle actualizado
+    var r2 = await fetch('/api/kanban/tareas/'+encodeURIComponent(kg_modalCurrentTask.id)+'/detalle');
+    if (r2.ok) {
+      var newDetail = await r2.json();
+      kg_renderFicha(newDetail);
+    }
+    // Refrescar el array global y re-renderizar el board
+    var idx = kg_kbAll.findIndex(function(x){ return x.id === kg_modalCurrentTask.id; });
+    if (idx >= 0 && d.tecnico) {
+      kg_kbAll[idx].tecnico = {id: d.tecnico.id, nombre: d.tecnico.nombre, carga: d.tecnico.carga};
+      kg_kbAll[idx].depto = d.tecnico.departamento;
+      // Si estaba sin asignar, ahora pasa a "asignada" (si no estaba ya en otro estado)
+      if (kg_kbAll[idx].estado === 'unassigned') kg_kbAll[idx].estado = 'asignada';
+      kg_renderKanban();
+    }
+  } catch(e) {
+    kg_showToast('✗ Error de red', true);
+    btn.disabled = false;
+    btn.textContent = '⚡ Guardar asignación';
+  }
+}
+
+async function kg_modalEscalar(){
+  if (!kg_modalCurrentTask) return;
+  if (!confirm('¿Escalar tarea ' + kg_modalCurrentTask.id + ' a prioridad superior?')) return;
+  kg_showToast('⚠ Escalación enviada (no implementada en backend aún)');
+}
+
+async function kg_modalCerrar(){
+  if (!kg_modalCurrentTask) return;
+  if (!confirm('¿Marcar tarea ' + kg_modalCurrentTask.id + ' como RESUELTA?')) return;
+  try {
+    var r = await fetch('/api/kanban/tareas/'+encodeURIComponent(kg_modalCurrentTask.id), {
+      method: 'PATCH',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({estado: 'resuelta'}),
+    });
+    var d = await r.json();
+    if (!r.ok) { kg_showToast('✗ ' + (d.detail || 'Transición no permitida'), true); return; }
+    kg_showToast('✓ Tarea cerrada');
+    // Actualizar array global y refrescar
+    var idx = kg_kbAll.findIndex(function(x){ return x.id === kg_modalCurrentTask.id; });
+    if (idx >= 0) {
+      kg_kbAll[idx].estado = 'resuelta';
+      kg_kbAll[idx].pct = 100;
+    }
+    kg_renderKanban();
+    kg_loadFlowMetrics();
+    kg_closeFicha();
+  } catch(e) { kg_showToast('✗ Error de red', true); }
 }
 
 // Initial + refresh
