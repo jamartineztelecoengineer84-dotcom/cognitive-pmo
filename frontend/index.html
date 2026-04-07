@@ -1353,6 +1353,41 @@ footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;disp
 #kg-root .kg-dm-desc {background:var(--kg-bg-el);border:1px solid var(--kg-border);border-radius:10px;padding:12px;margin-bottom:14px}
 #kg-root .kg-dm-desc-h {font-size:10px;font-weight:700;text-transform:uppercase;color:var(--kg-tx2);margin-bottom:8px;display:flex;align-items:center;gap:6px}
 #kg-root .kg-dm-desc-body {font-size:12px;line-height:1.55;color:var(--kg-tx);white-space:pre-wrap}
+/* ── Descripción JSON estructurada (FASE 12) ── */
+#kg-root .kg-desc-section {background:var(--kg-bg-el);border:1px solid var(--kg-border);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+#kg-root .kg-desc-section-h {font-size:10px;font-weight:700;text-transform:uppercase;color:var(--kg-tx2);margin-bottom:9px;display:flex;align-items:center;gap:6px;letter-spacing:.4px}
+#kg-root .kg-desc-chips {display:flex;flex-wrap:wrap;gap:6px}
+#kg-root .kg-desc-chip {display:inline-flex;align-items:center;gap:5px;background:var(--kg-bg-card);border:1px solid var(--kg-border);border-radius:14px;padding:3px 10px;font-size:10px;color:var(--kg-tx);font-family:var(--kg-font)}
+#kg-root .kg-desc-chip b {font-size:8px;color:var(--kg-tx3);text-transform:uppercase;letter-spacing:.3px;font-weight:700}
+#kg-root .kg-desc-chip.kg-cy {border-color:rgba(57,210,192,.3);background:rgba(57,210,192,.06)}
+#kg-root .kg-desc-chip.kg-or {border-color:rgba(210,153,34,.3);background:rgba(210,153,34,.06)}
+#kg-root .kg-desc-chip.kg-pu {border-color:rgba(188,140,255,.3);background:rgba(188,140,255,.06)}
+/* Checklist */
+#kg-root .kg-desc-checklist {list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+#kg-root .kg-desc-checklist li {display:flex;align-items:center;gap:9px;font-size:11px;color:var(--kg-tx);padding:5px 8px;background:var(--kg-bg-card);border:1px solid var(--kg-border);border-radius:6px}
+#kg-root .kg-desc-checklist li::before {content:'';display:inline-block;width:14px;height:14px;border:1.5px solid var(--kg-tx3);border-radius:3px;flex-shrink:0;background:transparent}
+/* CMDB table */
+#kg-root .kg-cmdb-table {width:100%;border-collapse:collapse;font-size:11px}
+#kg-root .kg-cmdb-table th {text-align:left;padding:5px 8px;background:var(--kg-bg-card);font-size:9px;text-transform:uppercase;color:var(--kg-tx3);font-weight:700;letter-spacing:.3px;border-bottom:1px solid var(--kg-border)}
+#kg-root .kg-cmdb-table td {padding:6px 8px;border-bottom:1px solid var(--kg-border);color:var(--kg-tx);vertical-align:middle}
+#kg-root .kg-cmdb-table tr:last-child td {border-bottom:none}
+#kg-root .kg-cmdb-table td.kg-cmdb-campo {font-weight:600;color:var(--kg-tx2);width:35%}
+#kg-root .kg-cmdb-table td.kg-cmdb-valor {font-family:var(--kg-mono);font-size:10px;word-break:break-all}
+#kg-root .kg-cmdb-table td.kg-cmdb-source {width:60px;text-align:right}
+/* Source badge (CMDB / IA) */
+#kg-root .kg-source-badge {display:inline-block;font-size:8px;font-weight:800;padding:2px 7px;border-radius:10px;letter-spacing:.4px;text-transform:uppercase;font-family:var(--kg-mono)}
+#kg-root .kg-source-badge.kg-src-cmdb {background:rgba(88,166,255,.15);color:var(--kg-acc-bl);border:1px solid rgba(88,166,255,.3)}
+#kg-root .kg-source-badge.kg-src-ia {background:rgba(188,140,255,.15);color:var(--kg-acc-pu);border:1px solid rgba(188,140,255,.3)}
+/* Instrucciones paso a paso */
+#kg-root .kg-instr-list {display:flex;flex-direction:column;gap:12px}
+#kg-root .kg-instr {background:var(--kg-bg-card);border:1px solid var(--kg-border);border-radius:8px;padding:12px 12px 10px;position:relative}
+#kg-root .kg-instr-num {position:absolute;top:-9px;left:10px;background:var(--kg-acc-cy);color:var(--kg-bg);font-size:9px;font-weight:800;padding:2px 8px;border-radius:10px;font-family:var(--kg-mono);letter-spacing:.5px}
+#kg-root .kg-instr-titulo {font-size:11px;font-weight:700;color:var(--kg-tx);margin-bottom:3px;margin-top:2px}
+#kg-root .kg-instr-detalle {font-size:10px;color:var(--kg-tx2);margin-bottom:7px;line-height:1.45}
+#kg-root .kg-instr-cmds-h {display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+#kg-root .kg-instr-cmds-label {font-size:8px;font-weight:700;color:var(--kg-tx3);text-transform:uppercase;letter-spacing:.4px}
+#kg-root .kg-cmd {background:#0a0e14;color:#a5b4fc;font-family:var(--kg-mono);font-size:10px;padding:8px 11px;border-radius:6px;border:1px solid var(--kg-border);white-space:pre-wrap;margin:0;line-height:1.55;overflow-x:auto}
+:root.light #kg-root .kg-cmd {background:#1e293b;color:#e2e8f0}
 /* SLA countdown grande */
 #kg-root .kg-dm-sla {background:linear-gradient(135deg,rgba(248,81,73,.08),rgba(210,153,34,.06));border:1px solid var(--kg-border);border-radius:10px;padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;gap:14px}
 #kg-root .kg-dm-sla-icon {font-size:24px;line-height:1}
@@ -18262,6 +18297,93 @@ document.addEventListener('keydown', function(e){
 var kg_modalCurrentTask = null;
 var kg_modalTecCache = {};
 
+// ── Parser y renderer de descripción JSON estructurada (FASE 12) ──
+function kg_parseDesc(text){
+  if (typeof text !== 'string') return null;
+  var trimmed = text.trim();
+  if (!trimmed.startsWith('{')) return null;
+  try {
+    var obj = JSON.parse(trimmed);
+    return (obj && typeof obj === 'object') ? obj : null;
+  } catch(e) { return null; }
+}
+
+function kg_srcBadge(src){
+  if (!src) return '';
+  var s = String(src).toUpperCase();
+  var cls = s === 'CMDB' ? 'kg-src-cmdb' : 'kg-src-ia';
+  return '<span class="kg-source-badge '+cls+'">'+kg_escAt(s)+'</span>';
+}
+
+function kg_renderDescJSON(obj){
+  var html = '';
+  // (a) CONTEXTO — chips
+  var chips = [];
+  if (obj.silo)             chips.push({l:'silo', v:obj.silo, c:'kg-cy'});
+  if (obj.tipo)             chips.push({l:'tipo', v:obj.tipo, c:''});
+  if (obj.orden !== undefined && obj.orden !== null) chips.push({l:'orden', v:obj.orden, c:''});
+  if (obj.area_negocio)     chips.push({l:'área', v:obj.area_negocio, c:'kg-pu'});
+  if (obj.skill_requerida)  chips.push({l:'skill', v:obj.skill_requerida, c:'kg-cy'});
+  if (obj.sla_tarea_minutos !== undefined && obj.sla_tarea_minutos !== null) chips.push({l:'SLA', v:obj.sla_tarea_minutos+' min', c:'kg-or'});
+  if (obj.requiere_negocio !== undefined) chips.push({l:'requiere negocio', v:obj.requiere_negocio?'sí':'no', c:''});
+  if (chips.length) {
+    html += '<div class="kg-desc-section">';
+    html += '<div class="kg-desc-section-h">&#127919; Contexto</div>';
+    html += '<div class="kg-desc-chips">';
+    chips.forEach(function(c){
+      html += '<span class="kg-desc-chip '+c.c+'"><b>'+kg_escAt(c.l)+'</b>'+kg_escAt(String(c.v))+'</span>';
+    });
+    html += '</div></div>';
+  }
+  // (b) CHECKLIST
+  if (Array.isArray(obj.checklist) && obj.checklist.length) {
+    html += '<div class="kg-desc-section">';
+    html += '<div class="kg-desc-section-h">&#9989; Checklist <span style="margin-left:auto;font-family:var(--kg-mono);color:var(--kg-tx3);">'+obj.checklist.length+' items</span></div>';
+    html += '<ul class="kg-desc-checklist">';
+    obj.checklist.forEach(function(item){
+      html += '<li>'+kg_escAt(item)+'</li>';
+    });
+    html += '</ul></div>';
+  }
+  // (c) CONTEXTO CMDB
+  if (obj.contexto_cmdb && Array.isArray(obj.contexto_cmdb.items) && obj.contexto_cmdb.items.length) {
+    html += '<div class="kg-desc-section">';
+    html += '<div class="kg-desc-section-h">&#128451; Contexto CMDB <span style="margin-left:auto;font-family:var(--kg-mono);color:var(--kg-tx3);">'+obj.contexto_cmdb.items.length+' campos</span></div>';
+    html += '<table class="kg-cmdb-table"><thead><tr><th>Campo</th><th>Valor</th><th style="text-align:right">Source</th></tr></thead><tbody>';
+    obj.contexto_cmdb.items.forEach(function(it){
+      html += '<tr>';
+      html += '<td class="kg-cmdb-campo">'+kg_escAt(it.campo||'—')+'</td>';
+      html += '<td class="kg-cmdb-valor">'+kg_escAt(it.valor||'—')+'</td>';
+      html += '<td class="kg-cmdb-source">'+kg_srcBadge(it.source)+'</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+  // (d) INSTRUCCIONES PASO A PASO
+  if (Array.isArray(obj.instrucciones) && obj.instrucciones.length) {
+    html += '<div class="kg-desc-section">';
+    html += '<div class="kg-desc-section-h">&#128203; Instrucciones paso a paso <span style="margin-left:auto;font-family:var(--kg-mono);color:var(--kg-tx3);">'+obj.instrucciones.length+' pasos</span></div>';
+    html += '<div class="kg-instr-list">';
+    obj.instrucciones.forEach(function(ins, idx){
+      var num = ins.paso || (idx+1);
+      html += '<div class="kg-instr">';
+      html += '<span class="kg-instr-num">PASO '+num+'</span>';
+      html += '<div class="kg-instr-titulo">'+kg_escAt(ins.titulo||'—')+'</div>';
+      if (ins.detalle) html += '<div class="kg-instr-detalle">'+kg_escAt(ins.detalle)+'</div>';
+      if (Array.isArray(ins.comandos) && ins.comandos.length) {
+        html += '<div class="kg-instr-cmds-h">';
+        html += '<span class="kg-instr-cmds-label">Comandos</span>';
+        if (ins.source_comandos) html += kg_srcBadge(ins.source_comandos);
+        html += '</div>';
+        html += '<pre class="kg-cmd">'+ins.comandos.map(function(c){return kg_escAt(c)}).join('\n')+'</pre>';
+      }
+      html += '</div>';
+    });
+    html += '</div></div>';
+  }
+  return html;
+}
+
 function kg_renderFicha(d){
   kg_modalCurrentTask = d;
   document.getElementById('kg-dm-title').textContent = d.titulo;
@@ -18283,12 +18405,17 @@ function kg_renderFicha(d){
   html += '</div>';
   // SLA countdown grande live (RUN) o deadline (BUILD)
   html += kg_renderModalSLA(d);
-  // Descripción
+  // Descripción: si es JSON estructurado, render rico; si no, texto plano
   if (d.descripcion) {
-    html += '<div class="kg-dm-desc">';
-    html += '<div class="kg-dm-desc-h">&#9998; Descripci&oacute;n</div>';
-    html += '<div class="kg-dm-desc-body">'+kg_escAt(d.descripcion)+'</div>';
-    html += '</div>';
+    var descObj = kg_parseDesc(d.descripcion);
+    if (descObj) {
+      html += kg_renderDescJSON(descObj);
+    } else {
+      html += '<div class="kg-dm-desc">';
+      html += '<div class="kg-dm-desc-h">&#9998; Descripci&oacute;n</div>';
+      html += '<div class="kg-dm-desc-body">'+kg_escAt(d.descripcion)+'</div>';
+      html += '</div>';
+    }
   }
   // Asignación cascada (departamento → técnico)
   html += kg_renderModalAssign(d);
@@ -18313,9 +18440,9 @@ function kg_renderFicha(d){
   html += '<div class="kg-dm-times-h">&#9201; Tiempos de ciclo</div>';
   html += '<div class="kg-dm-times-grid">';
   html += '<div class="kg-dm-time-cell"><div class="kg-l">En espera</div><div class="kg-v">'+kg_escAt(d.tiempos.en_espera)+'</div></div>';
-  html += '<div class="kg-dm-time-cell"><div class="kg-l">Asignaci&oacute;n</div><div class="kg-v">'+kg_escAt(d.tiempos.asignacion)+'</div></div>';
-  html += '<div class="kg-dm-time-cell"><div class="kg-l">Primer toque</div><div class="kg-v">'+kg_escAt(d.tiempos.primer_toque)+'</div></div>';
-  html += '<div class="kg-dm-time-cell"><div class="kg-l">Activo</div><div class="kg-v">'+kg_escAt(d.tiempos.activo)+'</div></div>';
+  html += '<div class="kg-dm-time-cell"><div class="kg-l">Hora asignaci&oacute;n</div><div class="kg-v">'+kg_escAt(d.tiempos.asignacion)+'</div></div>';
+  html += '<div class="kg-dm-time-cell"><div class="kg-l">Hora primer toque</div><div class="kg-v">'+kg_escAt(d.tiempos.primer_toque)+'</div></div>';
+  html += '<div class="kg-dm-time-cell"><div class="kg-l">Tiempo activo</div><div class="kg-v">'+kg_escAt(d.tiempos.activo)+'</div></div>';
   html += '</div></div>';
   // Subtareas
   if (d.subtareas && d.subtareas.length) {
