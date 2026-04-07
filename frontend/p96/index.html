@@ -867,18 +867,6 @@ body{background:var(--bg);color:var(--tx);font-family:var(--font);font-size:12px
         <div class="bg-login-avatar">PR</div>
         <div class="bg-login-meta"><div class="bg-login-name">Pablo Rivas</div><div class="bg-login-role">PMO_SENIOR</div><span class="bg-login-scope">scope: MIS_PROYECTOS</span></div>
       </div>
-      <div class="bg-login-card l-tl" data-role="TEAM_LEAD">
-        <div class="bg-login-avatar">MN</div>
-        <div class="bg-login-meta"><div class="bg-login-name">Marta Núñez</div><div class="bg-login-role">TEAM_LEAD · Infra</div><span class="bg-login-scope">scope: MI_EQUIPO · 6 técnicos</span></div>
-      </div>
-      <div class="bg-login-card l-ts" data-role="TECH_SENIOR">
-        <div class="bg-login-avatar">SO</div>
-        <div class="bg-login-meta"><div class="bg-login-name">Sandra Ortega</div><div class="bg-login-role">TECH_SENIOR</div><span class="bg-login-scope">scope: YO</span></div>
-      </div>
-      <div class="bg-login-card l-tj" data-role="TECH_JUNIOR">
-        <div class="bg-login-avatar">AS</div>
-        <div class="bg-login-meta"><div class="bg-login-name">Adriana Suárez</div><div class="bg-login-role">TECH_JUNIOR</div><span class="bg-login-scope">scope: NADIE · sin econ</span></div>
-      </div>
     </div>
 
     <div class="bg-login-foot">
@@ -1936,8 +1924,17 @@ document.querySelectorAll('.bg-login-card').forEach(c=>{
   });
 });
 
+// P97 F6 — al cargar la página, intentar hidratar desde el shell antes de pedir login
+window.addEventListener('DOMContentLoaded', async ()=>{
+  if(typeof p96HydrateFromShell==='function'){
+    const ok = await p96HydrateFromShell();
+    if(ok && typeof p96BootstrapData==='function'){ await p96BootstrapData(); }
+  }
+});
+
 document.getElementById('bg-session-logout').addEventListener('click',()=>{
-  document.getElementById('bg-login-overlay').classList.remove('hidden');
+  if(typeof p96Logout==='function'){ p96Logout(); }
+  else { document.getElementById('bg-login-overlay').classList.remove('hidden'); }
 });
 
 // ═══════════════ MODALS ═══════════════
@@ -2215,6 +2212,31 @@ function p96Fetch(url, opts){
   const headers = Object.assign({}, (opts && opts.headers) || {});
   if(tok){ headers['Authorization'] = 'Bearer ' + tok; }
   return fetch(url, Object.assign({}, opts || {}, {headers}));
+}
+
+// P97 F6 — hidratación desde el shell (skip re-login si ya hay token válido)
+async function p96HydrateFromShell(){
+  const tok = sessionStorage.getItem('p96_token');
+  if(!tok) return false;
+  try{
+    const r = await fetch('/api/me', { headers: {'Authorization': 'Bearer ' + tok} });
+    if(!r.ok){ console.warn('[p96] /api/me failed', r.status); return false; }
+    const me = await r.json();
+    if(!me.p96_allowed){ console.warn('[p96] role not allowed', me.role_code); return false; }
+    sessionStorage.setItem('p96_me', JSON.stringify(me));
+    if(typeof bgApplyRole==='function'){ bgApplyRole(me.role_code); }
+    const ov = document.getElementById('bg-login-overlay');
+    if(ov) ov.classList.add('hidden');
+    console.log('[p96] hydrated from shell as', me.role_code, '·', me.email);
+    return true;
+  }catch(e){ console.warn('[p96] hydrate err', e); return false; }
+}
+
+// P97 F6 — logout: limpia token y vuelve al shell
+function p96Logout(){
+  sessionStorage.removeItem('p96_token');
+  sessionStorage.removeItem('p96_me');
+  window.location.href = '/';
 }
 
 let bgGovernorsData = [];

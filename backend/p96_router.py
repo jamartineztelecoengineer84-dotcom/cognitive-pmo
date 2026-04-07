@@ -26,6 +26,38 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/p96", tags=["p96"])
 
+# Router secundario SIN prefijo /api/p96 para endpoints globales como /api/me
+me_router = APIRouter(tags=["p96-me"])
+
+# P97 FASE 6 — Allowlist de roles autorizados a entrar al CEO Dashboard /p96/
+# (15 roles de niveles jerárquicos 0-4: C-Level, VP, Directores, PMO_SENIOR, AUDITOR)
+P96_ALLOWED_ROLES = {
+    'SUPERADMIN', 'CEO', 'CFO', 'CIO', 'CTO', 'CISO',
+    'VP_ENGINEERING', 'VP_OPERATIONS', 'VP_PMO',
+    'DIRECTOR_INFRA', 'DIRECTOR_SEC', 'DIRECTOR_DATA', 'DIRECTOR_IT',
+    'PMO_SENIOR', 'AUDITOR',
+}
+
+
+# ─────────────────────────────────────────────────────────────────────
+# P97 FASE 6 — /api/me enriquecido con scope económico + p96_allowed
+# ─────────────────────────────────────────────────────────────────────
+@me_router.get("/api/me")
+async def get_me(user: UserInfo = Depends(get_current_user)):
+    scope = _load_econ_scope(user.role_code)
+    return {
+        "id": user.id_usuario,
+        "email": user.email,
+        "nombre": user.nombre_completo,
+        "role_code": user.role_code,
+        "role_nombre": user.role_nombre,
+        "scope_who": scope.scope_who,
+        "ver_nombres": scope.ver_nombres,
+        "ver_salario_ind": scope.ver_salario_ind,
+        "silos_visibles": scope.silos_visibles,
+        "p96_allowed": user.role_code in P96_ALLOWED_ROLES,
+    }
+
 
 # ─────────────────────────────────────────────────────────────────────
 # Mini-RBAC económico embebido (sustituye a rbac_econ_scopes que no existe)

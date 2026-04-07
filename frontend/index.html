@@ -4524,6 +4524,22 @@ async function doLogin() {
     localStorage.setItem('pmo_permisos', JSON.stringify(AUTH_PERMISOS));
     localStorage.setItem('pmo_role', JSON.stringify(AUTH_ROLE));
 
+    // P97 F6 — routing a /p96/ si el rol está en la allowlist
+    const P96_ROLES = new Set(['SUPERADMIN','CEO','CFO','CIO','CTO','CISO',
+      'VP_ENGINEERING','VP_OPERATIONS','VP_PMO',
+      'DIRECTOR_INFRA','DIRECTOR_SEC','DIRECTOR_DATA','DIRECTOR_IT',
+      'PMO_SENIOR','AUDITOR']);
+    if(AUTH_ROLE && P96_ROLES.has(AUTH_ROLE.code)){
+      sessionStorage.setItem('p96_token', AUTH_TOKEN);
+      sessionStorage.setItem('p96_me', JSON.stringify({
+        role_code: AUTH_ROLE.code,
+        nombre: AUTH_USER.nombre_completo,
+        email: AUTH_USER.email,
+        p96_allowed: true
+      }));
+      window.location.href = '/p96/';
+      return;
+    }
     // Redirect technicians to their dashboard
     if(AUTH_ROLE && (AUTH_ROLE.code === 'TECH_SENIOR' || AUTH_ROLE.code === 'TECH_JUNIOR')){
       window.location.href = '/tech-dashboard.html';
