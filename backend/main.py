@@ -3529,6 +3529,50 @@ async def kanban_tarea_detalle(task_id: str):
         }
 
 
+# ── Kanban WIP limits (P95 FASE 9) ────────────────────────────────────────
+# Tabla kanban_wip_limits: límite máximo de tareas por columna lógica.
+# Si no hay registro o limite IS NULL, la columna no tiene límite (∞).
+
+_KB_WIP_VALID_COLS = {'unassigned', 'asignada', 'en_curso', 'pte_tercero', 'resuelta'}
+
+
+class KanbanWipLimit(BaseModel):
+    limite: Optional[int] = None  # None = sin límite
+
+
+@app.get("/api/kanban/wip-limits")
+async def kanban_wip_limits_get():
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(503, "DB no disponible")
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("SELECT columna, limite, updated_at FROM kanban_wip_limits")
+        result = {r['columna']: {"limite": r['limite'], "updated_at": r['updated_at'].isoformat() if r['updated_at'] else None} for r in rows}
+        # Asegurar que las 5 columnas estén presentes (con limite=None si no hay registro)
+        for c in _KB_WIP_VALID_COLS:
+            if c not in result:
+                result[c] = {"limite": None, "updated_at": None}
+        return result
+
+
+@app.put("/api/kanban/wip-limits/{columna}")
+async def kanban_wip_limits_put(columna: str, body: KanbanWipLimit):
+    if columna not in _KB_WIP_VALID_COLS:
+        raise HTTPException(400, f"Columna inválida: {columna}. Permitidas: {sorted(_KB_WIP_VALID_COLS)}")
+    if body.limite is not None and body.limite < 0:
+        raise HTTPException(400, "El límite debe ser >= 0 o null")
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(503, "DB no disponible")
+    async with pool.acquire() as conn:
+        await conn.execute("""
+            INSERT INTO kanban_wip_limits (columna, limite, updated_at)
+            VALUES ($1, $2, NOW())
+            ON CONFLICT (columna) DO UPDATE SET limite=EXCLUDED.limite, updated_at=NOW()
+        """, columna, body.limite)
+        return {"ok": True, "columna": columna, "limite": body.limite}
+
+
 @app.get("/api/kanban/export-pdf")
 async def kanban_export_pdf(tipo: Optional[str] = None, prioridad: Optional[str] = None):
     """Snapshot PDF del estado actual del kanban global.

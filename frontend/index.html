@@ -1154,7 +1154,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;disp
 #kg-root .kg-flow-panel.kg-collapsed .kg-flow-toggle-btn .kg-txt-close {display:none}
 #kg-root .kg-flow-panel.kg-collapsed .kg-flow-toggle-btn {background:linear-gradient(135deg,rgba(57,210,192,.12),rgba(88,166,255,.12));border-color:rgba(57,210,192,.4);color:var(--kg-acc-cy)}
 #kg-root .kg-flow-body {padding:10px 14px 0;display:flex;flex-direction:column;gap:8px}
-#kg-root .kg-fkpi-row {display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+#kg-root .kg-fkpi-row {display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
 #kg-root .kg-fkpi {background:var(--kg-bg-card);border:1px solid var(--kg-border);border-radius:7px;padding:9px 12px 8px;position:relative;overflow:hidden;text-align:left}
 #kg-root .kg-fkpi::before {content:'';position:absolute;left:0;top:0;bottom:0;width:2px}
 #kg-root .kg-fkpi.kg-cy::before {background:var(--kg-acc-cy)}
@@ -1209,7 +1209,22 @@ footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;disp
 #kg-root .kg-kb-col-h {padding:10px 12px;border-bottom:1px solid var(--kg-border);display:flex;align-items:center;gap:8px;flex-shrink:0}
 #kg-root .kg-kb-col-h h4 {font-size:11px;font-weight:700;display:flex;align-items:center;gap:6px;text-transform:uppercase;letter-spacing:.3px}
 #kg-root .kg-kb-col-h .kg-dot {width:8px;height:8px;border-radius:50%}
-#kg-root .kg-kb-col-h .kg-kcnt {margin-left:auto;font-family:var(--kg-mono);font-size:10px;background:var(--kg-bg-el);border:1px solid var(--kg-border);padding:2px 7px;border-radius:4px;color:var(--kg-tx2)}
+#kg-root .kg-kb-col-h .kg-kcnt {margin-left:auto;font-family:var(--kg-mono);font-size:10px;background:var(--kg-bg-el);border:1px solid var(--kg-border);padding:2px 7px;border-radius:4px;color:var(--kg-tx2);display:flex;align-items:center;gap:4px}
+#kg-root .kg-kcnt .kg-wip-cur {font-weight:800}
+#kg-root .kg-kcnt .kg-wip-sep {color:var(--kg-tx3);opacity:.5}
+#kg-root .kg-kcnt .kg-wip-lim {cursor:pointer;border-bottom:1px dotted var(--kg-tx3);padding:0 1px}
+#kg-root .kg-kcnt .kg-wip-lim:hover {color:var(--kg-acc-cy);border-bottom-color:var(--kg-acc-cy)}
+#kg-root .kg-kcnt .kg-wip-lim.kg-wip-empty {color:var(--kg-tx3);font-style:italic}
+#kg-root .kg-kcnt .kg-wip-lim-input {background:var(--kg-bg);border:1px solid var(--kg-acc-cy);color:var(--kg-tx);border-radius:3px;width:38px;padding:0 4px;font-family:var(--kg-mono);font-size:10px;font-weight:800;outline:none;text-align:center}
+#kg-root .kg-kcnt .kg-wip-badge {font-size:8px;font-weight:800;padding:0 4px;border-radius:3px;letter-spacing:.3px}
+#kg-root .kg-kcnt.kg-wip-ok {border-color:rgba(63,185,80,.4);background:rgba(63,185,80,.08)}
+#kg-root .kg-kcnt.kg-wip-ok .kg-wip-cur {color:var(--kg-acc-gn)}
+#kg-root .kg-kcnt.kg-wip-ok .kg-wip-badge {background:rgba(63,185,80,.15);color:var(--kg-acc-gn)}
+#kg-root .kg-kcnt.kg-wip-over {border-color:rgba(248,81,73,.55);background:rgba(248,81,73,.12);animation:kg-wip-pulse 2s infinite}
+#kg-root .kg-kcnt.kg-wip-over .kg-wip-cur {color:var(--kg-acc-rd)}
+#kg-root .kg-kcnt.kg-wip-over .kg-wip-badge {background:rgba(248,81,73,.2);color:var(--kg-acc-rd)}
+#kg-root .kg-kb-col.kg-wip-over-col {border-color:rgba(248,81,73,.55);box-shadow:0 0 0 1px rgba(248,81,73,.2)}
+@keyframes kg-wip-pulse {0%,100%{opacity:1}50%{opacity:.7}}
 #kg-root .kg-kb-body {flex:1 1 0;min-height:calc(100vh - 380px);overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:8px}
 #kg-root .kg-kb-body::-webkit-scrollbar {width:6px}
 #kg-root .kg-kb-body::-webkit-scrollbar-track {background:transparent}
@@ -2360,6 +2375,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;disp
       <div class="kg-fkpi kg-or"><div class="kg-fkpi-value" id="kg-kpi-lt">0<span class="kg-u">h</span></div><div class="kg-fkpi-label">Avg Lead Time</div></div>
       <div class="kg-fkpi kg-cy"><div class="kg-fkpi-value" id="kg-kpi-ct">0<span class="kg-u">h</span></div><div class="kg-fkpi-label">Avg Cycle Time</div></div>
       <div class="kg-fkpi kg-gn"><div class="kg-fkpi-value" id="kg-kpi-fe">0<span class="kg-u">%</span></div><div class="kg-fkpi-label">Flow Efficiency</div></div>
+      <div class="kg-fkpi kg-gn"><div class="kg-fkpi-value" id="kg-kpi-wip-over">0<span class="kg-u">/5</span></div><div class="kg-fkpi-label">Columnas sobre WIP</div></div>
     </div>
     <!-- Charts -->
     <div class="kg-charts-row">
@@ -17576,9 +17592,26 @@ function kg_renderCFD(cfd){
       xLabels += '<text x="'+x(i)+'" y="'+(H-5)+'" font-size="9" fill="#8b949e">'+lbl+'</text>';
     }
   });
+  // WIP limit overlay: línea horizontal punteada por cada límite definido
+  var wipOverlay = '';
+  if (kg_wipLimits) {
+    var states_wip = [
+      {k:'asignada',c:'#58a6ff'},
+      {k:'en_curso',c:'#d29922'},
+      {k:'pte_tercero',c:'#bc8cff'},
+    ];
+    states_wip.forEach(function(sw){
+      var lim = kg_wipLimits[sw.k];
+      if (lim !== null && lim !== undefined && lim > 0 && lim <= maxTotal) {
+        var yWip = y(lim);
+        wipOverlay += '<line x1="'+M.l+'" y1="'+yWip+'" x2="'+(W-M.r)+'" y2="'+yWip+'" stroke="'+sw.c+'" stroke-width="1" stroke-dasharray="3,3" opacity=".55"/>';
+        wipOverlay += '<text x="'+(W-M.r-2)+'" y="'+(yWip-2)+'" text-anchor="end" font-size="8" fill="'+sw.c+'" font-weight="700" opacity=".85">WIP '+sw.k+' '+lim+'</text>';
+      }
+    });
+  }
   document.getElementById('kg-chart-cfd').innerHTML =
     '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" style="width:100%;height:100%;font-family:monospace">' +
-    yLabels + layerPaths + xLabels + '</svg>';
+    yLabels + layerPaths + wipOverlay + xLabels + '</svg>';
 }
 
 // ── Render Control Chart ──
@@ -17660,6 +17693,65 @@ function kg_renderWipDist(wd, wipTotal){
 // ── Kanban global: fetch + render + filtros ──
 var kg_kbAll = [];
 var kg_kbFilters = {tipo:'all', pri:'', tech:'', dept:'', search:''};
+var kg_wipLimits = {unassigned:null, asignada:null, en_curso:null, pte_tercero:null, resuelta:null};
+
+async function kg_loadWipLimits(){
+  try {
+    var r = await fetch('/api/kanban/wip-limits');
+    if (!r.ok) return;
+    var d = await r.json();
+    var states = ['unassigned','asignada','en_curso','pte_tercero','resuelta'];
+    states.forEach(function(s){
+      kg_wipLimits[s] = (d[s] && d[s].limite !== undefined) ? d[s].limite : null;
+    });
+    console.log('[kg] WIP limits:', kg_wipLimits);
+  } catch(e) { console.warn('[kg] wip-limits fetch error', e); }
+}
+
+async function kg_saveWipLimit(columna, limite){
+  try {
+    var r = await fetch('/api/kanban/wip-limits/'+encodeURIComponent(columna), {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({limite: limite}),
+    });
+    if (!r.ok) { kg_showToast('✗ Error guardando límite', true); return false; }
+    kg_wipLimits[columna] = limite;
+    kg_renderKanban();
+    kg_renderWipKpi();
+    kg_showToast('✓ Límite WIP de '+columna+' = '+(limite===null?'∞':limite));
+    return true;
+  } catch(e) { kg_showToast('✗ Error de red', true); return false; }
+}
+
+function kg_editWipLimit(columna, e){
+  e.stopPropagation();
+  var span = e.currentTarget;
+  var current = kg_wipLimits[columna];
+  var input = document.createElement('input');
+  input.type = 'number';
+  input.min = '0';
+  input.className = 'kg-wip-lim-input';
+  input.value = current === null ? '' : current;
+  input.placeholder = '∞';
+  span.replaceWith(input);
+  input.focus();
+  input.select();
+  var save = function(){
+    var v = input.value.trim();
+    var newLim = v === '' ? null : parseInt(v, 10);
+    if (v !== '' && (isNaN(newLim) || newLim < 0)) { input.focus(); return; }
+    kg_saveWipLimit(columna, newLim);
+  };
+  var cancel = function(){
+    kg_renderKanban();
+  };
+  input.addEventListener('keydown', function(ev){
+    if (ev.key === 'Enter') { ev.preventDefault(); save(); }
+    else if (ev.key === 'Escape') { ev.preventDefault(); cancel(); }
+  });
+  input.addEventListener('blur', function(){ save(); });
+}
 
 async function kg_loadKanbanGlobal(){
   try {
@@ -17746,10 +17838,65 @@ function kg_renderKanban(){
     var bodyEl = document.getElementById('kg-body-'+s);
     var cntEl = document.getElementById('kg-cnt-'+s);
     if (bodyEl) bodyEl.innerHTML = bodies[s].join('') || '<div style="text-align:center;color:var(--kg-tx3);font-size:10px;padding:20px 0;">— vac&iacute;o —</div>';
-    if (cntEl) cntEl.textContent = counts[s];
+    if (cntEl) {
+      // Render count/limit + badge
+      var cur = counts[s];
+      var lim = kg_wipLimits[s];
+      var html = '<span class="kg-wip-cur">'+cur+'</span>';
+      html += '<span class="kg-wip-sep">/</span>';
+      if (lim === null || lim === undefined) {
+        html += '<span class="kg-wip-lim kg-wip-empty" onclick="kg_editWipLimit(\''+s+'\',event)" title="Click para definir l&iacute;mite WIP">&infin;</span>';
+      } else {
+        html += '<span class="kg-wip-lim" onclick="kg_editWipLimit(\''+s+'\',event)" title="Click para editar">'+lim+'</span>';
+      }
+      // Badge + clase de estado
+      cntEl.classList.remove('kg-wip-ok','kg-wip-over');
+      if (lim !== null && lim !== undefined) {
+        if (cur > lim) {
+          cntEl.classList.add('kg-wip-over');
+          html += '<span class="kg-wip-badge">&#9888; SUPERADO</span>';
+        } else {
+          cntEl.classList.add('kg-wip-ok');
+          html += '<span class="kg-wip-badge">&#10003;</span>';
+        }
+      }
+      cntEl.innerHTML = html;
+      // Marcar columna padre con kg-wip-over-col si supera
+      var colEl = cntEl.closest('.kg-kb-col');
+      if (colEl) {
+        if (lim !== null && lim !== undefined && cur > lim) colEl.classList.add('kg-wip-over-col');
+        else colEl.classList.remove('kg-wip-over-col');
+      }
+    }
   });
   var totalEl = document.getElementById('kg-kb-total');
   if (totalEl) totalEl.textContent = hasFilter ? (totalShown + ' / ' + kg_kbAll.length + ' tareas') : (kg_kbAll.length + ' tareas');
+  // KPI "Columnas sobre WIP" actualizado
+  kg_renderWipKpi();
+}
+
+function kg_renderWipKpi(){
+  // Cuenta columnas que actualmente superan su límite WIP
+  var states = ['unassigned','asignada','en_curso','pte_tercero','resuelta'];
+  var counts = {};
+  states.forEach(function(s){ counts[s]=0; });
+  kg_kbAll.forEach(function(t){
+    if (counts[t.estado] !== undefined) counts[t.estado]++;
+  });
+  var over = 0;
+  states.forEach(function(s){
+    var lim = kg_wipLimits[s];
+    if (lim !== null && lim !== undefined && counts[s] > lim) over++;
+  });
+  var el = document.getElementById('kg-kpi-wip-over');
+  if (el) {
+    el.innerHTML = over + '<span class="kg-u">/5</span>';
+    var card = el.closest('.kg-fkpi');
+    if (card) {
+      card.classList.remove('kg-rd','kg-gn');
+      card.classList.add(over > 0 ? 'kg-rd' : 'kg-gn');
+    }
+  }
 }
 
 // Gradiente determinista por id de técnico (paleta del mockup)
@@ -18114,11 +18261,12 @@ var kg_inited = false;
 function kg_init(){
   // Guard: requiere DOM #kg-root presente
   if (!document.getElementById('kg-root')) return;
-  if (kg_inited) { kg_loadFlowMetrics(); kg_loadKanbanGlobal(); return; }
+  if (kg_inited) { kg_loadFlowMetrics(); kg_loadWipLimits().then(kg_loadKanbanGlobal); return; }
   kg_inited = true;
   kg_loadFlowMetrics();
-  kg_loadKanbanGlobal();
-  setInterval(function(){ if(document.getElementById('kg-root') && document.getElementById('page-kanban').classList.contains('active')) { kg_loadFlowMetrics(); kg_loadKanbanGlobal(); } }, 60000);
+  // Cargar WIP limits PRIMERO, luego las tareas (para que el primer render tenga los límites)
+  kg_loadWipLimits().then(kg_loadKanbanGlobal);
+  setInterval(function(){ if(document.getElementById('kg-root') && document.getElementById('page-kanban').classList.contains('active')) { kg_loadFlowMetrics(); kg_loadWipLimits().then(kg_loadKanbanGlobal); } }, 60000);
 }
 // ═══ END P95 FASE 8 ═══
 
