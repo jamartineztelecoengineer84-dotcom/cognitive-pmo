@@ -140,11 +140,14 @@ body{background:var(--bg);color:var(--tx);font-family:var(--font);font-size:12px
 .kk-sla.warn{color:var(--acc-or);background:rgba(210,153,34,.1)}
 .kk-sla.danger{color:var(--acc-rd);background:rgba(248,81,73,.12);animation:blink 1.5s infinite}
 .kk-sla.done{color:var(--acc-gn)}
+.kk-sla.paused{color:var(--tx2);background:var(--bg-l3)}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.55}}
+.kk.highlight{outline:2px solid var(--acc-ye);outline-offset:-1px;box-shadow:0 0 0 4px rgba(234,179,8,.25);animation:kk-pulse 1.5s ease-in-out 2}
+@keyframes kk-pulse{0%,100%{box-shadow:0 0 0 4px rgba(234,179,8,.25)}50%{box-shadow:0 0 0 8px rgba(234,179,8,.4)}}
 .kk-deadline{font-size:9px;font-family:var(--mono);font-weight:700;display:flex;align-items:center;gap:3px;padding:1px 5px;border-radius:3px;background:var(--bg-el)}
 .kk-deadline.ok{color:var(--acc-gn)}
 .kk-deadline.warn{color:var(--acc-or);background:rgba(210,153,34,.1)}
-.kk-deadline.overdue{color:var(--acc-rd);background:rgba(248,81,73,.15);font-weight:800}
+.kk-deadline.overdue{color:var(--acc-rd);background:rgba(248,81,73,.15);font-weight:800;animation:blink 1.5s infinite}
 .kk-ci{font-size:8px;color:var(--tx3);background:var(--bg-el);padding:1px 5px;border-radius:3px;border:1px solid var(--border)}
 .kk-prj{font-size:8px;color:var(--acc-pu);background:rgba(188,140,255,.1);padding:1px 5px;border-radius:3px;border:1px solid rgba(188,140,255,.25);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px}
 .kk-dep{font-size:8px;color:var(--acc-ye);background:rgba(234,179,8,.1);padding:1px 5px;border-radius:3px;border:1px solid rgba(234,179,8,.25);font-family:var(--mono);font-weight:600;cursor:pointer;display:flex;align-items:center;gap:3px}
@@ -560,59 +563,161 @@ function renderKanban(){
   document.getElementById('kb-total').textContent = totalShown + ' tareas';
 }
 
-function renderCard(t){
-  var iniciales = t.tecnico ? t.tecnico.nombre.split(' ').map(function(w){return w[0]}).join('').substring(0,2).toUpperCase() : '?';
-  var pctColor = t.estado==='resuelta' ? 'var(--acc-gn)' : (t.pri==='p1'?'var(--acc-rd)':'var(--tx3)');
-  var slaTag = '';
+// Gradiente determinista por id de técnico (paleta del mockup)
+var _techGradients = [
+  'linear-gradient(135deg,#58a6ff,#39d2c0)',  // azul-cian
+  'linear-gradient(135deg,#bc8cff,#f778ba)',  // violeta-rosa
+  'linear-gradient(135deg,#3fb950,#39d2c0)',  // verde-cian
+  'linear-gradient(135deg,#eab308,#d29922)',  // amarillo-naranja
+  'linear-gradient(135deg,#f85149,#bc8cff)',  // rojo-violeta
+  'linear-gradient(135deg,#39d2c0,#3fb950)',  // cian-verde
+];
+function techGradient(id){
+  if (!id) return _techGradients[0];
+  var h = 0;
+  for (var i=0;i<id.length;i++) h = (h*31 + id.charCodeAt(i)) | 0;
+  return _techGradients[Math.abs(h) % _techGradients.length];
+}
+
+function pctColorFor(t){
+  if (t.estado === 'resuelta') return 'var(--acc-gn)';
+  if (t.estado === 'pte_tercero') return 'var(--tx3)';
+  if (t.estado === 'unassigned') return 'var(--tx3)';
+  if (t.pri === 'p1') return 'var(--acc-rd)';
+  if (t.pri === 'p2') return 'var(--acc-or)';
+  return 'var(--acc-bl)';
+}
+
+// SLA tag con timestamp absoluto (data-sla = ms epoch del fin) para tick live
+function slaTagFor(t){
+  // Resuelta: mostrar OK
   if (t.estado === 'resuelta') {
-    slaTag = '<span class="kk-sla done">&#10003; OK</span>';
-  } else if (t.tipo === 'RUN' && t.sla_seg !== null && t.sla_seg !== undefined) {
+    if (t.tipo === 'BUILD' && t.deadline) {
+      return '<span class="kk-deadline ok">&#10003; Entregada '+formatDate(new Date(t.deadline))+'</span>';
+    }
+    return '<span class="kk-sla done">&#10003; OK</span>';
+  }
+  // Pte. tercero (RUN): SLA pausado
+  if (t.estado === 'pte_tercero' && t.tipo === 'RUN' && t.sla_seg !== null && t.sla_seg !== undefined) {
+    var rest = Math.max(0, t.sla_seg);
+    return '<span class="kk-sla paused">&#9208; Pausado &middot; '+formatTime(rest)+' rest.</span>';
+  }
+  // RUN activo: SLA live (data-sla = ms timestamp absoluto del fin)
+  if (t.tipo === 'RUN' && t.sla_seg !== null && t.sla_seg !== undefined) {
+    var endAt = Date.now() + (t.sla_seg * 1000);
     var s = t.sla_seg;
     var cls = s < 0 ? 'danger' : (s < 3600 ? 'danger' : (s < 14400 ? 'warn' : 'ok'));
     var lbl = s < 0 ? ('VENCIDO '+formatTime(-s)) : formatTime(s);
-    slaTag = '<span class="kk-sla '+cls+'">&#9201; '+lbl+'</span>';
-  } else if (t.tipo === 'BUILD' && t.deadline) {
+    return '<span class="kk-sla '+cls+'" data-sla="'+endAt+'">&#9201; '+lbl+'</span>';
+  }
+  // BUILD: deadline
+  if (t.tipo === 'BUILD' && t.deadline) {
     var dl = new Date(t.deadline);
     var diasR = Math.ceil((dl - Date.now()) / 86400000);
     var dCls = diasR < 0 ? 'overdue' : (diasR < 3 ? 'warn' : 'ok');
-    var dLbl = diasR < 0 ? ('VENCIDO '+(-diasR)+'d') : (formatDate(dl)+' &middot; '+diasR+'d');
-    slaTag = '<span class="kk-deadline '+dCls+'">&#128197; '+dLbl+'</span>';
+    var dLbl = diasR < 0 ? ('VENCIDA '+(-diasR)+'d') : (formatDate(dl)+' &middot; '+diasR+'d');
+    return '<span class="kk-deadline '+dCls+'">&#128197; '+dLbl+'</span>';
   }
+  return '';
+}
+
+function originBadge(t){
+  // Si no hay agente o es 'MANUAL', mostrar badge manual sin .ag
+  if (!t.agente_origen || t.agente_origen === 'MANUAL') {
+    return '<span class="kk-origen" title="Creada manualmente">&#128100; Manual</span>';
+  }
+  // SVG hexágono inline (NO inventado — copiado del mockup ⬢)
+  return '<span class="kk-origen ag" title="Originada por '+escAt(t.agente_origen)+'">&#11042; '+escAt(t.agente_origen)+'</span>';
+}
+
+function renderCard(t){
+  var iniciales = t.tecnico ? t.tecnico.nombre.split(' ').map(function(w){return w[0]}).join('').substring(0,2).toUpperCase() : '?';
+  var pctColor = pctColorFor(t);
+  var slaHtml = slaTagFor(t);
   var techHtml;
   if (t.tecnico) {
-    var loadCls = t.tecnico.carga > 100 ? 'over' : (t.tecnico.carga > 0 ? 'ok' : '');
-    var loadColor = t.tecnico.carga > 100 ? 'var(--acc-or)' : 'var(--tx2)';
-    techHtml = '<div class="kk-tech"><div class="kk-tech-av '+loadCls+'">'+escAt(iniciales)+'</div>'+
+    var carga = t.tecnico.carga || 0;
+    var loadCls = carga > 100 ? 'over' : (carga > 0 ? 'ok' : '');
+    var loadColor, loadLbl;
+    if (t.estado === 'resuelta') { loadColor = 'var(--acc-gn)'; loadLbl = 'Cerrado'; }
+    else if (carga > 100) { loadColor = 'var(--acc-or)'; loadLbl = carga+'%'; }
+    else { loadColor = 'var(--tx2)'; loadLbl = carga+'%'; }
+    var grad = techGradient(t.tecnico.id);
+    techHtml = '<div class="kk-tech"><div class="kk-tech-av '+loadCls+'" style="background:'+grad+'">'+escAt(iniciales)+'</div>'+
       '<span class="kk-tech-name">'+escAt(t.tecnico.nombre)+'</span>'+
-      '<span class="kk-tech-load" style="color:'+loadColor+'">'+t.tecnico.carga+'%</span></div>';
+      '<span class="kk-tech-load" style="color:'+loadColor+'">'+loadLbl+'</span></div>';
   } else {
     techHtml = '<div class="kk-tech unassigned"><div class="kk-tech-av">?</div><span class="kk-tech-name">Sin asignar</span><span class="kk-tech-load">&mdash;</span></div>';
   }
   var depsHtml = '';
   if (t.deps && t.deps.length) {
     t.deps.forEach(function(d){
-      depsHtml += '<span class="kk-dep" title="'+d.tipo+' '+escAt(d.target_id)+' (resuelto por '+d.agente+')">&#9901; '+escAt(d.target_id)+'</span>';
+      var dlbl = d.tipo === 'bloquea_a' ? ('Bloquea '+d.target_id) : escAt(d.target_id);
+      depsHtml += '<span class="kk-dep" onclick="event.stopPropagation();jumpTo(\''+escAt(d.target_id)+'\')" title="'+escAt(d.tipo)+' '+escAt(d.target_id)+' (resuelto por '+escAt(d.agente)+')">&#9901; '+dlbl+'</span>';
     });
   }
   var ciOrPrj = '';
   if (t.tipo === 'RUN' && t.ci) ciOrPrj = '<span class="kk-ci">CI: '+escAt(t.ci)+'</span>';
   if (t.tipo === 'BUILD' && t.proyecto) ciOrPrj = '<span class="kk-prj" title="'+escAt(t.proyecto.nombre)+'">'+escAt(t.proyecto.id)+'</span>';
-  var idShort = t.id.length > 16 ? t.id.substring(0,16)+'…' : t.id;
-  return '<div class="kk '+t.tipo.toLowerCase()+'" data-id="'+escAt(t.id)+'">'+
+  var idShort = t.id.length > 16 ? t.id.substring(0,16)+'\u2026' : t.id;
+  var opacity = t.estado === 'resuelta' ? 'opacity:.75' : '';
+  return '<div class="kk '+t.tipo.toLowerCase()+'" data-id="'+escAt(t.id)+'" style="'+opacity+'">'+
     '<div class="kk-top">'+
       '<span class="kk-type '+t.tipo.toLowerCase()+'">'+t.tipo+'</span>'+
       '<span class="kk-id" title="'+escAt(t.id)+'">'+escAt(idShort)+'</span>'+
-      '<span class="kk-origen ag" title="Originada por '+t.agente_origen+'">&#11042; '+t.agente_origen+'</span>'+
+      originBadge(t) +
     '</div>'+
     '<div class="kk-title">'+escAt(t.titulo)+'</div>'+
     '<div class="kk-pct" style="color:'+pctColor+'">'+t.pct+'%</div>'+
     '<div class="kk-meta">'+
       '<span class="kk-pri '+t.pri+'">'+t.pri.toUpperCase()+'</span>'+
-      slaTag + ciOrPrj + depsHtml +
+      slaHtml + ciOrPrj + depsHtml +
     '</div>'+
     techHtml +
     '<div class="kk-bar"><div class="kk-bar-fill" style="width:'+t.pct+'%;background:'+pctColor+'"></div></div>'+
   '</div>';
+}
+
+// ── SLA tick live: actualiza cada segundo todas las .kk-sla[data-sla] ──
+function tickSLA(){
+  var now = Date.now();
+  document.querySelectorAll('.kk-sla[data-sla]').forEach(function(el){
+    var endAt = parseInt(el.getAttribute('data-sla'), 10);
+    if (isNaN(endAt)) return;
+    var s = Math.floor((endAt - now) / 1000);
+    var cls = s < 0 ? 'danger' : (s < 3600 ? 'danger' : (s < 14400 ? 'warn' : 'ok'));
+    var lbl = s < 0 ? ('VENCIDO '+formatTime(-s)) : formatTime(s);
+    // Mantener estado paused / done si ya estaba (no tienen data-sla)
+    el.className = 'kk-sla '+cls;
+    el.innerHTML = '\u23f1 '+lbl;
+  });
+}
+setInterval(tickSLA, 1000);
+
+// ── jumpTo: navega a una tarjeta y la resalta con outline amarillo ──
+function jumpTo(targetId){
+  var el = document.querySelector('.kk[data-id="'+targetId+'"]');
+  if (!el) {
+    // Si no existe en el DOM filtrado, limpiar filtros y reintentar
+    document.getElementById('filter-search').value = '';
+    document.getElementById('filter-prio').value = '';
+    document.getElementById('filter-tech').value = '';
+    document.getElementById('filter-dept').value = '';
+    var seg = document.querySelector('.kb-seg button');
+    if (seg) filterType('all', seg);
+    setTimeout(function(){
+      el = document.querySelector('.kk[data-id="'+targetId+'"]');
+      if (el) doHighlight(el);
+    }, 100);
+    return;
+  }
+  doHighlight(el);
+}
+function doHighlight(el){
+  document.querySelectorAll('.kk.highlight').forEach(function(x){x.classList.remove('highlight');});
+  el.classList.add('highlight');
+  el.scrollIntoView({behavior:'smooth', block:'center', inline:'center'});
+  setTimeout(function(){ el.classList.remove('highlight'); }, 3200);
 }
 
 function formatTime(s){
