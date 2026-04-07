@@ -3263,6 +3263,31 @@ async def kanban_tareas_global():
         }
 
 
+# ── Bus de eventos kanban → agentes (FASE 6) ──
+# Patrón: si no existe event_bus, persistimos eventos como notas en
+# tech_chat_mensajes vía sala dedicada del agente destino (zona congelada:
+# solo INSERT, no se modifica lógica interna del agente).
+async def _kb_notify_agent(conn, agent_code: str, evento: str, payload: dict):
+    """Notifica un evento a un agente. agent_code: 'AG-004', 'AG-014', etc.
+    Usa tech_chat_salas tipo='run' con id_referencia='BUS-{agent_code}' como buzón.
+    """
+    try:
+        ref = f"BUS-{agent_code}"
+        sala_id = await conn.fetchval(
+            """INSERT INTO tech_chat_salas (tipo, id_referencia, nombre)
+               VALUES ('run', $1, $2) ON CONFLICT (tipo, id_referencia)
+               DO UPDATE SET activa=TRUE RETURNING id""",
+            ref, f"Bus de eventos · {agent_code}")
+        msg = f"[{evento}] {json.dumps(payload, ensure_ascii=False)}"
+        await conn.execute(
+            """INSERT INTO tech_chat_mensajes (id_sala, id_autor, rol_autor, mensaje)
+               VALUES ($1, 'KANBAN-BUS', 'agente', $2)""",
+            sala_id, msg)
+        logger.info(f"event_bus → {agent_code}: {evento} ({payload.get('task_id','?')})")
+    except Exception as e:
+        logger.warning(f"No se pudo notificar a {agent_code}: {e}")
+
+
 # Mapeo estado lógico → columna kanban_tareas
 _KB_ESTADO_TO_COLUMNA = {
     "unassigned": "Backlog",
@@ -3348,6 +3373,29 @@ async def kanban_patch_estado(task_id: str, body: KanbanEstadoUpdate):
                 sala_id, 'AG-SYS', f"Tarea movida {actual} → {nuevo} (columna: {old['columna']} → {nueva_col})")
         except Exception as e:
             logger.warning(f"No se pudo crear nota sys para {task_id}: {e}")
+        # ── Hooks de eventos a agentes (FASE 6) ──
+        # AG-004 Buffer Gatekeeper: cuando una tarea pasa a pte_tercero,
+        # el buffer debe re-evaluar dependencias cruzadas y posiblemente
+        # pausar tareas BUILD que dependan del CI bloqueado.
+        if nuevo == 'pte_tercero':
+            await _kb_notify_agent(conn, 'AG-004', 'TASK_BLOCKED', {
+                "task_id": task_id, "tipo": old['tipo'], "from": actual,
+                "id_incidencia": old['id_incidencia'], "id_proyecto": old['id_proyecto'],
+                "bloqueador": old['bloqueador'],
+            })
+        # AG-014 Risk Predictor: cuando una RUN entra en SLA warn/danger
+        # (calculado por el endpoint global), notificar para que pueda
+        # disparar escalado o re-priorización. Aquí lo activamos al pasar
+        # a en_curso (es cuando empieza a consumir SLA real).
+        if nuevo == 'en_curso' and old['tipo'] == 'RUN':
+            sla_horas = await conn.fetchval(
+                "SELECT sla_limite FROM incidencias_run WHERE ticket_id=$1",
+                old['id_incidencia']) if old['id_incidencia'] else None
+            if sla_horas and float(sla_horas) <= 4:  # Umbral warn
+                await _kb_notify_agent(conn, 'AG-014', 'SLA_RISK', {
+                    "task_id": task_id, "ticket": old['id_incidencia'],
+                    "sla_horas": float(sla_horas), "severity": "WARN" if float(sla_horas) > 1 else "DANGER",
+                })
         return {"ok": True, "task_id": task_id, "estado": nuevo, "columna": nueva_col}
 
 
@@ -3475,6 +3523,164 @@ async def kanban_tarea_detalle(task_id: str):
             "notas": notas,
             "agente_origen": "AG-002" if r['tipo'] == 'RUN' else "AG-013",
         }
+
+
+@app.get("/api/kanban/export-pdf")
+async def kanban_export_pdf(tipo: Optional[str] = None, prioridad: Optional[str] = None):
+    """Snapshot PDF del estado actual del kanban global.
+    Incluye: KPIs flow-metrics + 5 columnas resumidas + top 10 tareas críticas.
+    Usa reportlab (verificado en requirements). filters opcionales aplican a las tareas.
+    """
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.lib.units import mm
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+        from reportlab.lib.enums import TA_LEFT
+    except ImportError:
+        raise HTTPException(500, "reportlab no disponible. Instalar: pip install reportlab")
+
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(503, "DB no disponible")
+    async with pool.acquire() as conn:
+        # Obtener métricas (mismo cálculo que /flow-metrics, simplificado)
+        total = await conn.fetchval("SELECT COUNT(*) FROM kanban_tareas")
+        completadas_30d = await conn.fetchval(
+            "SELECT COUNT(*) FROM kanban_tareas WHERE columna='Completado' AND fecha_cierre >= NOW() - INTERVAL '30 days'")
+        wip = await conn.fetchval("SELECT COUNT(*) FROM kanban_tareas WHERE columna NOT IN ('Backlog','Completado')")
+        bloqueadas = await conn.fetchval("SELECT COUNT(*) FROM kanban_tareas WHERE columna='Bloqueado'")
+        lead_time = await conn.fetchval("""
+            SELECT COALESCE(AVG(EXTRACT(EPOCH FROM (fecha_cierre - fecha_creacion))/3600), 0)
+            FROM kanban_tareas WHERE columna='Completado' AND fecha_cierre >= NOW() - INTERVAL '30 days'
+        """) or 0
+
+        # Obtener tareas (con filtros opcionales)
+        where = []
+        params = []
+        if tipo and tipo.upper() in ('RUN', 'BUILD'):
+            params.append(tipo.upper()); where.append(f"tipo=${len(params)}")
+        pri_map = {"p1": "Crítica", "p2": "Alta", "p3": "Media", "p4": "Baja"}
+        if prioridad and prioridad.lower() in pri_map:
+            params.append(pri_map[prioridad.lower()]); where.append(f"prioridad=${len(params)}")
+        wsql = ("WHERE " + " AND ".join(where)) if where else ""
+        rows = await conn.fetch(f"SELECT id, tipo, prioridad, columna, titulo, id_tecnico FROM kanban_tareas {wsql}", *params)
+
+        # Distribución por columna lógica (5 estados)
+        def estado_of(col, tec):
+            if col == 'Completado': return 'Resuelta'
+            if col == 'Bloqueado': return 'Pte. tercero'
+            if col in ('En Progreso', 'Code Review', 'Testing', 'Despliegue'): return 'En curso'
+            if not tec: return 'Sin asignar'
+            return 'Asignada'
+        col_counts = {'Sin asignar':0,'Asignada':0,'En curso':0,'Pte. tercero':0,'Resuelta':0}
+        for r in rows:
+            col_counts[estado_of(r['columna'], r['id_tecnico'])] += 1
+
+        # Top 10 tareas críticas (P1/P2 no resueltas)
+        criticas = await conn.fetch(f"""
+            SELECT k.id, k.tipo, k.prioridad, k.titulo, k.columna,
+                   p.nombre AS tecnico_nombre
+            FROM kanban_tareas k
+            LEFT JOIN pmo_staff_skills p ON k.id_tecnico = p.id_recurso
+            WHERE k.prioridad IN ('Crítica','Alta') AND k.columna != 'Completado'
+            {(' AND ' + ' AND '.join(where)) if where else ''}
+            ORDER BY CASE k.prioridad WHEN 'Crítica' THEN 0 WHEN 'Alta' THEN 1 ELSE 2 END,
+                     k.fecha_creacion DESC LIMIT 10
+        """, *params)
+
+    # Construir el PDF en memoria
+    import io
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=15*mm, rightMargin=15*mm, topMargin=15*mm, bottomMargin=15*mm)
+    styles = getSampleStyleSheet()
+    h1 = ParagraphStyle('h1', parent=styles['Heading1'], fontSize=16, textColor=colors.HexColor('#0d1117'), spaceAfter=4)
+    h2 = ParagraphStyle('h2', parent=styles['Heading2'], fontSize=11, textColor=colors.HexColor('#39d2c0'), spaceAfter=6, spaceBefore=10)
+    p_small = ParagraphStyle('ps', parent=styles['Normal'], fontSize=8, textColor=colors.HexColor('#6e7681'))
+    p_norm = ParagraphStyle('pn', parent=styles['Normal'], fontSize=9, leading=11)
+
+    story = []
+    story.append(Paragraph("Cognitive PMO — Kanban Global", h1))
+    story.append(Paragraph(f"Snapshot generado: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}", p_small))
+    if tipo or prioridad:
+        f_lbl = []
+        if tipo: f_lbl.append(f"tipo={tipo}")
+        if prioridad: f_lbl.append(f"prioridad={prioridad}")
+        story.append(Paragraph(f"Filtros: {' · '.join(f_lbl)}", p_small))
+    story.append(Spacer(1, 8))
+
+    # KPIs
+    story.append(Paragraph("Métricas de flujo (ventana 30 días)", h2))
+    kpi_data = [
+        ['Total tareas', 'Completadas', 'Throughput/sem', 'Lead Time', 'WIP', 'Bloqueadas'],
+        [str(total or 0), str(completadas_30d or 0), f"{round((completadas_30d or 0)/4.3,1)}",
+         f"{round(float(lead_time),1)}h", str(wip or 0), str(bloqueadas or 0)],
+    ]
+    t = Table(kpi_data, colWidths=[30*mm]*6)
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#1c2128')),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.HexColor('#8b949e')),
+        ('FONTSIZE', (0,0), (-1,0), 7),
+        ('FONTSIZE', (0,1), (-1,1), 13),
+        ('FONTNAME', (0,1), (-1,1), 'Helvetica-Bold'),
+        ('TEXTCOLOR', (0,1), (-1,1), colors.HexColor('#58a6ff')),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('BOX', (0,0), (-1,-1), 0.5, colors.HexColor('#30363d')),
+        ('GRID', (0,0), (-1,-1), 0.3, colors.HexColor('#30363d')),
+        ('TOPPADDING', (0,0), (-1,-1), 6),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+    ]))
+    story.append(t)
+    story.append(Spacer(1, 12))
+
+    # 5 columnas resumidas
+    story.append(Paragraph("Distribución por estado", h2))
+    col_data = [['Estado','Tareas']] + [[k, str(v)] for k,v in col_counts.items()]
+    t2 = Table(col_data, colWidths=[100*mm, 30*mm])
+    t2.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#1c2128')),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.HexColor('#8b949e')),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,-1), 9),
+        ('GRID', (0,0), (-1,-1), 0.3, colors.HexColor('#30363d')),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#f6f8fa')]),
+        ('TOPPADDING', (0,0), (-1,-1), 5),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+    ]))
+    story.append(t2)
+    story.append(Spacer(1, 12))
+
+    # Top 10 críticas
+    story.append(Paragraph(f"Top {len(criticas)} tareas críticas (P1/P2 no resueltas)", h2))
+    crit_data = [['#','Tipo','Prio','ID','Título','Columna','Técnico']]
+    for i, c in enumerate(criticas, 1):
+        title = (c['titulo'] or '')[:55] + ('…' if c['titulo'] and len(c['titulo']) > 55 else '')
+        crit_data.append([str(i), c['tipo'], c['prioridad'], c['id'][:18], title, c['columna'], (c['tecnico_nombre'] or '—')[:18]])
+    t3 = Table(crit_data, colWidths=[8*mm, 14*mm, 14*mm, 30*mm, 65*mm, 22*mm, 27*mm])
+    t3.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#1c2128')),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.HexColor('#8b949e')),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,-1), 7),
+        ('GRID', (0,0), (-1,-1), 0.3, colors.HexColor('#30363d')),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#f6f8fa')]),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('TOPPADDING', (0,0), (-1,-1), 4),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+    ]))
+    story.append(t3)
+
+    story.append(Spacer(1, 18))
+    story.append(Paragraph("Cognitive PMO · TFM Jose Antonio Martínez Victoria", p_small))
+
+    doc.build(story)
+    pdf_bytes = buf.getvalue()
+    buf.close()
+    from fastapi.responses import Response
+    fname = f"kanban-snapshot-{datetime.now().strftime('%Y%m%d-%H%M%S')}.pdf"
+    return Response(content=pdf_bytes, media_type="application/pdf",
+                    headers={"Content-Disposition": f'attachment; filename="{fname}"'})
 
 
 @app.get("/api/kanban/flow-metrics")

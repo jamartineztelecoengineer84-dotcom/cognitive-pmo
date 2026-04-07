@@ -322,6 +322,10 @@ body{background:var(--bg);color:var(--tx);font-family:var(--font);font-size:12px
     <option value="">Todos departamentos</option>
   </select>
   <input class="kb-search" id="filter-search" placeholder="Buscar tarea, CI, proyecto..." oninput="applyFilters()">
+  <button id="kb-export-pdf" onclick="exportKanbanPDF()" title="Descargar snapshot PDF" style="background:linear-gradient(135deg,rgba(57,210,192,.18),rgba(88,166,255,.18));border:1px solid var(--acc-cy);color:var(--acc-cy);padding:5px 12px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;font-family:var(--font);display:flex;align-items:center;gap:5px;transition:.15s;">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    PDF
+  </button>
 </div>
 
 <!-- ═══════════════ KANBAN BOARD ═══════════════ -->
@@ -810,6 +814,22 @@ function formatTime(s){
 function formatDate(d){
   var p=function(x){return x<10?'0'+x:x};
   return p(d.getDate())+'/'+p(d.getMonth()+1);
+}
+
+// ── Export PDF (FASE 6) ──
+function exportKanbanPDF(){
+  var qs = [];
+  if (_kbFilters.tipo && _kbFilters.tipo !== 'all') qs.push('tipo='+encodeURIComponent(_kbFilters.tipo));
+  if (_kbFilters.pri) qs.push('prioridad='+encodeURIComponent(_kbFilters.pri));
+  var url = '/api/kanban/export-pdf' + (qs.length ? '?'+qs.join('&') : '');
+  showToast('\u2193 Generando snapshot PDF...');
+  // Trigger download
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = '';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 }
 
 // ── Toast ──
