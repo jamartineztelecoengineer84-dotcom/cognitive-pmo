@@ -1,0 +1,18 @@
+         tbl         | count 
+---------------------+-------
+ build_live          |    60
+ build_project_plans |    75
+ build_quality_gates |    66
+ build_risks         |   178
+ build_sprint_items  |   174
+ build_sprints       |    51
+ build_stakeholders  |   234
+ build_subtasks      |   160
+ cartera_build       |    46
+ incidencias         |     1
+ incidencias_live    |     4
+ incidencias_run     |    34
+ kanban_tareas       |   341
+ run_incident_plans  |    61
+(14 filas)
+

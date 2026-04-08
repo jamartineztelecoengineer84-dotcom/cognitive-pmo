@@ -1,0 +1,71 @@
+                                                                      Tabla «public.incidencias_live»
+       Columna        |            Tipo             | Ordenamiento | Nulable  |           Por omisión            | Almacenamiento | Compresión | Estadísticas | Descripción 
+----------------------+-----------------------------+--------------+----------+----------------------------------+----------------+------------+--------------+-------------
+ ticket_id            | character varying           |              | not null |                                  | extended       |            |              | 
+ incidencia_detectada | text                        |              | not null |                                  | extended       |            |              | 
+ prioridad            | character varying           |              | not null | 'P4'::character varying          | extended       |            |              | 
+ categoria            | character varying           |              |          |                                  | extended       |            |              | 
+ estado               | character varying           |              |          | 'IN_PROGRESS'::character varying | extended       |            |              | 
+ sla_horas            | numeric                     |              |          | 48                               | main           |            |              | 
+ tecnico_asignado     | character varying           |              |          |                                  | extended       |            |              | 
+ area_afectada        | text                        |              |          |                                  | extended       |            |              | 
+ fecha_creacion       | timestamp without time zone |              |          | now()                            | plain          |            |              | 
+ fecha_limite         | timestamp without time zone |              |          |                                  | plain          |            |              | 
+ progreso_pct         | integer                     |              |          | 0                                | plain          |            |              | 
+ total_tareas         | integer                     |              |          | 0                                | plain          |            |              | 
+ tareas_completadas   | integer                     |              |          | 0                                | plain          |            |              | 
+ agente_origen        | character varying           |              |          | 'AG-001'::character varying      | extended       |            |              | 
+ canal_entrada        | character varying           |              |          |                                  | extended       |            |              | 
+ reportado_por        | character varying           |              |          |                                  | extended       |            |              | 
+ servicio_afectado    | character varying           |              |          |                                  | extended       |            |              | 
+ impacto_negocio      | character varying           |              |          |                                  | extended       |            |              | 
+ notas                | text                        |              |          |                                  | extended       |            |              | 
+Índices:
+    "incidencias_live_pkey" PRIMARY KEY, btree (ticket_id)
+Método de acceso: heap
+
+                                                                     Tabla «public.incidencias»
+      Columna      |            Tipo             | Ordenamiento | Nulable  |         Por omisión         | Almacenamiento | Compresión | Estadísticas | Descripción 
+-------------------+-----------------------------+--------------+----------+-----------------------------+----------------+------------+--------------+-------------
+ id_incidencia     | character varying           |              | not null |                             | extended       |            |              | 
+ descripcion       | text                        |              |          |                             | extended       |            |              | 
+ prioridad         | character varying           |              |          |                             | extended       |            |              | 
+ categoria         | character varying           |              |          |                             | extended       |            |              | 
+ estado            | character varying           |              |          | 'QUEUED'::character varying | extended       |            |              | 
+ sla_limite        | character varying           |              |          |                             | extended       |            |              | 
+ tecnico_asignado  | character varying           |              |          |                             | extended       |            |              | 
+ fecha_creacion    | timestamp without time zone |              |          | now()                       | plain          |            |              | 
+ flag_build_vs_run | boolean                     |              |          | false                       | plain          |            |              | 
+ impacto_negocio   | character varying           |              |          |                             | extended       |            |              | 
+Índices:
+    "incidencias_pkey" PRIMARY KEY, btree (id_incidencia)
+Método de acceso: heap
+
+                                                          Tabla «public.run_incident_plans»
+  Columna   |           Tipo           | Ordenamiento | Nulable  |       Por omisión       | Almacenamiento | Compresión | Estadísticas | Descripción 
+------------+--------------------------+--------------+----------+-------------------------+----------------+------------+--------------+-------------
+ id         | character varying(30)    |              | not null |                         | extended       |            |              | 
+ ticket_id  | character varying(30)    |              |          |                         | extended       |            |              | 
+ nombre     | text                     |              | not null |                         | extended       |            |              | 
+ prioridad  | character varying(5)     |              |          | 'P3'::character varying | extended       |            |              | 
+ area       | character varying(30)    |              |          |                         | extended       |            |              | 
+ sla_horas  | numeric(5,1)             |              |          |                         | main           |            |              | 
+ plan_data  | jsonb                    |              | not null | '{}'::jsonb             | extended       |            |              | 
+ created_at | timestamp with time zone |              |          | now()                   | plain          |            |              | 
+Índices:
+    "run_incident_plans_pkey" PRIMARY KEY, btree (id)
+    "idx_rip_ticket" btree (ticket_id)
+Método de acceso: heap
+
+                    Vista «public.vista_serie_temporal_incidencias»
+ Columna |  Tipo  | Ordenamiento | Nulable | Por omisión | Almacenamiento | Descripción 
+---------+--------+--------------+---------+-------------+----------------+-------------
+ ds      | date   |              |         |             | plain          | 
+ y       | bigint |              |         |             | plain          | 
+Definición de vista:
+ SELECT date(incidencias_run.timestamp_creacion) AS ds,
+    count(*) AS y
+   FROM incidencias_run
+  GROUP BY (date(incidencias_run.timestamp_creacion))
+  ORDER BY (date(incidencias_run.timestamp_creacion));
+
