@@ -26,6 +26,7 @@ from models import (
 from rbac_api import router as rbac_router
 from cmdb_api import router as cmdb_router
 from p96_router import router as p96_router, me_router as p96_me_router
+from pm_router import pm_router
 from db_loader import router as db_loader_router
 from tech_routes import router as tech_router
 from tech_terminal_ws import router as tech_terminal_router
@@ -119,6 +120,7 @@ app.include_router(tech_terminal_router)
 app.include_router(tech_copiloto_router)
 app.include_router(p96_router)
 app.include_router(p96_me_router)
+app.include_router(pm_router)
 
 
 # ── Admin: Valoración mensual ─────────────────────────────────────────────
