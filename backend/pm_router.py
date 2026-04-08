@@ -170,22 +170,18 @@ async def my_timeline(user: UserInfo = Depends(get_current_user)):
 
 
 # ─────────────────────────────────────────────────────────────────────
-# GET /api/pm/my-resources
+# GET /api/pm/my-resources — equipo asignado vía rbac_usuarios.id_pm
 # ─────────────────────────────────────────────────────────────────────
+# id_pm es varchar en el schema actual; lo casteamos a INT en la query.
 _RESOURCES_SQL = """
 SELECT
-  u.id_usuario, u.nombre_completo, u.email, r.code AS role_code,
-  ARRAY_AGG(DISTINCT bl.id_proyecto) AS proyectos,
-  COUNT(DISTINCT k.id) AS tareas_count,
-  COALESCE(SUM(k.horas_estimadas), 0) AS horas_estimadas,
-  COALESCE(SUM(k.horas_reales), 0) AS horas_reales
-FROM build_live bl
-JOIN kanban_tareas k ON k.id_proyecto = bl.id_proyecto
-JOIN rbac_usuarios u ON u.id_recurso = k.id_tecnico
+  u.id_usuario, u.nombre_completo, u.email,
+  r.code AS role_code, u.departamento, u.cargo
+FROM rbac_usuarios u
 JOIN rbac_roles r ON r.id_role = u.id_role
-WHERE bl.id_pm_usuario = $1
-GROUP BY u.id_usuario, u.nombre_completo, u.email, r.code
-ORDER BY tareas_count DESC
+WHERE u.id_pm::int = $1
+  AND u.activo = TRUE
+ORDER BY r.nivel_jerarquico, u.nombre_completo
 """
 
 
@@ -202,20 +198,26 @@ async def my_resources(user: UserInfo = Depends(get_current_user)):
         "id": r["id_usuario"],
         "nombre": r["nombre_completo"],
         "email": r["email"],
-        "rol": r["role_code"],
-        "proyectos": list(r["proyectos"] or []),
-        "tareas": r["tareas_count"],
-        "horas_estimadas": float(r["horas_estimadas"] or 0),
-        "horas_reales": float(r["horas_reales"] or 0),
+        "role_code": r["role_code"],
+        "departamento": r["departamento"],
+        "cargo": r["cargo"],
     } for r in rows]
-    # TODO(P98 F3.1): cuando agent_conversations tenga FK id_proyecto poblada,
-    # agregar agentes IA por proyecto. Por ahora devolvemos lista vacía.
+    # TODO(post-P98): cruzar con kanban_tareas (cuando se alinee id_proyecto)
+    # para enriquecer con horas/tareas. Y poblar agents cuando agent_conversations
+    # tenga FK id_proyecto.
     return {"humans": humans, "agents": []}
 
 
 # ─────────────────────────────────────────────────────────────────────
-# GET /api/pm/my-kpis
+# GET /api/pm/my-kpis — agregados financieros + CAPEX/OPEX inferidos por silo
 # ─────────────────────────────────────────────────────────────────────
+# Inferencia P98 F3.1: clasificación CAPEX/OPEX por silo (no hay flag por
+# proyecto en build_live). Cualquier silo fuera de los dos sets cae en
+# "otros_ratio" para no forzar clasificación binaria.
+SILO_CAPEX = {'IT-CLOUD', 'IT-STORAGE', 'IT-RED', 'IT-INFRA'}
+SILO_OPEX  = {'IT-SEGURIDAD', 'IT-DATA', 'IT-APPS'}
+
+
 @pm_router.get("/my-kpis")
 async def my_kpis(user: UserInfo = Depends(get_current_user)):
     if user is None:
@@ -239,6 +241,18 @@ async def my_kpis(user: UserInfo = Depends(get_current_user)):
         cpi_pond = 1.0
         spi_pond = 1.0
 
+    # CAPEX/OPEX/otros inferidos por silo
+    bac_capex = sum(p["presupuesto_bac"] for p in projs if p["silo"] in SILO_CAPEX)
+    bac_opex  = sum(p["presupuesto_bac"] for p in projs if p["silo"] in SILO_OPEX)
+    bac_otros = sum(p["presupuesto_bac"] for p in projs
+                    if p["silo"] not in SILO_CAPEX and p["silo"] not in SILO_OPEX)
+    if total_bac > 0:
+        capex_ratio = round(bac_capex / total_bac, 3)
+        opex_ratio  = round(bac_opex  / total_bac, 3)
+        otros_ratio = round(bac_otros / total_bac, 3)
+    else:
+        capex_ratio = opex_ratio = otros_ratio = 0.0
+
     return {
         "total_projects": n,
         "total_bac": round(total_bac, 2),
@@ -247,8 +261,9 @@ async def my_kpis(user: UserInfo = Depends(get_current_user)):
         "spi_medio_ponderado": round(spi_pond, 3),
         "proyectos_en_riesgo": sum(1 for p in projs if (p["risk_score"] or 0) > 0.6),
         "proyectos_retraso": sum(1 for p in projs if p["spi"] < 0.95),
-        "capex_ratio": 0.0,   # TODO(P98 F3.1): build_live no tiene flag CAPEX/OPEX
-        "opex_ratio": 0.0,    # TODO(P98 F3.1)
+        "capex_ratio": capex_ratio,
+        "opex_ratio":  opex_ratio,
+        "otros_ratio": otros_ratio,
         "ver_salario_ind": False,    # PMO_* nunca ven salarios individuales (RGPD)
         "silos": sorted({p["silo"] for p in projs if p["silo"]}),
     }
