@@ -44,6 +44,8 @@ P96_ALLOWED_ROLES = {
 # ─────────────────────────────────────────────────────────────────────
 @me_router.get("/api/me")
 async def get_me(user: UserInfo = Depends(get_current_user)):
+    if user is None:
+        raise HTTPException(status_code=401, detail="Autenticación requerida")
     scope = _load_econ_scope(user.role_code)
     return {
         "id": user.id_usuario,
