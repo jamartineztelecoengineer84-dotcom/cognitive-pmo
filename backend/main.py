@@ -665,11 +665,12 @@ class IncidenciaITSM(BaseModel):
 
 @app.post("/incidencias")
 async def crear_incidencia(inc: IncidenciaITSM):
-    inc_id = "INC-" + datetime.now().strftime("%Y") + "-" + str(uuid.uuid4())[:4].upper()
+    inc_id = "INC-MOCK-NODB"  # F1.3b fallback si no hay pool
     pool = get_pool()
     if pool:
         try:
             async with pool.acquire() as conn:
+                inc_id = await conn.fetchval("SELECT generar_ticket_id()")
                 row = await conn.fetchrow(
                     """INSERT INTO incidencias_run
                        (ticket_id, incidencia_detectada, id_catalogo, prioridad_ia,

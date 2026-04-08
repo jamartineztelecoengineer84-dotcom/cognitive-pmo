@@ -1,0 +1,10 @@
+              t              | count 
+-----------------------------+-------
+ incidencias_run             |    35
+ kanban_tareas RUN           |   240
+ incidencias_live            |     5
+ tech_chat_salas run         |     6
+ run_incident_plans NULL     |    61
+ run_incident_plans NOT NULL |     0
+(6 filas)
+

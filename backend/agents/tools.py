@@ -121,7 +121,7 @@ async def create_incident(db, descripcion: str, prioridad: str,
                           categoria: str, sla_horas: float,
                           area_afectada: str, **kwargs):
     """Crea incidencia en incidencias_run"""
-    ticket_id = f"INC-{datetime.now().strftime('%Y%m%d')}-{uuid4().hex[:4].upper()}"
+    ticket_id = await db.fetchval("SELECT generar_ticket_id()")
     await db.execute("""
         INSERT INTO incidencias_run
         (ticket_id, incidencia_detectada, prioridad_ia, categoria,
