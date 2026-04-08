@@ -1242,7 +1242,7 @@ async def get_run_plans():
     if pool:
         try:
             async with pool.acquire() as conn:
-                rows = await conn.fetch("SELECT * FROM run_incident_plans ORDER BY created_at DESC")
+                rows = await conn.fetch("SELECT * FROM itsm_form_drafts ORDER BY created_at DESC")
                 return [serialize(r) for r in rows]
         except Exception as e:
             logger.warning(f"DB error in GET /run/plans: {e}")
@@ -1268,7 +1268,7 @@ async def create_run_plan(p: RunPlanCreate):
     try:
         async with pool.acquire() as conn:
             row = await conn.fetchrow(
-                """INSERT INTO run_incident_plans (id,ticket_id,nombre,prioridad,area,sla_horas,plan_data)
+                """INSERT INTO itsm_form_drafts (id,ticket_id,nombre,prioridad,area,sla_horas,plan_data)
                 VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb)
                 ON CONFLICT (id) DO UPDATE SET plan_data=EXCLUDED.plan_data, nombre=EXCLUDED.nombre
                 RETURNING *""",
@@ -1287,7 +1287,7 @@ async def delete_run_plan(plan_id: str):
         raise HTTPException(status_code=503)
     try:
         async with pool.acquire() as conn:
-            result = await conn.execute("DELETE FROM run_incident_plans WHERE id=$1", plan_id)
+            result = await conn.execute("DELETE FROM itsm_form_drafts WHERE id=$1", plan_id)
             if result == "DELETE 0":
                 raise HTTPException(status_code=404)
             return {"ok": True}
