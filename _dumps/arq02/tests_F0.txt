@@ -1,0 +1,206 @@
+time="2026-04-08T21:47:20+02:00" level=warning msg="/root/cognitive-pmo/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+============================= test session starts ==============================
+platform linux -- Python 3.11.15, pytest-9.0.3, pluggy-1.6.0 -- /usr/local/bin/python3
+cachedir: .pytest_cache
+rootdir: /app
+plugins: anyio-4.13.0
+collecting ... collected 43 items
+
+tests/test_p96_router.py::test_me_ceo PASSED                             [  2%]
+tests/test_p96_router.py::test_me_tech_junior PASSED                     [  4%]
+tests/test_p96_router.py::test_me_sin_token PASSED                       [  6%]
+tests/test_p96_router.py::test_governors PASSED                          [  9%]
+tests/test_p96_router.py::test_run_matrix PASSED                         [ 11%]
+tests/test_p96_router.py::test_build_portfolio FAILED                    [ 13%]
+tests/test_p96_router.py::test_pulse_kpis PASSED                         [ 16%]
+tests/test_p96_router.py::test_pulse_alerts PASSED                       [ 18%]
+tests/test_p96_router.py::test_pulse_blocks PASSED                       [ 20%]
+tests/test_p96_router.py::test_pulse_decisions PASSED                    [ 23%]
+tests/test_p96_router.py::test_strategy[dafo] PASSED                     [ 25%]
+tests/test_p96_router.py::test_strategy[pestle] PASSED                   [ 27%]
+tests/test_p96_router.py::test_strategy[porter] PASSED                   [ 30%]
+tests/test_p96_router.py::test_strategy[okr] PASSED                      [ 32%]
+tests/test_p96_router.py::test_cfo_ve_salarios PASSED                    [ 34%]
+tests/test_p96_router.py::test_cio_no_ve_salarios PASSED                 [ 37%]
+tests/test_scenario_e2e.py::test_e2e_seed_scenario FAILED                [ 39%]
+tests/test_scenario_e2e.py::test_e2e_seed_scenario_403 PASSED            [ 41%]
+tests/test_scenario_engine.py::test_i1_guard_rejects_legacy PASSED       [ 44%]
+tests/test_scenario_engine.py::test_i1_guard_accepts_scenario PASSED     [ 46%]
+tests/test_scenario_engine.py::test_i1_guard_rejects_other_prefixes PASSED [ 48%]
+tests/test_scenario_engine.py::test_seed_optimal_inserts_expected_counts PASSED [ 51%]
+tests/test_scenario_engine.py::test_i5_cartera_build_unchanged PASSED    [ 53%]
+tests/test_scenario_engine.py::test_i4_legacy_build_live_unchanged PASSED [ 55%]
+tests/test_scenario_engine.py::test_i3_legacy_kanban_unchanged PASSED    [ 58%]
+tests/test_scenario_engine.py::test_idempotency_two_seeds_same_count PASSED [ 60%]
+tests/test_scenario_engine.py::test_seed_empty_clears_scenario PASSED    [ 62%]
+tests/test_scenario_engine.py::test_seed_half_counts PASSED              [ 65%]
+tests/test_scenario_engine.py::test_seed_overload_counts PASSED          [ 67%]
+tests/test_scenario_engine.py::test_legacy_intacto_post_overload FAILED  [ 69%]
+tests/test_scenario_engine.py::test_optimal_pct_capacidad_realista PASSED [ 72%]
+tests/test_tech_dashboard.py::test_dashboard_sin_auth PASSED             [ 74%]
+tests/test_tech_dashboard.py::test_dashboard_con_auth PASSED             [ 76%]
+tests/test_tech_dashboard.py::test_incidencias_filtro_recurso PASSED     [ 79%]
+tests/test_tech_dashboard.py::test_tareas_con_auth PASSED                [ 81%]
+tests/test_tech_dashboard.py::test_actividad_con_auth PASSED             [ 83%]
+tests/test_tech_dashboard.py::test_chat_salas PASSED                     [ 86%]
+tests/test_tech_dashboard.py::test_chat_crear_mensaje PASSED             [ 88%]
+tests/test_tech_dashboard.py::test_servidores PASSED                     [ 90%]
+tests/test_tech_dashboard.py::test_valoracion_actual PASSED              [ 93%]
+tests/test_tech_dashboard.py::test_valoracion_historial PASSED           [ 95%]
+tests/test_tech_dashboard.py::test_copiloto_responde PASSED              [ 97%]
+tests/test_tech_dashboard.py::test_cambio_estado_invalido PASSED         [100%]
+
+=================================== FAILURES ===================================
+_____________________________ test_build_portfolio _____________________________
+
+ceo_token = 'eyJhbGciOiAiSFMyNTYiLCAidHlwIjogIkpXVCJ9.eyJzdWIiOiAyLCAiZW1haWwiOiAiYWxlamFuZHJvLnZpZGFsQGNvZ25pdGl2ZXBtby5jb20iLCAi...JvIiwgImV4cCI6IDE3NzU3NjQwNDEuMjI0NDY2LCAiaWF0IjogMTc3NTY3NzY0MS4yMjQ0ODJ9.JxxJgC4vzBP4GoQZvTacPtSrb_gwXULffPGCxJAA3Do'
+
+    def test_build_portfolio(ceo_token):
+        code, data = _get("/api/p96/build/portfolio", ceo_token)
+        assert code == 200
+        assert isinstance(data, list)
+>       assert len(data) == 60
+E       AssertionError: assert 101 == 60
+E        +  where 101 = len([{'ai_lead': True, 'bac_k': 1178, 'cpi': 0.94, 'gate': 'G2', ...}, {'ai_lead': True, 'bac_k': 820, 'cpi': 0.89, 'gate': 'G2', ...}, {'ai_lead': False, 'bac_k': 799, 'cpi': 2.52, 'gate': 'G2-PLANIFICACION', ...}, {'ai_lead': False, 'bac_k': 795, 'cpi': 4.3, 'gate': 'G2-PLANIFICACION', ...}, {'ai_lead': False, 'bac_k': 789, 'cpi': 5.68, 'gate': 'G2-PLANIFICACION', ...}, {'ai_lead': False, 'bac_k': 784, 'cpi': 4.45, 'gate': 'G2-PLANIFICACION', ...}, ...])
+
+tests/test_p96_router.py:116: AssertionError
+____________________________ test_e2e_seed_scenario ____________________________
+
+    def test_e2e_seed_scenario():
+        """E2E completo: 7 checks contra POST /api/admin/seed-scenario."""
+        admin_token = _login(ADMIN_EMAIL, ADMIN_PASS)
+        headers_admin = {"Authorization": f"Bearer {admin_token}"}
+    
+        # CHECK 1 — POST seed OPTIMAL con reset
+        r = httpx.post(
+            f"{API_URL}/api/admin/seed-scenario",
+            json={"scenario_id": 2, "reset": True},
+            headers=headers_admin,
+            timeout=30,
+        )
+        assert r.status_code == 200, f"CHECK1 fail: {r.status_code} {r.text}"
+        body = r.json()
+        assert body["scenario"] == "OPTIMAL"
+        print("CHECK1 OK", body["counts"])
+    
+        async def _db_checks():
+            c = await _conn()
+            try:
+                # CHECK 2 — 40 PRJ-SC en build_live
+                n_proj = await c.fetchval(
+                    "SELECT COUNT(*) FROM build_live WHERE id_proyecto ~ '^PRJ-SC[A-D]'"
+                )
+                assert n_proj == 40, f"CHECK2 fail: {n_proj}"
+                print("CHECK2 OK")
+    
+                # CHECK 3 — 120 KAN-SC
+                n_kan = await c.fetchval(
+                    "SELECT COUNT(*) FROM kanban_tareas WHERE id LIKE 'KAN-SC%'"
+                )
+                assert n_kan == 120, f"CHECK3 fail: {n_kan}"
+                print("CHECK3 OK")
+    
+                # CHECK 4 — legacy build_live intacto (PRJ-MSF sigue existiendo)
+                n_msf = await c.fetchval(
+                    "SELECT COUNT(*) FROM build_live WHERE id_proyecto = 'PRJ-MSF'"
+                )
+                assert n_msf == 1, f"CHECK4 fail: PRJ-MSF = {n_msf}"
+                print("CHECK4 OK")
+    
+                # CHECK 5 — cartera_build = 46
+                n_cb = await c.fetchval("SELECT COUNT(*) FROM cartera_build")
+                assert n_cb == 46, f"CHECK5 fail: {n_cb}"
+                print("CHECK5 OK")
+            finally:
+                await c.close()
+        _run(_db_checks())
+    
+        # CHECK 6 — login PM nuevo + my-projects + my-resources
+        pm_token = _login(PM_EMAIL, PM_PASS)
+        headers_pm = {"Authorization": f"Bearer {pm_token}"}
+    
+        r = httpx.get(f"{API_URL}/api/pm/my-projects", headers=headers_pm, timeout=10)
+        assert r.status_code == 200
+        proj = r.json()
+        # Pablo Rivas (id_usuario=19) tiene 8 proyectos legacy de P98 F2 +
+        # 4 scenario (40 PRJ-SC repartidos entre 10 PMs en round-robin) = 12 totales.
+        # Los invariantes I3/I4 garantizan que la legacy queda intacta.
+        n_scenario = sum(1 for p in proj if p["id_proyecto"].startswith("PRJ-SC"))
+        n_legacy   = len(proj) - n_scenario
+        assert len(proj) == 12, f"CHECK6a fail: {len(proj)} proyectos (esperaba 12 = 8 legacy + 4 scenario)"
+        assert n_scenario == 4, f"CHECK6a fail: {n_scenario} scenario (esperaba 4)"
+        assert n_legacy == 8, f"CHECK6a fail: {n_legacy} legacy (esperaba 8)"
+        print(f"CHECK6a OK ({n_legacy} legacy + {n_scenario} scenario = {len(proj)} total)")
+    
+        r = httpx.get(f"{API_URL}/api/pm/my-resources", headers=headers_pm, timeout=10)
+        assert r.status_code == 200
+        humans = r.json().get("humans", [])
+        assert len(humans) > 0, "CHECK6b fail: humans vacío"
+        assert all("pct_capacidad" in h for h in humans)
+        print(f"CHECK6b OK ({len(humans)} humans)")
+    
+        # CHECK 7 — POST seed EMPTY → todo a 0 scenario, legacy intacto
+        r = httpx.post(
+            f"{API_URL}/api/admin/seed-scenario",
+            json={"scenario_id": 0, "reset": True},
+            headers=headers_admin,
+            timeout=30,
+        )
+        assert r.status_code == 200
+        b = r.json()
+        c2 = b["counts"]
+        assert c2["build_live_scenario"] == 0
+        assert c2["kanban_scenario"] == 0
+>       assert c2["build_live_legacy"] == 60
+E       assert 61 == 60
+
+tests/test_scenario_e2e.py:130: AssertionError
+----------------------------- Captured stdout call -----------------------------
+CHECK1 OK {'build_live_scenario': 40, 'kanban_scenario': 120, 'incidencias_scenario': 12, 'build_live_legacy': 61, 'kanban_legacy': 347, 'cartera_build': 46}
+CHECK2 OK
+CHECK3 OK
+CHECK4 OK
+CHECK5 OK
+CHECK6a OK (8 legacy + 4 scenario = 12 total)
+CHECK6b OK (11 humans)
+______________________ test_legacy_intacto_post_overload _______________________
+
+    def test_legacy_intacto_post_overload():
+        """Tras OVERLOAD, los counts legacy siguen igual a counts_F0.txt."""
+        from scenario_engine import seed_scenario_overload
+        async def _go():
+            c = await _conn()
+            try:
+                await seed_scenario_overload(c)
+                return (
+                    await c.fetchval("SELECT COUNT(*) FROM cartera_build"),
+                    await c.fetchval(
+                        "SELECT COUNT(*) FROM build_live WHERE id_proyecto !~ '^PRJ-SC[A-D]'"
+                    ),
+                    await c.fetchval(
+                        "SELECT COUNT(*) FROM kanban_tareas WHERE id NOT LIKE 'KAN-SC%'"
+                    ),
+                    await c.fetchval(
+                        "SELECT COUNT(*) FROM incidencias_run WHERE ticket_id NOT LIKE 'INC-SC%'"
+                    ),
+                )
+            finally:
+                await c.close()
+>       assert _run(_go()) == (46, 60, 341, 34)
+E       AssertionError: assert (46, 61, 347, 35) == (46, 60, 341, 34)
+E         
+E         At index 1 diff: 61 != 60
+E         
+E         Full diff:
+E           (
+E               46,
+E         -     60,...
+E         
+E         ...Full output truncated (9 lines hidden), use '-vv' to show
+
+tests/test_scenario_engine.py:257: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_p96_router.py::test_build_portfolio - AssertionError: asser...
+FAILED tests/test_scenario_e2e.py::test_e2e_seed_scenario - assert 61 == 60
+FAILED tests/test_scenario_engine.py::test_legacy_intacto_post_overload - Ass...
+======================== 3 failed, 40 passed in 15.34s =========================

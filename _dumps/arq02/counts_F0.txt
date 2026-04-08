@@ -1,0 +1,12 @@
+              t               | count 
+------------------------------+-------
+ incidencias_run              |    35
+ incidencias_live             |     5
+ incidencias                  |     1
+ run_incident_plans           |    61
+ agent_conversations          |  1624
+ kanban_tareas WHERE tipo=RUN |   240
+ tech_chat_salas tipo=run     |     6
+ tech_chat_mensajes           |    50
+(8 filas)
+

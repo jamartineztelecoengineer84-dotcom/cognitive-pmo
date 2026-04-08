@@ -1,0 +1,62 @@
+time="2026-04-08T21:47:01+02:00" level=warning msg="/root/cognitive-pmo/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+============================= test session starts ==============================
+platform linux -- Python 3.11.15, pytest-9.0.3, pluggy-1.6.0 -- /usr/local/bin/python3
+cachedir: .pytest_cache
+rootdir: /app
+plugins: anyio-4.13.0
+collecting ... collected 13 items
+
+tests/test_scenario_engine.py::test_i1_guard_rejects_legacy PASSED       [  7%]
+tests/test_scenario_engine.py::test_i1_guard_accepts_scenario PASSED     [ 15%]
+tests/test_scenario_engine.py::test_i1_guard_rejects_other_prefixes PASSED [ 23%]
+tests/test_scenario_engine.py::test_seed_optimal_inserts_expected_counts PASSED [ 30%]
+tests/test_scenario_engine.py::test_i5_cartera_build_unchanged PASSED    [ 38%]
+tests/test_scenario_engine.py::test_i4_legacy_build_live_unchanged PASSED [ 46%]
+tests/test_scenario_engine.py::test_i3_legacy_kanban_unchanged PASSED    [ 53%]
+tests/test_scenario_engine.py::test_idempotency_two_seeds_same_count PASSED [ 61%]
+tests/test_scenario_engine.py::test_seed_empty_clears_scenario PASSED    [ 69%]
+tests/test_scenario_engine.py::test_seed_half_counts PASSED              [ 76%]
+tests/test_scenario_engine.py::test_seed_overload_counts PASSED          [ 84%]
+tests/test_scenario_engine.py::test_legacy_intacto_post_overload FAILED  [ 92%]
+tests/test_scenario_engine.py::test_optimal_pct_capacidad_realista PASSED [100%]
+
+=================================== FAILURES ===================================
+______________________ test_legacy_intacto_post_overload _______________________
+
+    def test_legacy_intacto_post_overload():
+        """Tras OVERLOAD, los counts legacy siguen igual a counts_F0.txt."""
+        from scenario_engine import seed_scenario_overload
+        async def _go():
+            c = await _conn()
+            try:
+                await seed_scenario_overload(c)
+                return (
+                    await c.fetchval("SELECT COUNT(*) FROM cartera_build"),
+                    await c.fetchval(
+                        "SELECT COUNT(*) FROM build_live WHERE id_proyecto !~ '^PRJ-SC[A-D]'"
+                    ),
+                    await c.fetchval(
+                        "SELECT COUNT(*) FROM kanban_tareas WHERE id NOT LIKE 'KAN-SC%'"
+                    ),
+                    await c.fetchval(
+                        "SELECT COUNT(*) FROM incidencias_run WHERE ticket_id NOT LIKE 'INC-SC%'"
+                    ),
+                )
+            finally:
+                await c.close()
+>       assert _run(_go()) == (46, 60, 341, 34)
+E       AssertionError: assert (46, 61, 347, 35) == (46, 60, 341, 34)
+E         
+E         At index 1 diff: 61 != 60
+E         
+E         Full diff:
+E           (
+E               46,
+E         -     60,...
+E         
+E         ...Full output truncated (9 lines hidden), use '-vv' to show
+
+tests/test_scenario_engine.py:257: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_scenario_engine.py::test_legacy_intacto_post_overload - Ass...
+========================= 1 failed, 12 passed in 5.18s =========================

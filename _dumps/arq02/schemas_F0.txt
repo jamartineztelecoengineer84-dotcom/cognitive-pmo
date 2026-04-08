@@ -1,0 +1,493 @@
+--
+-- PostgreSQL database dump
+--
+
+\restrict ucMCsoFJCFvhGqPQc3fYDKswikyk8y28jMC7PoXmNBkKyHl5HQmHForHqdcq0Vn
+
+-- Dumped from database version 15.16 (Debian 15.16-1.pgdg13+1)
+-- Dumped by pg_dump version 15.16 (Debian 15.16-0+deb12u1)
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
+
+--
+-- Name: agent_conversations; Type: TABLE; Schema: public; Owner: jose_admin
+--
+
+CREATE TABLE public.agent_conversations (
+    id character varying(50) DEFAULT (gen_random_uuid())::text NOT NULL,
+    session_id character varying(50) DEFAULT (gen_random_uuid())::text NOT NULL,
+    agent_id character varying(10) NOT NULL,
+    agent_name character varying(100) NOT NULL,
+    role character varying(20) NOT NULL,
+    content text NOT NULL,
+    tokens_used integer DEFAULT 0,
+    model_used character varying(50) DEFAULT 'claude-sonnet-4-20250514'::character varying,
+    latency_ms integer DEFAULT 0,
+    metadata jsonb DEFAULT '{}'::jsonb,
+    created_at timestamp with time zone DEFAULT now(),
+    CONSTRAINT agent_conversations_role_check CHECK (((role)::text = ANY ((ARRAY['user'::character varying, 'assistant'::character varying, 'system'::character varying, 'tool'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.agent_conversations OWNER TO jose_admin;
+
+--
+-- Name: incidencias; Type: TABLE; Schema: public; Owner: jose_admin
+--
+
+CREATE TABLE public.incidencias (
+    id_incidencia character varying NOT NULL,
+    descripcion text,
+    prioridad character varying,
+    categoria character varying,
+    estado character varying DEFAULT 'QUEUED'::character varying,
+    sla_limite character varying,
+    tecnico_asignado character varying,
+    fecha_creacion timestamp without time zone DEFAULT now(),
+    flag_build_vs_run boolean DEFAULT false,
+    impacto_negocio character varying
+);
+
+
+ALTER TABLE public.incidencias OWNER TO jose_admin;
+
+--
+-- Name: incidencias_live; Type: TABLE; Schema: public; Owner: jose_admin
+--
+
+CREATE TABLE public.incidencias_live (
+    ticket_id character varying NOT NULL,
+    incidencia_detectada text NOT NULL,
+    prioridad character varying DEFAULT 'P4'::character varying NOT NULL,
+    categoria character varying,
+    estado character varying DEFAULT 'IN_PROGRESS'::character varying,
+    sla_horas numeric DEFAULT 48,
+    tecnico_asignado character varying,
+    area_afectada text,
+    fecha_creacion timestamp without time zone DEFAULT now(),
+    fecha_limite timestamp without time zone,
+    progreso_pct integer DEFAULT 0,
+    total_tareas integer DEFAULT 0,
+    tareas_completadas integer DEFAULT 0,
+    agente_origen character varying DEFAULT 'AG-001'::character varying,
+    canal_entrada character varying,
+    reportado_por character varying,
+    servicio_afectado character varying,
+    impacto_negocio character varying,
+    notas text
+);
+
+
+ALTER TABLE public.incidencias_live OWNER TO jose_admin;
+
+--
+-- Name: incidencias_run; Type: TABLE; Schema: public; Owner: jose_admin
+--
+
+CREATE TABLE public.incidencias_run (
+    ticket_id character varying(30) NOT NULL,
+    incidencia_detectada text NOT NULL,
+    id_catalogo integer,
+    prioridad_ia character varying(5) NOT NULL,
+    categoria character varying(100),
+    estado character varying(30) DEFAULT 'QUEUED'::character varying,
+    sla_limite numeric(5,1),
+    tecnico_asignado character varying(20),
+    impacto_negocio text,
+    area_afectada text,
+    flag_reasignacion boolean DEFAULT false,
+    timestamp_creacion timestamp without time zone DEFAULT now(),
+    timestamp_asignacion timestamp without time zone,
+    timestamp_resolucion timestamp without time zone,
+    tiempo_resolucion_minutos integer,
+    agente_origen character varying(20) DEFAULT 'AG-001'::character varying,
+    urgencia character varying(10) DEFAULT 'Media'::character varying,
+    impacto character varying(10) DEFAULT 'Medio'::character varying,
+    canal_entrada character varying(30) DEFAULT 'Portal ITSM'::character varying,
+    reportado_por character varying(100),
+    servicio_afectado character varying(100),
+    ci_afectado character varying(100),
+    notas_adicionales text,
+    id_proyecto character varying(30),
+    CONSTRAINT incidencias_run_estado_check CHECK (((estado)::text = ANY ((ARRAY['QUEUED'::character varying, 'EN_CURSO'::character varying, 'ESCALADO'::character varying, 'RESUELTO'::character varying, 'CERRADO'::character varying])::text[]))),
+    CONSTRAINT incidencias_run_prioridad_ia_check CHECK (((prioridad_ia)::text = ANY ((ARRAY['P1'::character varying, 'P2'::character varying, 'P3'::character varying, 'P4'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.incidencias_run OWNER TO jose_admin;
+
+--
+-- Name: kanban_tareas; Type: TABLE; Schema: public; Owner: jose_admin
+--
+
+CREATE TABLE public.kanban_tareas (
+    id character varying(30) NOT NULL,
+    titulo text NOT NULL,
+    descripcion text,
+    tipo character varying(10) NOT NULL,
+    prioridad character varying(10) NOT NULL,
+    columna character varying(30) DEFAULT 'Backlog'::character varying NOT NULL,
+    id_tecnico character varying(20),
+    id_proyecto character varying(30),
+    id_incidencia character varying(30),
+    bloqueador text,
+    horas_estimadas numeric(6,1) DEFAULT 0,
+    horas_reales numeric(6,1) DEFAULT 0,
+    fecha_creacion timestamp with time zone DEFAULT now() NOT NULL,
+    fecha_inicio_ejecucion timestamp with time zone,
+    fecha_cierre timestamp with time zone,
+    historial_columnas jsonb DEFAULT '[]'::jsonb,
+    created_at timestamp with time zone DEFAULT now(),
+    CONSTRAINT kanban_tareas_columna_check CHECK (((columna)::text = ANY ((ARRAY['Backlog'::character varying, 'Análisis'::character varying, 'En Progreso'::character varying, 'Code Review'::character varying, 'Testing'::character varying, 'Despliegue'::character varying, 'Bloqueado'::character varying, 'Completado'::character varying])::text[]))),
+    CONSTRAINT kanban_tareas_prioridad_check CHECK (((prioridad)::text = ANY ((ARRAY['Crítica'::character varying, 'Alta'::character varying, 'Media'::character varying, 'Baja'::character varying])::text[]))),
+    CONSTRAINT kanban_tareas_tipo_check CHECK (((tipo)::text = ANY ((ARRAY['RUN'::character varying, 'BUILD'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.kanban_tareas OWNER TO jose_admin;
+
+--
+-- Name: run_incident_plans; Type: TABLE; Schema: public; Owner: jose_admin
+--
+
+CREATE TABLE public.run_incident_plans (
+    id character varying(30) NOT NULL,
+    ticket_id character varying(30),
+    nombre text NOT NULL,
+    prioridad character varying(5) DEFAULT 'P3'::character varying,
+    area character varying(30),
+    sla_horas numeric(5,1),
+    plan_data jsonb DEFAULT '{}'::jsonb NOT NULL,
+    created_at timestamp with time zone DEFAULT now()
+);
+
+
+ALTER TABLE public.run_incident_plans OWNER TO jose_admin;
+
+--
+-- Name: tech_chat_mensajes; Type: TABLE; Schema: public; Owner: jose_admin
+--
+
+CREATE TABLE public.tech_chat_mensajes (
+    id integer NOT NULL,
+    id_sala integer NOT NULL,
+    id_autor character varying(20) NOT NULL,
+    rol_autor character varying(20) NOT NULL,
+    mensaje text NOT NULL,
+    created_at timestamp without time zone DEFAULT now(),
+    CONSTRAINT tech_chat_mensajes_rol_autor_check CHECK (((rol_autor)::text = ANY ((ARRAY['tecnico'::character varying, 'gobernador'::character varying, 'pm'::character varying, 'agente'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.tech_chat_mensajes OWNER TO jose_admin;
+
+--
+-- Name: tech_chat_mensajes_id_seq; Type: SEQUENCE; Schema: public; Owner: jose_admin
+--
+
+CREATE SEQUENCE public.tech_chat_mensajes_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.tech_chat_mensajes_id_seq OWNER TO jose_admin;
+
+--
+-- Name: tech_chat_mensajes_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: jose_admin
+--
+
+ALTER SEQUENCE public.tech_chat_mensajes_id_seq OWNED BY public.tech_chat_mensajes.id;
+
+
+--
+-- Name: tech_chat_salas; Type: TABLE; Schema: public; Owner: jose_admin
+--
+
+CREATE TABLE public.tech_chat_salas (
+    id integer NOT NULL,
+    tipo character varying(10) NOT NULL,
+    id_referencia character varying(30) NOT NULL,
+    nombre character varying(200) NOT NULL,
+    created_at timestamp without time zone DEFAULT now(),
+    activa boolean DEFAULT true,
+    CONSTRAINT tech_chat_salas_tipo_check CHECK (((tipo)::text = ANY ((ARRAY['run'::character varying, 'build'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.tech_chat_salas OWNER TO jose_admin;
+
+--
+-- Name: tech_chat_salas_id_seq; Type: SEQUENCE; Schema: public; Owner: jose_admin
+--
+
+CREATE SEQUENCE public.tech_chat_salas_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.tech_chat_salas_id_seq OWNER TO jose_admin;
+
+--
+-- Name: tech_chat_salas_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: jose_admin
+--
+
+ALTER SEQUENCE public.tech_chat_salas_id_seq OWNED BY public.tech_chat_salas.id;
+
+
+--
+-- Name: tech_chat_mensajes id; Type: DEFAULT; Schema: public; Owner: jose_admin
+--
+
+ALTER TABLE ONLY public.tech_chat_mensajes ALTER COLUMN id SET DEFAULT nextval('public.tech_chat_mensajes_id_seq'::regclass);
+
+
+--
+-- Name: tech_chat_salas id; Type: DEFAULT; Schema: public; Owner: jose_admin
+--
+
+ALTER TABLE ONLY public.tech_chat_salas ALTER COLUMN id SET DEFAULT nextval('public.tech_chat_salas_id_seq'::regclass);
+
+
+--
+-- Name: agent_conversations agent_conversations_pkey; Type: CONSTRAINT; Schema: public; Owner: jose_admin
+--
+
+ALTER TABLE ONLY public.agent_conversations
+    ADD CONSTRAINT agent_conversations_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: incidencias_live incidencias_live_pkey; Type: CONSTRAINT; Schema: public; Owner: jose_admin
+--
+
+ALTER TABLE ONLY public.incidencias_live
+    ADD CONSTRAINT incidencias_live_pkey PRIMARY KEY (ticket_id);
+
+
+--
+-- Name: incidencias incidencias_pkey; Type: CONSTRAINT; Schema: public; Owner: jose_admin
+--
+
+ALTER TABLE ONLY public.incidencias
+    ADD CONSTRAINT incidencias_pkey PRIMARY KEY (id_incidencia);
+
+
+--
+-- Name: incidencias_run incidencias_run_pkey; Type: CONSTRAINT; Schema: public; Owner: jose_admin
+--
+
+ALTER TABLE ONLY public.incidencias_run
+    ADD CONSTRAINT incidencias_run_pkey PRIMARY KEY (ticket_id);
+
+
+--
+-- Name: kanban_tareas kanban_tareas_pkey; Type: CONSTRAINT; Schema: public; Owner: jose_admin
+--
+
+ALTER TABLE ONLY public.kanban_tareas
+    ADD CONSTRAINT kanban_tareas_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: run_incident_plans run_incident_plans_pkey; Type: CONSTRAINT; Schema: public; Owner: jose_admin
+--
+
+ALTER TABLE ONLY public.run_incident_plans
+    ADD CONSTRAINT run_incident_plans_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: tech_chat_mensajes tech_chat_mensajes_pkey; Type: CONSTRAINT; Schema: public; Owner: jose_admin
+--
+
+ALTER TABLE ONLY public.tech_chat_mensajes
+    ADD CONSTRAINT tech_chat_mensajes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: tech_chat_salas tech_chat_salas_pkey; Type: CONSTRAINT; Schema: public; Owner: jose_admin
+--
+
+ALTER TABLE ONLY public.tech_chat_salas
+    ADD CONSTRAINT tech_chat_salas_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: tech_chat_salas tech_chat_salas_tipo_id_referencia_key; Type: CONSTRAINT; Schema: public; Owner: jose_admin
+--
+
+ALTER TABLE ONLY public.tech_chat_salas
+    ADD CONSTRAINT tech_chat_salas_tipo_id_referencia_key UNIQUE (tipo, id_referencia);
+
+
+--
+-- Name: idx_chat_msg_sala_ts; Type: INDEX; Schema: public; Owner: jose_admin
+--
+
+CREATE INDEX idx_chat_msg_sala_ts ON public.tech_chat_mensajes USING btree (id_sala, created_at DESC);
+
+
+--
+-- Name: idx_conv_agent; Type: INDEX; Schema: public; Owner: jose_admin
+--
+
+CREATE INDEX idx_conv_agent ON public.agent_conversations USING btree (agent_id);
+
+
+--
+-- Name: idx_conv_created; Type: INDEX; Schema: public; Owner: jose_admin
+--
+
+CREATE INDEX idx_conv_created ON public.agent_conversations USING btree (created_at DESC);
+
+
+--
+-- Name: idx_conv_session; Type: INDEX; Schema: public; Owner: jose_admin
+--
+
+CREATE INDEX idx_conv_session ON public.agent_conversations USING btree (session_id);
+
+
+--
+-- Name: idx_inc_run_estado; Type: INDEX; Schema: public; Owner: jose_admin
+--
+
+CREATE INDEX idx_inc_run_estado ON public.incidencias_run USING btree (estado);
+
+
+--
+-- Name: idx_inc_run_fecha; Type: INDEX; Schema: public; Owner: jose_admin
+--
+
+CREATE INDEX idx_inc_run_fecha ON public.incidencias_run USING btree (timestamp_creacion);
+
+
+--
+-- Name: idx_inc_run_prioridad; Type: INDEX; Schema: public; Owner: jose_admin
+--
+
+CREATE INDEX idx_inc_run_prioridad ON public.incidencias_run USING btree (prioridad_ia);
+
+
+--
+-- Name: idx_inc_run_proyecto; Type: INDEX; Schema: public; Owner: jose_admin
+--
+
+CREATE INDEX idx_inc_run_proyecto ON public.incidencias_run USING btree (id_proyecto);
+
+
+--
+-- Name: idx_inc_run_tecnico; Type: INDEX; Schema: public; Owner: jose_admin
+--
+
+CREATE INDEX idx_inc_run_tecnico ON public.incidencias_run USING btree (tecnico_asignado);
+
+
+--
+-- Name: idx_kanban_columna; Type: INDEX; Schema: public; Owner: jose_admin
+--
+
+CREATE INDEX idx_kanban_columna ON public.kanban_tareas USING btree (columna);
+
+
+--
+-- Name: idx_kanban_incidencia; Type: INDEX; Schema: public; Owner: jose_admin
+--
+
+CREATE INDEX idx_kanban_incidencia ON public.kanban_tareas USING btree (id_incidencia);
+
+
+--
+-- Name: idx_kanban_proyecto; Type: INDEX; Schema: public; Owner: jose_admin
+--
+
+CREATE INDEX idx_kanban_proyecto ON public.kanban_tareas USING btree (id_proyecto);
+
+
+--
+-- Name: idx_kanban_recent; Type: INDEX; Schema: public; Owner: jose_admin
+--
+
+CREATE INDEX idx_kanban_recent ON public.kanban_tareas USING btree (fecha_creacion DESC);
+
+
+--
+-- Name: idx_kanban_tecnico; Type: INDEX; Schema: public; Owner: jose_admin
+--
+
+CREATE INDEX idx_kanban_tecnico ON public.kanban_tareas USING btree (id_tecnico);
+
+
+--
+-- Name: idx_kanban_tipo; Type: INDEX; Schema: public; Owner: jose_admin
+--
+
+CREATE INDEX idx_kanban_tipo ON public.kanban_tareas USING btree (tipo);
+
+
+--
+-- Name: idx_rip_ticket; Type: INDEX; Schema: public; Owner: jose_admin
+--
+
+CREATE INDEX idx_rip_ticket ON public.run_incident_plans USING btree (ticket_id);
+
+
+--
+-- Name: incidencias_run incidencias_run_id_catalogo_fkey; Type: FK CONSTRAINT; Schema: public; Owner: jose_admin
+--
+
+ALTER TABLE ONLY public.incidencias_run
+    ADD CONSTRAINT incidencias_run_id_catalogo_fkey FOREIGN KEY (id_catalogo) REFERENCES public.catalogo_incidencias(id_catalogo);
+
+
+--
+-- Name: incidencias_run incidencias_run_tecnico_asignado_fkey; Type: FK CONSTRAINT; Schema: public; Owner: jose_admin
+--
+
+ALTER TABLE ONLY public.incidencias_run
+    ADD CONSTRAINT incidencias_run_tecnico_asignado_fkey FOREIGN KEY (tecnico_asignado) REFERENCES public.pmo_staff_skills(id_recurso);
+
+
+--
+-- Name: kanban_tareas kanban_tareas_id_tecnico_fkey; Type: FK CONSTRAINT; Schema: public; Owner: jose_admin
+--
+
+ALTER TABLE ONLY public.kanban_tareas
+    ADD CONSTRAINT kanban_tareas_id_tecnico_fkey FOREIGN KEY (id_tecnico) REFERENCES public.pmo_staff_skills(id_recurso);
+
+
+--
+-- Name: tech_chat_mensajes tech_chat_mensajes_id_sala_fkey; Type: FK CONSTRAINT; Schema: public; Owner: jose_admin
+--
+
+ALTER TABLE ONLY public.tech_chat_mensajes
+    ADD CONSTRAINT tech_chat_mensajes_id_sala_fkey FOREIGN KEY (id_sala) REFERENCES public.tech_chat_salas(id) ON DELETE CASCADE;
+
+
+--
+-- PostgreSQL database dump complete
+--
+
+\unrestrict ucMCsoFJCFvhGqPQc3fYDKswikyk8y28jMC7PoXmNBkKyHl5HQmHForHqdcq0Vn
+
