@@ -1,0 +1,120 @@
+═══ ARQ-01 F5 SMOKE 15 PUNTOS · 2026-04-08T19:38:16+02:00 ═══
+
+[seed OPTIMAL]
+{"ok":true,"scenario":"OPTIMAL","counts":{"build_live_scenario":40,"kanban_scenario":120,"incidencias_scenario":12,"build_live_legacy":60,"kanban_legacy":341,"cartera_build":46}}
+
+── CHECK 1 · /api/p96/build/portfolio (SUPERADMIN admin) ──
+rows: 100   (esperado >= 100)
+✅
+
+── CHECK 2 · /api/p96/build/portfolio (Pablo Rivas PMO_SENIOR) ──
+total: 4
+PRJ-SC*: 4
+ok
+
+── CHECK 3 · /api/p96/build/portfolio (Inés Carmona PMO_JUNIOR) ──
+HTTP 200
+rows: 4
+
+── CHECK 4 · /build/live (admin) — PRJ-SC* con pm_asignado ──
+total: 100 PRJ-SC: 40
+PRJ-SC sin pm_asignado: 0
+✅
+
+── CHECK 5 · /build/live/PRJ-SCA001 ──
+HTTP 405
+id: None nombre: None pm: None
+
+── CHECK 5 (adaptado · /api/p96/build/project/PRJ-SCA001) ──
+GET /build/live/{id} no existe (solo DELETE+PUT). Adapto al equivalente real:
+GET /api/p96/build/project/PRJ-SCA001 → 200 OK con portfolio.id_proyecto=PRJ-SCA001
+✅ (caveat: endpoint del prompt no existía, usado P97 equivalente)
+
+── CHECK 6 · top 5 técnicos con tarjetas LEGACY abiertas ──
+ id_tecnico | cnt 
+------------+-----
+ FTE-112    |  13
+ FTE-028    |  12
+ FTE-013    |  12
+ FTE-087    |  10
+ FTE-139    |   7
+(5 filas)
+
+
+── CHECK 7 · top 5 técnicos con tarjetas SCENARIO ──
+ id_tecnico | cnt 
+------------+-----
+ FTE-110    |   7
+ FTE-003    |   5
+ FTE-124    |   5
+ FTE-069    |   5
+ FTE-105    |   5
+(5 filas)
+
+
+── CHECK 8 · war_room cartera_build (SELECT directo, no hay endpoint /stats) ──
+ projects_cartera_build 
+------------------------
+                     46
+(1 fila)
+
+
+── CHECK 9 · /api/kanban/tareas (admin) — total + desglose ──
+HTTP 200
+total: 461 scenario: 120 legacy: 341
+
+── CHECK 10 · counts legacy intactos vs F0 ──
+         tbl         | count 
+---------------------+-------
+ build_project_plans |    75
+ build_quality_gates |    66
+ build_risks         |   178
+ build_sprint_items  |   174
+ build_sprints       |    51
+ build_stakeholders  |   234
+ build_subtasks      |   160
+ cartera_build       |    46
+(8 filas)
+
+
+── CHECK 11 · login 10 PMs nuevos ──
+pablo.rivas: OK
+cristina.vega: OK
+daniel.prieto: OK
+lucia.romero: OK
+ines.carmona: OK
+marta.nunez: OK
+sergio.mateos: OK
+nuria.beltran: OK
+hugo.ramos: OK
+ruben.ortiz: OK
+
+── CHECK 12 · /pmo/managers/candidates (admin) ──
+  File "<string>", line 6
+    print(f"  {p[\"id_pm\"]:7s} {p[\"nombre\"]:30s} tasa_exito={p[\"tasa_exito\"]} carga={p[\"carga_actual\"]}")
+                                                                                                               ^
+SyntaxError: f-string expression part cannot include a backslash
+
+── CHECK 13 · /api/pm/my-projects (Pablo Rivas) ──
+total: 12 PRJ-SC: 4 legacy: 8
+
+── CHECK 14 · /api/pm/my-resources (Pablo Rivas) ──
+humans: 12
+pct max:    152.5
+pct mediana:68.8
+pct min:    32.5
+
+── CHECK 15 · rbac_usuarios.id_pm numérico (debe ser 0) ──
+ id_pm_numericos 
+-----------------
+               0
+(1 fila)
+
+
+── CHECK 12 (re-run · sin error f-string) ──
+top 5:
+  PM-019  Lucía Romero Ibarra              tasa=100.0 carga=0
+  PM-017  Cristina Vega Salinas            tasa=100.0 carga=0
+  PM-018  Daniel Prieto Gallardo           tasa=100.0 carga=0
+  PM-016  Pablo Rivas Camacho              tasa=100.0 carga=0
+  PM-020  Inés Carmona Ruiz                tasa=100.0 carga=0

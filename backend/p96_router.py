@@ -30,12 +30,13 @@ router = APIRouter(prefix="/api/p96", tags=["p96"])
 me_router = APIRouter(tags=["p96-me"])
 
 # P97 FASE 6 — Allowlist de roles autorizados a entrar al CEO Dashboard /p96/
-# (15 roles de niveles jerárquicos 0-4: C-Level, VP, Directores, PMO_SENIOR, AUDITOR)
+# (16 roles: niveles 0-4 + PMO_JUNIOR añadido en ARQ-01 F5)
 P96_ALLOWED_ROLES = {
     'SUPERADMIN', 'CEO', 'CFO', 'CIO', 'CTO', 'CISO',
     'VP_ENGINEERING', 'VP_OPERATIONS', 'VP_PMO',
     'DIRECTOR_INFRA', 'DIRECTOR_SEC', 'DIRECTOR_DATA', 'DIRECTOR_IT',
-    'PMO_SENIOR', 'AUDITOR',
+    'PMO_SENIOR', 'PMO_JUNIOR',
+    'AUDITOR',
 }
 
 
