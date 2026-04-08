@@ -3580,7 +3580,8 @@ function bgRenderStrat(k){
 bgRenderPulso();
 
 // Cerrar al click fuera o ESC
-document.getElementById('bg-modal-overlay').addEventListener('click',e=>{
+const _bgOverlay = document.getElementById('bg-modal-overlay');
+if(_bgOverlay) _bgOverlay.addEventListener('click',e=>{
   if(e.target.id==='bg-modal-overlay') bgCloseModal();
 });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') bgCloseModal(); });
