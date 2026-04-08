@@ -1,0 +1,2 @@
+id_incidencia,descripcion,prioridad,categoria,estado,sla_limite,tecnico_asignado,fecha_creacion,flag_build_vs_run,impacto_negocio
+INC-02990DA7,Test incidencia,Alta,Redes,QUEUED,4h,FTE-001,2026-03-19 17:45:00.982413,t,Medio
