@@ -939,6 +939,20 @@ async def crear_incidencia_live(req: IncidenciaLive):
         raise HTTPException(status_code=503)
     try:
         async with pool.acquire() as conn:
+            # ARQ-02 F2.1 — el ticket debe existir en incidencias_run primero.
+            # La FK + trigger AFTER INSERT ya crearon la fila en live, este
+            # endpoint queda como no-op idempotente defensivo (ON CONFLICT DO
+            # NOTHING absorbe la fila duplicada).
+            exists = await conn.fetchval(
+                "SELECT 1 FROM incidencias_run WHERE ticket_id = $1",
+                req.ticket_id,
+            )
+            if not exists:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Ticket {req.ticket_id} no existe en incidencias_run. "
+                           f"El panel live solo puede mostrar tickets ya creados en run."
+                )
             sla_int = int(req.sla_horas)
             await conn.execute("""
                 INSERT INTO incidencias_live
@@ -951,6 +965,8 @@ async def crear_incidencia_live(req: IncidenciaLive):
                 req.sla_horas, sla_int, req.canal_entrada, req.reportado_por,
                 req.servicio_afectado, req.impacto_negocio)
             return {"ok": True, "ticket_id": req.ticket_id}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
