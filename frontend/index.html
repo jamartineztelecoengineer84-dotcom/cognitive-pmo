@@ -4177,7 +4177,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;disp
   </div>
 </div>
 <footer>
-  <span>COGNITIVE PMO v5.3.0 — <span data-i18n="footer.tfm">Trabajo de Fin de Máster</span> © 2025</span>
+  <span>COGNITIVE PMO v5.3.1 — <span data-i18n="footer.tfm">Trabajo de Fin de Máster</span> © 2025</span>
   <span>Jose Antonio Martinez Victoria | ID: 23046450J</span>
 </footer>
 <script>
@@ -4484,6 +4484,31 @@ function authFetch(url, options = {}) {
   return fetch(url, options).then(function(r) { r.safeJson = function() { return r.text().then(function(t) { return JSON.parse(t); }); }; return r; });
 }
 
+// ── P97 F6 — routing post-login (compartido entre doLogin y demoLogin) ──
+// Devuelve true si redirigió (la llamada debe hacer return inmediato).
+function p97RouteAfterLogin() {
+  const P96_ROLES = new Set(['SUPERADMIN','CEO','CFO','CIO','CTO','CISO',
+    'VP_ENGINEERING','VP_OPERATIONS','VP_PMO',
+    'DIRECTOR_INFRA','DIRECTOR_SEC','DIRECTOR_DATA','DIRECTOR_IT',
+    'PMO_SENIOR','AUDITOR']);
+  if(AUTH_ROLE && P96_ROLES.has(AUTH_ROLE.code)){
+    sessionStorage.setItem('p96_token', AUTH_TOKEN);
+    sessionStorage.setItem('p96_me', JSON.stringify({
+      role_code: AUTH_ROLE.code,
+      nombre: AUTH_USER.nombre_completo,
+      email: AUTH_USER.email,
+      p96_allowed: true
+    }));
+    window.location.href = '/p96/';
+    return true;
+  }
+  if(AUTH_ROLE && (AUTH_ROLE.code === 'TECH_SENIOR' || AUTH_ROLE.code === 'TECH_JUNIOR')){
+    window.location.href = '/tech-dashboard.html';
+    return true;
+  }
+  return false;
+}
+
 // ── Login ──
 async function doLogin() {
   const email = document.getElementById('login-email').value.trim();
@@ -4524,27 +4549,8 @@ async function doLogin() {
     localStorage.setItem('pmo_permisos', JSON.stringify(AUTH_PERMISOS));
     localStorage.setItem('pmo_role', JSON.stringify(AUTH_ROLE));
 
-    // P97 F6 — routing a /p96/ si el rol está en la allowlist
-    const P96_ROLES = new Set(['SUPERADMIN','CEO','CFO','CIO','CTO','CISO',
-      'VP_ENGINEERING','VP_OPERATIONS','VP_PMO',
-      'DIRECTOR_INFRA','DIRECTOR_SEC','DIRECTOR_DATA','DIRECTOR_IT',
-      'PMO_SENIOR','AUDITOR']);
-    if(AUTH_ROLE && P96_ROLES.has(AUTH_ROLE.code)){
-      sessionStorage.setItem('p96_token', AUTH_TOKEN);
-      sessionStorage.setItem('p96_me', JSON.stringify({
-        role_code: AUTH_ROLE.code,
-        nombre: AUTH_USER.nombre_completo,
-        email: AUTH_USER.email,
-        p96_allowed: true
-      }));
-      window.location.href = '/p96/';
-      return;
-    }
-    // Redirect technicians to their dashboard
-    if(AUTH_ROLE && (AUTH_ROLE.code === 'TECH_SENIOR' || AUTH_ROLE.code === 'TECH_JUNIOR')){
-      window.location.href = '/tech-dashboard.html';
-      return;
-    }
+    // P97 F6 — routing post-login (allowlist /p96/ + TECH_*)
+    if(p97RouteAfterLogin()) return;
     showApp();
   } catch (e) {
     errEl.textContent = t('login.error.connection') + ': ' + (e.message || e);
@@ -4589,6 +4595,8 @@ async function demoLogin(email, target) {
       localStorage.setItem('pmo_user', JSON.stringify(AUTH_USER));
       localStorage.setItem('pmo_permisos', JSON.stringify(AUTH_PERMISOS));
       localStorage.setItem('pmo_role', JSON.stringify(AUTH_ROLE));
+      // P97 F6 — routing post-login (allowlist /p96/ + TECH_*)
+      if(p97RouteAfterLogin()) return;
       showApp();
     }
   } catch (e) {
