@@ -184,3 +184,89 @@ def test_seed_empty_clears_scenario():
             await c.close()
     n_proj, n_kan, n_inc = _run(_go())
     assert n_proj == 0 and n_kan == 0 and n_inc == 0
+
+
+def test_seed_half_counts():
+    from scenario_engine import seed_scenario_half
+    async def _go():
+        c = await _conn()
+        try:
+            await seed_scenario_half(c)
+            proj = await c.fetchval(
+                "SELECT COUNT(*) FROM build_live WHERE id_proyecto ~ '^PRJ-SC[AB][0-9]+$'"
+            )
+            kan = await c.fetchval(
+                "SELECT COUNT(*) FROM kanban_tareas WHERE id LIKE 'KAN-SC%'"
+            )
+            inc = await c.fetchval(
+                "SELECT COUNT(*) FROM incidencias_run WHERE ticket_id LIKE 'INC-SC%'"
+            )
+            return proj, kan, inc
+        finally:
+            await c.close()
+    assert _run(_go()) == (20, 60, 8)
+
+
+def test_seed_overload_counts():
+    from scenario_engine import seed_scenario_overload
+    async def _go():
+        c = await _conn()
+        try:
+            await seed_scenario_overload(c)
+            proj = await c.fetchval(
+                "SELECT COUNT(*) FROM build_live WHERE id_proyecto ~ '^PRJ-SC[A-D][0-9]+$'"
+            )
+            kan = await c.fetchval(
+                "SELECT COUNT(*) FROM kanban_tareas WHERE id LIKE 'KAN-SC%'"
+            )
+            inc = await c.fetchval(
+                "SELECT COUNT(*) FROM incidencias_run WHERE ticket_id LIKE 'INC-SC%'"
+            )
+            escalados = await c.fetchval(
+                "SELECT COUNT(*) FROM incidencias_run WHERE ticket_id LIKE 'INC-SC%' AND estado='ESCALADO'"
+            )
+            return proj, kan, inc, escalados
+        finally:
+            await c.close()
+    proj, kan, inc, escalados = _run(_go())
+    assert (proj, kan, inc) == (40, 160, 22)
+    assert escalados == 3
+
+
+def test_legacy_intacto_post_overload():
+    """Tras OVERLOAD, los counts legacy siguen igual a counts_F0.txt."""
+    from scenario_engine import seed_scenario_overload
+    async def _go():
+        c = await _conn()
+        try:
+            await seed_scenario_overload(c)
+            return (
+                await c.fetchval("SELECT COUNT(*) FROM cartera_build"),
+                await c.fetchval(
+                    "SELECT COUNT(*) FROM build_live WHERE id_proyecto !~ '^PRJ-SC[A-D]'"
+                ),
+                await c.fetchval(
+                    "SELECT COUNT(*) FROM kanban_tareas WHERE id NOT LIKE 'KAN-SC%'"
+                ),
+                await c.fetchval(
+                    "SELECT COUNT(*) FROM incidencias_run WHERE ticket_id NOT LIKE 'INC-SC%'"
+                ),
+            )
+        finally:
+            await c.close()
+    assert _run(_go()) == (46, 60, 341, 34)
+
+
+def test_optimal_pct_capacidad_realista():
+    """Tras el fix, los técnicos elegidos por OPTIMAL son los 50 menos
+    cargados → el helper devuelve exactamente 50 filas válidas."""
+    from scenario_engine import seed_scenario_optimal, _pick_least_loaded_tecnicos
+    async def _go():
+        c = await _conn()
+        try:
+            await seed_scenario_optimal(c)
+            techs = await _pick_least_loaded_tecnicos(c, 50)
+            return len(techs)
+        finally:
+            await c.close()
+    assert _run(_go()) == 50

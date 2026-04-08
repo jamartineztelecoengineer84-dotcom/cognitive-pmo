@@ -48,6 +48,25 @@ async def reset_scenario(conn: asyncpg.Connection) -> None:
             )
 
 
+async def _pick_least_loaded_tecnicos(conn: asyncpg.Connection, n: int):
+    """Devuelve los n técnicos con MENOS horas legacy abiertas, para que
+    los escenarios EMPTY/OPTIMAL no hereden la sobrecarga legacy del NAS."""
+    rows = await conn.fetch("""
+        SELECT s.id_recurso,
+               COALESCE(SUM(k.horas_estimadas) FILTER (
+                   WHERE k.columna NOT IN ('Completado','Bloqueado')
+                     AND k.id NOT LIKE 'KAN-SC%'
+               ), 0) AS horas_legacy
+        FROM pmo_staff_skills s
+        LEFT JOIN kanban_tareas k ON k.id_tecnico = s.id_recurso
+        GROUP BY s.id_recurso
+        ORDER BY horas_legacy ASC, s.id_recurso ASC
+        LIMIT $1
+    """, n)
+    assert len(rows) == n, f"Esperaba {n} técnicos, encontré {len(rows)}"
+    return rows
+
+
 async def seed_scenario_empty(conn: asyncpg.Connection) -> None:
     """Escenario 0 — EMPTY: sin data scenario, todo legacy intacto."""
     await reset_scenario(conn)
@@ -110,10 +129,7 @@ async def seed_scenario_optimal(conn: asyncpg.Connection) -> None:
 
     # 120 kanban_tareas nuevas con columna VÁLIDA (CHECK existente en tabla)
     columnas_validas = ['Backlog', 'Análisis', 'En Progreso', 'Code Review', 'Testing']
-    tecnicos = await conn.fetch(
-        "SELECT id_recurso FROM pmo_staff_skills ORDER BY id_recurso LIMIT 50"
-    )
-    assert len(tecnicos) > 0, "No hay técnicos en pmo_staff_skills"
+    tecnicos = await _pick_least_loaded_tecnicos(conn, 50)
 
     for i in range(120):
         kan_id = f"KAN-SC{i:04d}"
@@ -155,6 +171,202 @@ async def seed_scenario_optimal(conn: asyncpg.Connection) -> None:
             f"Scenario incidente {i}",
             random.choice(prioridades_validas),
             random.choice(estados_validos),
+            random.choice(tecnicos)['id_recurso'],
+            id_proj,
+        )
+
+
+async def seed_scenario_half(conn: asyncpg.Connection) -> None:
+    """Escenario 1 — HALF: 20 proyectos PRJ-SCA001..010 + PRJ-SCB001..010,
+    5 PMs (PM-016..PM-020) x 4 proy, 60 kanban, 8 incidencias."""
+    random.seed(42)
+    await reset_scenario(conn)
+
+    pms = await conn.fetch("""
+        SELECT p.id_pm, p.nombre, p.id_usuario_rbac
+        FROM pmo_project_managers p
+        WHERE p.id_pm ~ '^PM-0(1[6-9]|20)$'
+          AND p.id_usuario_rbac IS NOT NULL
+        ORDER BY p.id_pm
+    """)
+    assert len(pms) == 5, f"Esperaba 5 PMs, encontré {len(pms)}"
+
+    prefixes = ['A', 'B']
+    for i in range(20):
+        prefix = prefixes[i // 10]
+        num    = (i % 10) + 1
+        id_proj = f"PRJ-SC{prefix}{num:03d}"
+        _assert_guard(id_proj)
+        pm = pms[i % 5]
+        await conn.execute("""
+            INSERT INTO build_live (
+                id_proyecto, nombre, pm_asignado, id_pm_usuario,
+                prioridad, estado, progreso_pct, sprint_actual, total_sprints,
+                presupuesto_bac, presupuesto_consumido, risk_score,
+                gate_actual, silo, ai_lead, fecha_inicio, fecha_fin_prevista
+            ) VALUES (
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+                now(), now() + interval '180 days'
+            )
+        """,
+            id_proj,
+            f"Scenario Half Project {prefix}{num}",
+            pm['nombre'], pm['id_usuario_rbac'],
+            random.choice(['Alta', 'Media']),
+            'PLANIFICACION',
+            random.randint(20, 60),
+            random.randint(1, 4), 16,
+            random.randint(150000, 500000),
+            random.randint(20000, 80000),
+            round(random.uniform(0.2, 0.6), 2),
+            'G2-PLANIFICACION',
+            random.choice(['IT-CLOUD', 'IT-APPS', 'IT-DATA']),
+            False,
+        )
+
+    columnas_validas = ['Backlog', 'Análisis', 'En Progreso', 'Code Review', 'Testing']
+    tecnicos = await _pick_least_loaded_tecnicos(conn, 30)
+
+    for i in range(60):
+        kan_id = f"KAN-SC{i:04d}"
+        proj_idx = i % 20
+        prefix = prefixes[proj_idx // 10]
+        num    = (proj_idx % 10) + 1
+        id_proj = f"PRJ-SC{prefix}{num:03d}"
+        await conn.execute("""
+            INSERT INTO kanban_tareas (
+                id, titulo, tipo, prioridad, columna,
+                id_tecnico, id_proyecto, horas_estimadas
+            ) VALUES ($1, $2, 'BUILD', $3, $4, $5, $6, $7)
+        """,
+            kan_id, f"Tarea half {i}",
+            random.choice(['Alta', 'Media', 'Baja']),
+            random.choice(columnas_validas),
+            random.choice(tecnicos)['id_recurso'],
+            id_proj,
+            random.randint(2, 12),
+        )
+
+    estados_validos = ['QUEUED', 'EN_CURSO', 'RESUELTO']
+    for i in range(8):
+        ticket = f"INC-SC{i:03d}"
+        proj_idx = i % 20
+        prefix = prefixes[proj_idx // 10]
+        num    = (proj_idx % 10) + 1
+        id_proj = f"PRJ-SC{prefix}{num:03d}"
+        await conn.execute("""
+            INSERT INTO incidencias_run (
+                ticket_id, incidencia_detectada, prioridad_ia, estado,
+                tecnico_asignado, id_proyecto
+            ) VALUES ($1, $2, $3, $4, $5, $6)
+        """,
+            ticket, f"Half incidente {i}",
+            random.choice(['P2', 'P3', 'P4']),
+            random.choice(estados_validos),
+            random.choice(tecnicos)['id_recurso'],
+            id_proj,
+        )
+
+
+async def seed_scenario_overload(conn: asyncpg.Connection) -> None:
+    """Escenario 3 — OVERLOAD: 40 proyectos como OPTIMAL, 160 kanban, 22
+    incidencias (3 ESCALADO), y 3 técnicos sobrecargados con 40+ tarjetas
+    cada uno."""
+    random.seed(42)
+    await reset_scenario(conn)
+
+    pms = await conn.fetch("""
+        SELECT p.id_pm, p.nombre, p.id_usuario_rbac
+        FROM pmo_project_managers p
+        WHERE p.id_pm ~ '^PM-0(1[6-9]|2[0-5])$'
+          AND p.id_usuario_rbac IS NOT NULL
+        ORDER BY p.id_pm
+    """)
+    assert len(pms) == 10
+
+    prefixes = ['A', 'B', 'C', 'D']
+    for i in range(40):
+        prefix = prefixes[i // 10]
+        num    = (i % 10) + 1
+        id_proj = f"PRJ-SC{prefix}{num:03d}"
+        _assert_guard(id_proj)
+        pm = pms[i % 10]
+        await conn.execute("""
+            INSERT INTO build_live (
+                id_proyecto, nombre, pm_asignado, id_pm_usuario,
+                prioridad, estado, progreso_pct, sprint_actual, total_sprints,
+                presupuesto_bac, presupuesto_consumido, risk_score,
+                gate_actual, silo, ai_lead, fecha_inicio, fecha_fin_prevista
+            ) VALUES (
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+                now(), now() + interval '180 days'
+            )
+        """,
+            id_proj,
+            f"Scenario Overload Project {prefix}{num}",
+            pm['nombre'], pm['id_usuario_rbac'],
+            random.choice(['Alta', 'Crítica']),
+            'EJECUCION',
+            random.randint(30, 70),
+            random.randint(2, 8), 16,
+            random.randint(300000, 900000),
+            random.randint(50000, 200000),
+            round(random.uniform(0.5, 0.9), 2),
+            'G3-EJECUCION',
+            random.choice(['IT-CLOUD', 'IT-APPS', 'IT-DATA', 'IT-SEGURIDAD']),
+            False,
+        )
+
+    # Sesgo: 3 técnicos hot reciben 40 kanban cada uno (120 de 160).
+    # Los otros 40 kanban se reparten entre 20 técnicos cualesquiera.
+    tecnicos = await _pick_least_loaded_tecnicos(conn, 23)
+    hot_tecnicos  = tecnicos[:3]
+    cold_tecnicos = tecnicos[3:]
+
+    columnas_validas = ['Backlog', 'Análisis', 'En Progreso', 'Code Review', 'Testing']
+
+    for i in range(160):
+        kan_id = f"KAN-SC{i:04d}"
+        proj_idx = i % 40
+        prefix = prefixes[proj_idx // 10]
+        num    = (proj_idx % 10) + 1
+        id_proj = f"PRJ-SC{prefix}{num:03d}"
+        if i < 120:
+            tec = hot_tecnicos[i % 3]
+        else:
+            tec = random.choice(cold_tecnicos)
+        await conn.execute("""
+            INSERT INTO kanban_tareas (
+                id, titulo, tipo, prioridad, columna,
+                id_tecnico, id_proyecto, horas_estimadas
+            ) VALUES ($1, $2, 'BUILD', $3, $4, $5, $6, $7)
+        """,
+            kan_id, f"Tarea overload {i}",
+            random.choice(['Alta', 'Crítica']),
+            random.choice(columnas_validas),
+            tec['id_recurso'],
+            id_proj,
+            random.randint(8, 16),
+        )
+
+    # 22 incidencias: 3 con estado 'ESCALADO', 19 con QUEUED/EN_CURSO/RESUELTO
+    estados_normales = ['QUEUED', 'EN_CURSO', 'RESUELTO']
+    for i in range(22):
+        ticket = f"INC-SC{i:03d}"
+        proj_idx = i % 40
+        prefix = prefixes[proj_idx // 10]
+        num    = (proj_idx % 10) + 1
+        id_proj = f"PRJ-SC{prefix}{num:03d}"
+        estado = 'ESCALADO' if i < 3 else random.choice(estados_normales)
+        await conn.execute("""
+            INSERT INTO incidencias_run (
+                ticket_id, incidencia_detectada, prioridad_ia, estado,
+                tecnico_asignado, id_proyecto
+            ) VALUES ($1, $2, $3, $4, $5, $6)
+        """,
+            ticket, f"Overload incidente {i}",
+            random.choice(['P1', 'P2', 'P3']),
+            estado,
             random.choice(tecnicos)['id_recurso'],
             id_proj,
         )
