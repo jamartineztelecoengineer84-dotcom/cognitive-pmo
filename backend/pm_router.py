@@ -170,18 +170,49 @@ async def my_timeline(user: UserInfo = Depends(get_current_user)):
 
 
 # ─────────────────────────────────────────────────────────────────────
-# GET /api/pm/my-resources — equipo asignado vía rbac_usuarios.id_pm
+# GET /api/pm/my-resources — pool compartido vía JOIN dinámico
 # ─────────────────────────────────────────────────────────────────────
-# id_pm es varchar en el schema actual; lo casteamos a INT en la query.
+# PRINCIPIO POOL COMPARTIDO: los técnicos NUNCA pertenecen a un PM.
+# Se calcula dinámicamente: técnicos que HOY tienen alguna kanban_tarea
+# abierta en algún proyecto de build_live cuyo id_pm_usuario = yo.
+#
+# % capacidad comprometida cross-stream = suma de horas_estimadas abiertas
+# del técnico (en CUALQUIER proyecto, no solo los míos) / 40h por semana.
 _RESOURCES_SQL = """
+WITH mis_proyectos AS (
+  SELECT id_proyecto
+  FROM build_live
+  WHERE id_pm_usuario = $1
+),
+tecnicos_en_mis_proyectos AS (
+  SELECT DISTINCT k.id_tecnico
+  FROM kanban_tareas k
+  JOIN mis_proyectos mp ON k.id_proyecto = mp.id_proyecto
+  WHERE k.id_tecnico IS NOT NULL
+    AND k.columna NOT IN ('Completado', 'Bloqueado')
+),
+capacidad_total AS (
+  SELECT k.id_tecnico,
+         COALESCE(SUM(k.horas_estimadas), 0) AS horas_abiertas
+  FROM kanban_tareas k
+  WHERE k.columna NOT IN ('Completado', 'Bloqueado')
+  GROUP BY k.id_tecnico
+)
 SELECT
-  u.id_usuario, u.nombre_completo, u.email,
-  r.code AS role_code, u.departamento, u.cargo
-FROM rbac_usuarios u
-JOIN rbac_roles r ON r.id_role = u.id_role
-WHERE u.id_pm::int = $1
-  AND u.activo = TRUE
-ORDER BY r.nivel_jerarquico, u.nombre_completo
+  u.id_usuario,
+  u.nombre_completo,
+  u.email,
+  r.code            AS role_code,
+  u.departamento,
+  u.cargo,
+  COALESCE(ct.horas_abiertas, 0)                    AS horas_abiertas_total,
+  ROUND(COALESCE(ct.horas_abiertas, 0) / 40.0 * 100, 1) AS pct_capacidad
+FROM tecnicos_en_mis_proyectos tmp
+JOIN rbac_usuarios u   ON u.id_recurso = tmp.id_tecnico
+JOIN rbac_roles    r   ON r.id_role    = u.id_role
+LEFT JOIN capacidad_total ct ON ct.id_tecnico = tmp.id_tecnico
+WHERE u.activo = TRUE
+ORDER BY pct_capacidad DESC, u.nombre_completo
 """
 
 
@@ -201,10 +232,10 @@ async def my_resources(user: UserInfo = Depends(get_current_user)):
         "role_code": r["role_code"],
         "departamento": r["departamento"],
         "cargo": r["cargo"],
+        "horas_abiertas_total": float(r["horas_abiertas_total"] or 0),
+        "pct_capacidad": float(r["pct_capacidad"] or 0),
     } for r in rows]
-    # TODO(post-P98): cruzar con kanban_tareas (cuando se alinee id_proyecto)
-    # para enriquecer con horas/tareas. Y poblar agents cuando agent_conversations
-    # tenga FK id_proyecto.
+    # TODO(post-P98): poblar agents cuando agent_conversations tenga FK id_proyecto.
     return {"humans": humans, "agents": []}
 
 
