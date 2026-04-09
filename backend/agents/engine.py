@@ -1,4 +1,5 @@
 import anthropic
+import re
 import time
 import json
 import logging
@@ -7,6 +8,12 @@ from agents.config import AgentConfig
 from agents.tools import TOOL_REGISTRY
 
 log = logging.getLogger("agents.engine")
+
+# Deuda B.1 / F-ARQ02-12: el shell ITSM (post-A.2) prefija el user_msg con
+# "TICKET: INC-NNNNNN-YYYYMMDD\n..." cuando ya creó el ticket vía POST
+# /incidencias antes de invocar al agente. _log lo extrae para poblar
+# agent_conversations.ticket_id sin tocar la firma de invoke().
+_TICKET_RE = re.compile(r'^TICKET:\s*(INC-\d{6}-\d{8})')
 
 
 class AgentEngine:
@@ -108,16 +115,25 @@ class AgentEngine:
             session_id = str(uuid4())
 
         try:
+            # Deuda B.1 / F-ARQ02-12: derivar ticket_id del prefijo TICKET:
+            # del shell ITSM A.2. EXISTS guard para no crear fantasmas (la
+            # columna es soft, sin FK — el guard preserva test_ningun_ticket_id_fantasma).
+            m = _TICKET_RE.match(user_msg or "")
+            ticket_id = await self.db.fetchval(
+                "SELECT ticket_id FROM incidencias_run WHERE ticket_id=$1",
+                m.group(1),
+            ) if m else None
+
             # Log conversación (user + assistant)
             for role, content in [("user", user_msg), ("assistant", response)]:
                 if content:
                     await self.db.execute("""
                         INSERT INTO agent_conversations
                         (session_id, agent_id, agent_name, role, content,
-                         tokens_used, model_used, latency_ms)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                         tokens_used, model_used, latency_ms, ticket_id)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                     """, session_id, self.config.agent_id, self.config.agent_name,
-                        role, content, tokens, self.config.model, latency)
+                        role, content, tokens, self.config.model, latency, ticket_id)
 
             # Log métricas (upsert por agente+fecha)
             await self.db.execute("""
