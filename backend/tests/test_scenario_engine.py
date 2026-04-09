@@ -254,7 +254,10 @@ def test_legacy_intacto_post_overload():
             )
         finally:
             await c.close()
-    assert _run(_go()) == (46, 60, 341, 34)
+    # F-ARQ02-06 C.2 cleanup 2026-04-09: kanban_legacy bajó de 341 original a
+    # 332 tras purgar 35 huérfanas + 18 hijas de 4 incidencias residuales.
+    # Baseline 341 irreproducible (3 filas del snapshot original ya no existen).
+    assert _run(_go()) == (46, 60, 332, 34)
 
 
 def test_optimal_pct_capacidad_realista():

@@ -49,6 +49,13 @@ async def _counts():
 async def _cleanup(tid):
     c = await _conn()
     try:
+        # Deuda C.2 / F-ARQ02-06: borrar kanban hijas + agent_conversations
+        # ANTES de la incidencia padre (no hay FK CASCADE entre estas tablas
+        # e incidencias_run — son columnas soft). Sin esto, AG-001 dejaría
+        # 6-8 kanban huérfanas por cada run, drift acumulativo en los 3 tests
+        # F-ARQ02-01.
+        await c.execute("DELETE FROM kanban_tareas WHERE id_incidencia = $1", tid)
+        await c.execute("DELETE FROM agent_conversations WHERE ticket_id = $1", tid)
         await c.execute("DELETE FROM incidencias_run WHERE ticket_id = $1", tid)
     finally:
         await c.close()

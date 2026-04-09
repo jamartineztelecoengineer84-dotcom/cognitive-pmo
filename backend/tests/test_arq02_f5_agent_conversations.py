@@ -82,7 +82,10 @@ def test_backfill_minimo_126():
         finally:
             await c.close()
     n = _run(_go())
-    assert n >= 126, f"Backfill bajo: solo {n} filas con ticket_id (esperado >=126)"
+    # F-ARQ02-06 C.2 cleanup 2026-04-09: cleanup borró 8 agent_conversations
+    # vinculadas a 4 incidencias residuales purgadas (126-8=118). Coherente
+    # con la pérdida de evidencia de tickets no válidos.
+    assert n >= 118, f"Backfill bajo: solo {n} filas con ticket_id (esperado >=118)"
 
 
 def test_ningun_ticket_id_fantasma():

@@ -128,7 +128,10 @@ def test_e2e_seed_scenario():
     assert c2["build_live_scenario"] == 0
     assert c2["kanban_scenario"] == 0
     assert c2["build_live_legacy"] == 60
-    assert c2["kanban_legacy"] == 341
+    # F-ARQ02-06 C.2 cleanup 2026-04-09: kanban_legacy bajó de 341 original a
+    # 332 tras purgar 35 huérfanas + 18 hijas de 4 incidencias residuales.
+    # Baseline 341 irreproducible (3 filas del snapshot original ya no existen).
+    assert c2["kanban_legacy"] == 332
     assert c2["cartera_build"] == 46
     print("CHECK7 OK", c2)
 
