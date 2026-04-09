@@ -40,5 +40,9 @@ def test_incidencias_run_y_live_intactas():
         finally:
             await c.close()
     run, live = _run(_go())
-    assert run >= 37, f"incidencias_run baseline esperado >=37, got {run}"
-    assert live >= 5, f"incidencias_live baseline esperado >=5, got {live}"
+    # F-ARQ02-20 hot-fix 2026-04-09: threshold bajado de >=37 a >=34. El
+    # original 37 asumía 34 baseline + 3 INC-SC* residuales típicos. Tras
+    # F-ARQ02-20 conftest purga TODOS los INC-SC* PRE y POST sesión, así que
+    # el count visible al test es 34 puro (sin scenario residuals).
+    assert run >= 34, f"incidencias_run baseline esperado >=34, got {run}"
+    assert live >= 2, f"incidencias_live baseline esperado >=2, got {live}"
