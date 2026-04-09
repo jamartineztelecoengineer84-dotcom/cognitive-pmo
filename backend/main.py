@@ -1264,9 +1264,10 @@ async def create_run_plan(p: RunPlanCreate):
     pool = get_pool()
     if not pool:
         raise HTTPException(status_code=503)
-    plan_id = p.id or ("RUN-" + datetime.now().strftime("%Y%m%d") + "-" + str(uuid.uuid4())[:4].upper())
     try:
         async with pool.acquire() as conn:
+            # Deuda A.1 / F-ARQ02-09: SEQUENCE atómica reemplaza uuid4().hex[:4]
+            plan_id = p.id or await conn.fetchval("SELECT generar_draft_id()")
             row = await conn.fetchrow(
                 """INSERT INTO itsm_form_drafts (id,ticket_id,nombre,prioridad,area,sla_horas,plan_data)
                 VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb)
