@@ -16,6 +16,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from database import init_pool, get_pool, close_pool
+from scenario_context import (
+    validate_scenario,
+    set_current_scenario,
+    reset_current_scenario,
+    get_current_scenario,
+)
 from models import (
     ProyectoCreate,
     IncidenciaCreate,
@@ -117,6 +123,44 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ── ARQ-03 F3: middleware X-Scenario → ContextVar → pool setup callback ──
+@app.middleware("http")
+async def scenario_middleware(request: Request, call_next):
+    """Lee header X-Scenario, valida contra whitelist, setea ContextVar.
+
+    El pool_setup_callback de asyncpg leerá el ContextVar en cada
+    pool.acquire() y fijará search_path = <scenario>, compartido, public.
+    Cero cambios en handlers existentes; siguen usando pool.acquire()
+    directo.
+    """
+    header = request.headers.get("x-scenario")
+    try:
+        scenario = validate_scenario(header)
+    except HTTPException as e:
+        return JSONResponse(
+            status_code=e.status_code,
+            content={"detail": e.detail},
+        )
+    token = set_current_scenario(scenario)
+    try:
+        response = await call_next(request)
+    finally:
+        reset_current_scenario(token)
+    return response
+
+
+# ── ARQ-03 F3: endpoint debug para verificar X-Scenario end-to-end ───────
+@app.get("/api/_debug/search_path")
+async def debug_search_path():
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(503, "DB pool no disponible")
+    async with pool.acquire() as conn:
+        sp = await conn.fetchval("SELECT current_setting('search_path')")
+    return {"search_path": sp, "scenario_ctx": get_current_scenario()}
+
 
 # ── RBAC Router ───────────────────────────────────────────────────────────
 app.include_router(rbac_router)

@@ -2,6 +2,8 @@ import asyncpg
 import os
 import logging
 
+from scenario_context import pool_setup_callback
+
 logger = logging.getLogger(__name__)
 
 _pool = None
@@ -22,7 +24,8 @@ async def init_pool():
             min_size=1,
             max_size=10,
             command_timeout=30,
-            timeout=10
+            timeout=10,
+            setup=pool_setup_callback,  # ARQ-03 F3
         )
         logger.info("AsyncPG pool created successfully")
     except Exception as e:
