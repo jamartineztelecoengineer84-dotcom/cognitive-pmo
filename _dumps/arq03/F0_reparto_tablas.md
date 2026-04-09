@@ -60,7 +60,7 @@ contra el primer esquema del search_path que lo contenga.
 
 Total A: **18 tablas**
 
-## 4. Caja B — por escenario (50 tablas)
+## 4. Caja B — por escenario (51 tablas)
 
 Se mantienen en `primitiva` en F1 y se clonarán por esquema banco en F2+.
 
@@ -77,7 +77,7 @@ Se mantienen en `primitiva` en F1 y se clonarán por esquema banco en F2+.
 - `intelligent_alerts`, `cartera_build`, `directorio_corporativo`
 - `presupuestos`, `pipeline_sessions`
 
-Total B: **50 tablas**
+Total B: **51 tablas**
 
 ## 5. Caja C — resuelta (0 dudosas pendientes)
 
@@ -141,7 +141,7 @@ search_path por transacción con `SET LOCAL`.
 ## 9. Criterio de entrada a F1
 
 - [x] F0_recon.md generado
-- [x] Clasificación 18+50+0 firmada
+- [x] Clasificación 18+51+0 firmada (corregida en F2.0, ver §12)
 - [x] Estrategia ALTER ROLE acordada
 - [x] Grep public. verificado (6/6 benignos)
 - [x] Riesgo test F-ARQ02-20 identificado
@@ -157,3 +157,10 @@ search_path por transacción con `SET LOCAL`.
 F1 solo crea `compartido` + `primitiva`, mueve tablas con ALTER TABLE,
 configura ALTER ROLE, actualiza el único test afectado, y verifica que
 la suite pasa 88/0.
+
+## 12. Errata y correcciones
+
+- 2026-04-09 F2.0: corregido typo de Caja B de 50 → 51. El conteo real
+  es 48 tablas puras Caja B del recon + 3 de Caja C que fueron asignadas
+  a B (cmdb_change_windows, pipeline_sessions, kanban_wip_limits) = 51.
+  El F0_recon.md no tenía el error, solo el contrato firmado.
