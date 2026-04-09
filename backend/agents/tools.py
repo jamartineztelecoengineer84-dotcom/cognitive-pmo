@@ -1,5 +1,6 @@
 import json
 from datetime import datetime, timedelta
+from typing import Optional
 from uuid import uuid4
 
 # ═══════════════════════════════════════════════════════════════
@@ -49,7 +50,11 @@ CREATE_INCIDENT_SCHEMA = {
             "servicio_afectado": {"type": "string", "description": "Servicio ITSM afectado"},
             "ci_afectado": {"type": "string", "description": "Código del CI de la CMDB afectado"},
             "urgencia": {"type": "string", "description": "Alta, Media, Baja"},
-            "impacto": {"type": "string", "description": "Alto, Medio, Bajo"}
+            "impacto": {"type": "string", "description": "Alto, Medio, Bajo"},
+            "pre_existing_ticket_id": {
+                "type": "string",
+                "description": "Opcional. Si el message del invoke comienza con 'TICKET: INC-NNNNNN-YYYYMMDD', extraer ese ticket_id y pasarlo aquí. La tool devolverá la fila existente sin crear una nueva. Usar SOLO cuando el shell ya creó el ticket vía POST /incidencias antes de invocar a AG-001."
+            }
         },
         "required": ["descripcion", "prioridad", "categoria", "sla_horas", "area_afectada"]
     }
@@ -119,8 +124,37 @@ async def query_catalogo(db, texto: str, limit: int = 5):
 @register_tool("create_incident")
 async def create_incident(db, descripcion: str, prioridad: str,
                           categoria: str, sla_horas: float,
-                          area_afectada: str, **kwargs):
-    """Crea incidencia en incidencias_run"""
+                          area_afectada: str,
+                          pre_existing_ticket_id: Optional[str] = None,
+                          **kwargs):
+    """Crea incidencia en incidencias_run.
+
+    Deuda A.2 / F-ARQ02-04: si el shell ya creó un ticket vía POST /incidencias
+    y pasa pre_existing_ticket_id, devolvemos la fila existente sin crear una
+    nueva (idempotencia). Si pre_existing_ticket_id no existe en BD, NO se crea
+    uno nuevo: devolvemos error explícito para que el LLM no repita el INSERT.
+    """
+    if pre_existing_ticket_id:
+        row = await db.fetchrow(
+            """SELECT ticket_id, prioridad_ia AS prioridad, categoria,
+                      sla_limite, estado
+               FROM incidencias_run WHERE ticket_id = $1""",
+            pre_existing_ticket_id,
+        )
+        if row:
+            return {
+                "ticket_id": row["ticket_id"],
+                "prioridad": row["prioridad"],
+                "categoria": row["categoria"],
+                "sla_limite": str(row["sla_limite"]) if row["sla_limite"] is not None else None,
+                "estado": row["estado"],
+                "_idempotent": True,
+            }
+        return {
+            "error": f"pre_existing_ticket_id {pre_existing_ticket_id} no existe en incidencias_run",
+            "_idempotent": False,
+        }
+
     ticket_id = await db.fetchval("SELECT generar_ticket_id()")
     await db.execute("""
         INSERT INTO incidencias_run

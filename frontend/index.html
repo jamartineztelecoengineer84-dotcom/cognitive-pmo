@@ -5902,7 +5902,12 @@ async function itsmSubmitAndPipeline() {
       'itsm-area': payload.area_afectada||'', 'run-input': desc, 'ticket-id': ticketId,
     });
     // Now build enriched text for pipeline
-    const enrichedText = `[${ticketId}] ${prio} | ${desc}
+    // Deuda A.2 / F-ARQ02-04: prefijar con "TICKET: <id>" si el id es válido
+    // formato nuevo INC-NNNNNN-YYYYMMDD, para que AG-001 invoque create_incident
+    // con pre_existing_ticket_id y NO duplique el ticket que ya creamos arriba.
+    const _validTicketId = (ticketId && /^INC-\d{6}-\d{8}$/.test(ticketId)) ? ticketId : null;
+    const _ticketPrefix = _validTicketId ? `TICKET: ${_validTicketId}\n` : '';
+    const enrichedText = `${_ticketPrefix}[${ticketId}] ${prio} | ${desc}
 Impacto: ${payload.impacto} | Urgencia: ${payload.urgencia} | SLA: ${payload.sla_limite}h
 Servicio: ${payload.servicio_afectado||'N/A'} | CI: ${payload.ci_afectado||'N/A'} | Canal: ${payload.canal_entrada}
 ${payload.impacto_negocio ? 'Impacto Negocio: '+payload.impacto_negocio : ''}
