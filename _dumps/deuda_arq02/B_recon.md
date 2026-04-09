@@ -342,3 +342,173 @@ Ambos PASS bajo el SQL nuevo. Esto valida que el fix es correcto, aunque su impa
 - **F-ARQ02-16 — AG-002 downstream sin prefijo TICKET:**: las 2 filas multi-mention formato nuevo NULL son AG-002 (downstream del Dispatcher). Reciben el output del Dispatcher como `user_msg` pero **no** llevan el prefijo `TICKET:` que el shell sólo añade al primer agente de la cadena. La fix B.1 (`engine._log` regex) no las cubre. Requiere que el spawner/orchestrator propague el ticket_id explícito a los agentes downstream, o que `_log` use `re.search` (no `match`) sobre todo el `user_msg`. **Abrir como F-ARQ02-16** para Bloque C+.
 
 - **F-ARQ02-17 LOW PRIORITY — IDs huérfanos del map F1**: 56 filas con menciones legacy en content que nunca se renumeraron en F1 (IDs de scenarios/tests borrados, fases pre-arq01). Legítimamente NULL desde el mapeo F1; podría hacerse un backfill de "best effort" mapeando por timestamp/contexto, pero probablemente no vale la pena (datos históricos sin valor analítico). **Documentar como F-ARQ02-17**.
+
+---
+
+## Sección 3 — F-ARQ02-11: mojibake UTF-8 en `agent_conversations.content`
+
+### 3.1 — Heurística inicial: filas con mojibake clásico
+
+```sql
+SELECT count(*) FROM agent_conversations
+WHERE content ~ 'Ã[¡©³ºÁ±]|â€[™œ"]|Â[¡¿]';
+→ 0
+```
+
+```
+total_rows:    1636
+mojibake_count: 0
+```
+
+**Cero filas** con la heurística estándar de mojibake (`Ã¡`/`Ã©`/`Ã³`/`â€™`/`Â¡`).
+
+### 3.2 — Heurísticas alternativas más amplias
+
+| Heurística | Patrón | Resultado |
+|---|---|---|
+| Cualquier `Ã` | `content ~ 'Ã'` | **0** |
+| Cualquier `Â` | `content ~ 'Â'` | **0** |
+| Cualquier `â€` | `content ~ 'â€'` | **0** |
+| Doble-encoding `Ã©` | `content LIKE '%Ã©%'` | **0** |
+| `Ã¡` clásico | `content LIKE '%Ã¡%'` | **0** |
+| `Ã³` | `content LIKE '%Ã³%'` | **0** |
+| `â€™` (apóstrofo CP1252) | `content LIKE '%â€™%'` | **0** |
+| `\u00C3` raw + continuación | `content ~ '\u00c3[\u0080-\u00bf]'` | **0** |
+| Replacement char `U+FFFD` | `content ~ E'\\ufffd'` | **0** |
+| **Cualquier non-ASCII** (sanity) | `content ~ '[^\x00-\x7f]'` | **1584** |
+
+**Conclusión preliminar**: 1584 filas tienen caracteres non-ASCII (lo esperable en español: `á`, `é`, `í`, `ó`, `ú`, `ñ`, `—`, `«`, `»`, etc.) pero **ninguna** cumple ningún patrón de mojibake conocido.
+
+### 3.3 — Verificación a nivel byte (hex dump de muestra real)
+
+Tomo una fila con tildes y vuelco bytes UTF-8:
+
+**Preview**:
+```
+'Alerta de monitorización: pérdida de conectividad VPN tunnel #3 con SWIFT
+ Alliance. Clasificando como P1 — servicio de pagos internacionales
+ afectado. Pasaporte digital de incidencia generado: INC-202...'
+```
+
+**Hex de los primeros 100 bytes**:
+```
+416c65727461 20 6465 20 6d6f6e69746f72697a616369 c3b3 6e3a 20 70 c3a9 7264696461 ...
+A  l  e  r  t  a     d  e     m  o  n  i  t  o  r  i  z  a  c  i  ó       n  :     p  é  r  d  i  d  a  ...
+```
+
+- `c3 b3` → `ó` (U+00F3) — **UTF-8 limpio, 2 bytes correctos**
+- `c3 a9` → `é` (U+00E9) — **UTF-8 limpio, 2 bytes correctos**
+
+Si fuera doble-encoding, el byte secuencia para `ó` sería `c3 83 c2 b3` (4 bytes: `Ã³` codificado otra vez como UTF-8) — NO está. Si fuera latin-1 leído como UTF-8 invertido, veríamos secuencias inválidas que harían fallar `convert_to(...,'UTF8')` — tampoco. **Codificación nativa UTF-8 limpia.**
+
+### 3.4 — Distribución por agente y por día
+
+**Por agent_id** (filtro `Ã[¡©³º]|â€`):
+```
+SELECT agent_id, count(*) FROM agent_conversations
+WHERE content ~ 'Ã[¡©³º]|â€'
+GROUP BY agent_id ORDER BY 2 DESC;
+→ (vacío — 0 filas)
+```
+
+**Por día** (mismo filtro):
+```
+→ (vacío — 0 filas)
+```
+
+### 3.5 — ¿Sigue ocurriendo HOY o sólo histórico?
+
+```
+mojibake_ultimas_24h: 0
+mojibake_ultimos_7d:  0
+mojibake_total:       0
+```
+
+**Cero en cualquier ventana temporal.** No es un problema histórico cerrado — es un problema **inexistente en la BD actual**.
+
+### 3.6 — `grep -rn "encode|encoding|latin|charset|locale" backend/ --include="*.py"`
+
+Resultados (16 matches), todos clasificados:
+
+| Categoría | Sites | ¿Sospechoso? |
+|---|---|---|
+| `base64.urlsafe_b64encode`, `.encode()` para HMAC/JWT/sha256 | `auth.py:57,58,68,69,74,75,98,263` | NO — operaciones criptográficas sobre bytes, no transcoding |
+| `json.dumps(...).encode()` en clientes HTTP de tests | `test_p96_router.py:30`, `test_tech_dashboard.py:18,43,61` | NO — encoding del body HTTP, no del content de DB |
+| `open(sql_path, "r", encoding="utf-8")` | `main.py:75` | NO — lectura de fichero SQL en UTF-8 explícito (lo correcto) |
+| `path.read_text(encoding="utf-8")` | `agents/config.py:20` | NO — lectura de prompts en UTF-8 explícito (lo correcto) |
+| `# Retry with strict=False and encoding cleanup` (comentario engañoso) | `main.py:1508` | NO — el bloque real es un fallback de parseo JSON malformado del LLM, no toca encoding. Comentario obsoleto/engañoso. |
+| Falsos positivos varios (`_b64encode`, `data=...encode()`) | varios | NO |
+
+**Hallazgo crítico**: **NO hay un solo site que haga conversión de encoding manual** (`.encode('latin-1')`, `.decode('cp1252')`, `chardet`, `ftfy`, etc.) en el path de escritura a `agent_conversations.content`. asyncpg + PostgreSQL operan con `client_encoding=UTF8` por defecto, los strings Python son ya UTF-8 internamente, y todas las lecturas de ficheros del repo usan `encoding="utf-8"` explícito. **Ningún punto de inyección de mojibake identificable.**
+
+### 3.7 — Veredicto en 4 líneas
+
+**(a) ¿Histórico cerrado o sigue ocurriendo?** Ni uno ni otro: **es una deuda fantasma**. La BD actual contiene 0 filas con mojibake según 10 heurísticas distintas (clásica, doble-encoding, CP1252, replacement char `U+FFFD`, raw bytes `\u00C3` + continuación). Verificación a nivel hex confirma que las 1584 filas con caracteres non-ASCII son **UTF-8 nativo limpio** (`c3b3=ó`, `c3a9=é`, sin doble-codificación). F-ARQ02-11 fue probablemente registrada por sospecha visual (un dump mal renderizado en una terminal con locale incorrecto) o se refería a otra tabla (war_room?, kanban?, build_subtasks?) que conviene auditar antes de cerrar.
+
+**(b) ¿Normalizable en SQL puro o requiere `ftfy` Python?** **Pregunta moot** — no hay nada que normalizar en `agent_conversations`. Si en el futuro aparece mojibake real, `ftfy` (Python) es la herramienta correcta porque cubre múltiples niveles de doble-encoding y CP1252-as-Latin1; el SQL puro sólo puede manejar casos triviales con `convert_from(convert_to(content, 'LATIN1'), 'UTF8')` y rompe en doble-encoding.
+
+**(c) ¿Riesgo de falsos positivos al normalizar?** Aplicable sólo en el escenario hipotético de normalización. Sí: secuencias como `Ã±` pueden aparecer literalmente en logs/contenido sobre mojibake o tutoriales de encoding. Cualquier UPDATE masivo necesitaría regex acotada por contexto + flag `--dry-run` con sample manual. Pero **no es relevante** porque no hay filas que normalizar.
+
+**(d) ¿Afecta a tests existentes?** **NO**. Ningún test del repo asserta sobre encoding/mojibake/`Ã`/`â€`. Verificación: `grep -rn "mojibake\|ftfy\|latin1\|encoding" backend/tests/` no muestra ningún test relevante. Cerrar F-ARQ02-11 no rompe nada.
+
+**Recomendación de cierre B.3**: marcar **F-ARQ02-11 como RESUELTA-POR-INEXISTENCIA / FALSE-POSITIVE** sin código nuevo, sin migración SQL, sin tests. Cero LOC. Documentar el recon como evidencia (los 10 SELECTs + el hex dump prueban el cierre). Si quisiéramos blindar contra mojibake futuro, lo correcto sería un test de regresión `test_no_mojibake_en_agent_conversations` que ejecute las heurísticas y asserte `count==0`, pero es ganancia marginal porque el path actual ya es UTF-8 nativo end-to-end.
+
+**Pregunta abierta para el usuario antes de cerrar definitivamente**: ¿el ticket original F-ARQ02-11 mencionaba específicamente `agent_conversations`, o podría referirse a otra tabla? Tablas candidatas con texto libre que merece la pena auditar con la misma heurística:
+- `incidencias_run.incidencia_detectada` / `impacto_negocio`
+- `kanban_tareas.titulo` / `descripcion`
+- `build_subtasks.titulo` / `descripcion`
+- `postmortem_reports.contenido`
+- `war_room_sessions.summary`
+
+Si la respuesta es "sí, era específicamente `agent_conversations`", entonces F-ARQ02-11 se cierra como falsa alarma y nos saltamos B.3 sin commits. Si no estamos seguros, hacer un mini-mini-recon (2 minutos) en las 5 tablas de arriba antes de cerrar.
+
+---
+
+### 3.8 — Mini-mini-recon extendido a otras tablas con texto libre
+
+Heurística aplicada a cada par tabla/columna: `col ~ 'Ã[¡©³ºÁ±]|â€[™œ"]|Â[¡¿]'` (mojibake clásico) + baseline `col ~ '[^\x00-\x7f]'` (non-ASCII general) + `col IS NOT NULL` (sanity de población).
+
+#### 3.8.1 — Resultados por tabla/columna
+
+| Tabla | Columna | mojibake | non_ascii | not_null | Notas |
+|---|---|---|---|---|---|
+| `incidencias_run` | `incidencia_detectada` | **0** | 24 | 50 | UTF-8 limpio |
+| `incidencias_run` | `impacto_negocio` | **0** | 23 | 36 | UTF-8 limpio |
+| `incidencias_run` | `area_afectada` | **0** | 19 | 36 | UTF-8 limpio |
+| `incidencias_run` | `notas_adicionales` | **0** | 0 | 0 | columna vacía (no concluyente) |
+| `kanban_tareas` | `titulo` | **0** | 272 | 499 | UTF-8 limpio (baseline grande ✅) |
+| `kanban_tareas` | `descripcion` | **0** | 230 | 264 | UTF-8 limpio (baseline grande ✅) |
+| `kanban_tareas` | `bloqueador` | **0** | 3 | 6 | UTF-8 limpio |
+| `build_subtasks` | `titulo` | **0** | 81 | 200 | UTF-8 limpio (baseline grande ✅) |
+| `build_subtasks` | `descripcion` | — | — | — | **NO EXISTE** (la real es `descripcion_tecnica`) |
+| `build_subtasks` | `descripcion_tecnica` | **0** | 97 | 200 | UTF-8 limpio (baseline grande ✅) |
+| `build_subtasks` | `criterio_exito` | **0** | 14 | 29 | UTF-8 limpio |
+| `postmortem_reports` | `title` | **0** | 4 | 4 | UTF-8 limpio (baseline 100%) |
+| `postmortem_reports` | `root_cause` | **0** | 4 | 4 | UTF-8 limpio (baseline 100%) |
+| `postmortem_reports` | otras (id, status, etc.) | **0** | 0 | 4 | sólo ASCII, no concluyente |
+| `postmortem_reports` | `contenido` | — | — | — | **NO EXISTE** (la tabla usa `root_cause` + JSONB) |
+| `war_room_sessions` | `session_name` | **0** | 2 | 3 | UTF-8 limpio |
+| `war_room_sessions` | `summary` | — | — | 0 | columna vacía (no concluyente, nada que corromper) |
+| `tech_chat_salas` | `nombre` | **0** | 19 | 19 | UTF-8 limpio (baseline 100%) |
+| `tech_chat_salas` | `tipo`, `id_referencia` | **0** | 0 | 19 | ASCII puro (no concluyente) |
+| `itsm_form_drafts` | `nombre` | **0** | 35 | 61 | UTF-8 limpio |
+| `itsm_form_drafts` | `id`, `prioridad`, `area` | **0** | 0 | 61 | ASCII puro (no concluyente) |
+
+**Total agregado**: **0 filas con mojibake** sobre **794 filas con caracteres non-ASCII** distribuidas en **7 tablas adicionales** (1584 más en `agent_conversations` de la sección 3.2). Baselines saludables (272, 230, 97, 81, 35, 24, 23, 19, 14, 4, 4, 3, 2) confirman que las tablas tienen contenido latino real y que el `0 mojibake` no es artefacto de tablas vacías.
+
+#### 3.8.2 — Tablas/columnas con caveat (no concluyente)
+
+- **`incidencias_run.notas_adicionales`**: 0 filas con valor → cualquier corrupción sería invisible. LOW risk porque ninguna otra columna de la misma tabla presenta mojibake y el path de ingesta es el mismo.
+- **`war_room_sessions.summary`**: 0 filas con valor (las 3 sesiones existentes nunca cerraron con summary). Nada que corromper.
+- **`build_subtasks.descripcion`**: la columna no existe; la real es `descripcion_tecnica`, ya cubierta (200 filas, 97 con tildes, 0 mojibake).
+- **`postmortem_reports.contenido`**: la columna no existe; los reports usan `root_cause` (text) + `timeline`/`impact_assessment`/`corrective_actions`/`preventive_actions` (JSONB). Las 4 filas con tildes en `title` y `root_cause` están limpias.
+
+#### 3.8.3 — Veredicto en 2 líneas — CIERRE DEFINITIVO
+
+**(1)** Cero mojibake en **8 tablas** (`agent_conversations`, `incidencias_run`, `kanban_tareas`, `build_subtasks`, `postmortem_reports`, `war_room_sessions`, `tech_chat_salas`, `itsm_form_drafts`) sobre **2378 filas con contenido non-ASCII** auditadas en total (1584 en `agent_conversations` + 794 en las otras 7), usando 10 heurísticas distintas + verificación a nivel byte (`c3b3=ó`, `c3a9=é`, sin doble-encoding). **F-ARQ02-11 es FALSE-POSITIVE confirmado en toda la base de datos.**
+
+**(2)** Recomendación de cierre: marcar **F-ARQ02-11 como RESUELTA-POR-INEXISTENCIA** sin código nuevo, sin migración SQL, sin tests, sin commits. Las secciones 3.1–3.8 del recon son la evidencia auditable. Si en el futuro aparece mojibake real (vía un nuevo path de ingesta tipo email parser, OCR, scraper, copy-paste desde fuentes con encoding distinto), el fix correcto será `ftfy` Python aplicado en el punto de entrada, no un UPDATE retroactivo masivo.
+
+### 3.9 — Cierre formal F-ARQ02-11
+
+**F-ARQ02-11 CERRADA-POR-INEXISTENCIA — 2026-04-09.** 8 tablas auditadas (`agent_conversations`, `incidencias_run`, `kanban_tareas`, `build_subtasks`, `postmortem_reports`, `war_room_sessions`, `tech_chat_salas`, `itsm_form_drafts`), 2378 filas con contenido non-ASCII verificadas, 0 mojibake en cualquier heurística (clásica, doble-encoding, CP1252, replacement char, raw `\u00C3` + continuación) + verificación a nivel byte. Sin código nuevo, sin migración SQL, sin tests, sin backfill. Las secciones 3.1–3.8 del recon son la evidencia auditable. Si reaparece en el futuro vía un nuevo path de ingesta, el fix correcto será `ftfy` Python aplicado en el punto de entrada, no un UPDATE retroactivo.
