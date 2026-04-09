@@ -934,6 +934,16 @@ class IncidenciaLive(BaseModel):
 
 @app.post("/incidencias/live")
 async def crear_incidencia_live(req: IncidenciaLive):
+    """
+    DEPRECATED desde Deuda A.3 / F-ARQ02-05 (2026-04-09).
+
+    Post-trigger F2.1, esta ruta es redundante: el trigger
+    trg_run_to_live_insert ya crea la fila live al insertar en
+    incidencias_run con datos más completos y precisos. El endpoint
+    se mantiene como no-op idempotente (ON CONFLICT DO NOTHING) para
+    consumidores externos legacy. El frontend ya no la invoca desde
+    el flujo del formulario ITSM (itsmSubmitAndPipeline).
+    """
     pool = get_pool()
     if not pool:
         raise HTTPException(status_code=503)

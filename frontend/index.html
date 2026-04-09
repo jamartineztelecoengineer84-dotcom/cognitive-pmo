@@ -6836,7 +6836,12 @@ async function executeRunPipeline(text) {
       addPreview('AG-004 Buffer \u2014 Decisi\u00f3n', '#06b6d4', finalResult);
     }
 
-    // Register live incident in sidebar (after AG-004, before AG-012)
+    // Deuda A.3 / F-ARQ02-05: POST /incidencias/live eliminado, el trigger
+    // F2.1 (trg_run_to_live_insert) ya crea la fila live al insertar en
+    // incidencias_run con datos más completos y precisos. El PUT del progreso
+    // se mantiene en su propio try/catch (UI state, no lo cubre el trigger).
+    window._currentLiveTicketId = ticketId;
+    addLog('LIVE', 'dispatcher', 'Incidencia ya registrada en panel (vía trigger F2.1).', false);
     try {
       var totalTareasLive = 0;
       try {
@@ -6844,26 +6849,8 @@ async function executeRunPipeline(text) {
         var ltAll2 = await ltResp2.json();
         totalTareasLive = ltAll2.filter(function(t) { return t.fecha_creacion && new Date(t.fecha_creacion) > new Date(Date.now() - 600000); }).length;
       } catch(e2) {}
-      var liveResp = await authFetch(API_BASE + '/incidencias/live', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          ticket_id: ticketId || '',
-          incidencia_detectada: text.substring(0, 200),
-          prioridad: globalPrio,
-          sla_horas: globalSlaHours,
-          canal_entrada: document.getElementById('run-canal') ? document.getElementById('run-canal').value : '',
-          reportado_por: document.getElementById('run-reportado') ? document.getElementById('run-reportado').value : '',
-          servicio_afectado: document.getElementById('run-servicio') ? document.getElementById('run-servicio').value : '',
-          impacto_negocio: document.getElementById('run-impacto') ? document.getElementById('run-impacto').value : ''
-        })
-      });
-      if (liveResp.ok) {
-        addLog('LIVE', 'dispatcher', 'Incidencia registrada en panel de control.', false);
-        window._currentLiveTicketId = ticketId;
-      }
       await authFetch(API_BASE + '/incidencias/live/' + ticketId + '/progreso?progreso=0&tareas_completadas=0&total_tareas=' + totalTareasLive, {method: 'PUT'}).catch(function(){});
-    } catch(ex) { console.error('Live register error:', ex); }
+    } catch(ex) { console.error('Live progreso PUT error:', ex); }
     if (typeof loadActiveIncidents === 'function') loadActiveIncidents();
 
     // ═══ AG-012 TASK ADVISOR ═══
