@@ -33,13 +33,7 @@ from rbac_api import router as rbac_router
 from cmdb_api import router as cmdb_router
 from p96_router import router as p96_router, me_router as p96_me_router
 from pm_router import pm_router
-from scenario_engine import (
-    seed_scenario_empty,
-    seed_scenario_half,
-    seed_scenario_optimal,
-    seed_scenario_overload,
-    reset_scenario,
-)
+from scenario_engine import seed_scenario, reset_scenario
 from db_loader import router as db_loader_router
 from tech_routes import router as tech_router
 from tech_terminal_ws import router as tech_terminal_router
@@ -205,64 +199,48 @@ def serialize(row: Any) -> Any:
     return d
 
 
-# ── ARQ-01 F4.3 · Scenario Engine admin endpoint ───────────────────────────
-SCENARIO_FUNCS = {
-    0: ("EMPTY",    seed_scenario_empty),
-    1: ("HALF",     seed_scenario_half),
-    2: ("OPTIMAL",  seed_scenario_optimal),
-    3: ("OVERLOAD", seed_scenario_overload),
-}
-
-
+# ── ARQ-03 F4 · Scenario Engine admin endpoint (post-esquemas) ─────────────
 @app.post("/api/admin/seed-scenario")
 async def admin_seed_scenario(
     body: dict,
     user: Optional[UserInfo] = Depends(get_current_user),
 ):
-    """Seed un escenario de demo en build_live/kanban_tareas/incidencias_run.
-    Solo SUPERADMIN. Body: {"scenario_id": 0|1|2|3, "reset": bool}."""
+    """Seed un escenario destino con el perfil pedido.
+
+    Body: {"scenario": "sc_piloto0", "profile": "empty|half|optimal|overload"}.
+    Solo SUPERADMIN. primitiva NUNCA se escribe (raise ValueError → 400).
+    El scenario_engine refactorizado opera dentro del esquema destino vía
+    SET LOCAL search_path; el header X-Scenario es opcional.
+    """
     if user is None:
         raise HTTPException(status_code=401, detail="Autenticación requerida")
     if user.role_code != 'SUPERADMIN':
         raise HTTPException(status_code=403, detail="SUPERADMIN required")
 
-    scenario_id = body.get("scenario_id")
-    if scenario_id not in SCENARIO_FUNCS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"scenario_id must be 0|1|2|3, got {scenario_id}",
-        )
+    scenario = body.get("scenario", "sc_piloto0")
+    profile  = body.get("profile",  "optimal")
 
-    name, fn = SCENARIO_FUNCS[scenario_id]
     pool = get_pool()
     if not pool:
         raise HTTPException(status_code=503, detail="DB no disponible")
-    async with pool.acquire() as conn:
-        if body.get("reset", False):
-            await reset_scenario(conn)
-        await fn(conn)
 
-        counts = {
-            "build_live_scenario": await conn.fetchval(
-                "SELECT COUNT(*) FROM build_live WHERE id_proyecto ~ '^PRJ-SC[A-D]'"
-            ),
-            "kanban_scenario": await conn.fetchval(
-                "SELECT COUNT(*) FROM kanban_tareas WHERE id LIKE 'KAN-SC%'"
-            ),
-            "incidencias_scenario": await conn.fetchval(
-                "SELECT COUNT(*) FROM incidencias_run WHERE ticket_id LIKE 'INC-SC%'"
-            ),
-            "build_live_legacy": await conn.fetchval(
-                "SELECT COUNT(*) FROM build_live WHERE id_proyecto !~ '^PRJ-SC'"
-            ),
-            "kanban_legacy": await conn.fetchval(
-                "SELECT COUNT(*) FROM kanban_tareas WHERE id NOT LIKE 'KAN-SC%'"
-            ),
-            "cartera_build": await conn.fetchval(
-                "SELECT COUNT(*) FROM cartera_build"
-            ),
+    async with pool.acquire() as conn:
+        try:
+            result = await seed_scenario(conn, scenario, profile)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+        # Counts post-seed dentro del esquema destino
+        await conn.execute(
+            f"SET LOCAL search_path = {scenario}, compartido, public"
+        )
+        counts_post = {
+            "build_live":      await conn.fetchval("SELECT COUNT(*) FROM build_live"),
+            "kanban_tareas":   await conn.fetchval("SELECT COUNT(*) FROM kanban_tareas"),
+            "incidencias_run": await conn.fetchval("SELECT COUNT(*) FROM incidencias_run"),
         }
-    return {"ok": True, "scenario": name, "counts": counts}
+
+    return {**result, "counts_post": counts_post}
 
 
 # ── Mock Data ──────────────────────────────────────────────────────────────

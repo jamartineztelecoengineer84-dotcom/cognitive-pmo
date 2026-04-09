@@ -1,9 +1,12 @@
-"""
-ARQ-01 F4.3 — E2E del endpoint POST /api/admin/seed-scenario.
-Verifica los 7 checks del plan v2 + check 403.
+"""ARQ-03 F4 — E2E del endpoint POST /api/admin/seed-scenario refactorizado.
 
-Mismo estilo que test_scenario_engine.py: asyncio + asyncpg + httpx con
-cliente sync para los hits HTTP locales al api del propio contenedor.
+Body nuevo: {scenario, profile} (sin scenario_id).
+Verifica:
+  - admin OK con sc_piloto0 + perfil OPTIMAL → 40/120/12
+  - admin con perfil EMPTY → 0/0/0
+  - PM (no admin) → 403
+  - admin intentando seedear primitiva → 400 (raise ValueError mapeado)
+  - aislamiento: tras seedear sc_piloto0, primitiva no cambia
 """
 import asyncio
 import os
@@ -42,110 +45,96 @@ async def _conn():
     )
 
 
-def test_e2e_seed_scenario():
-    """E2E completo: 7 checks contra POST /api/admin/seed-scenario."""
-    admin_token = _login(ADMIN_EMAIL, ADMIN_PASS)
-    headers_admin = {"Authorization": f"Bearer {admin_token}"}
-
-    # CHECK 1 — POST seed OPTIMAL con reset
+def test_e2e_seed_optimal_sc_piloto0():
+    """Admin POST {sc_piloto0, optimal} → 40/120/12 en sc_piloto0."""
+    token = _login(ADMIN_EMAIL, ADMIN_PASS)
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "X-Scenario": "sc_piloto0",
+    }
     r = httpx.post(
         f"{API_URL}/api/admin/seed-scenario",
-        json={"scenario_id": 2, "reset": True},
-        headers=headers_admin,
+        json={"scenario": "sc_piloto0", "profile": "optimal"},
+        headers=headers,
+        timeout=60,
+    )
+    assert r.status_code == 200, f"seed: {r.status_code} {r.text}"
+    body = r.json()
+    assert body["scenario"] == "sc_piloto0"
+    assert body["profile"] == "optimal"
+    assert body["counts_post"]["build_live"] == 40
+    assert body["counts_post"]["kanban_tareas"] == 120
+    assert body["counts_post"]["incidencias_run"] == 12
+
+
+def test_e2e_seed_empty_resetea_sc_piloto0():
+    """Admin POST {sc_piloto0, empty} → 0/0/0."""
+    token = _login(ADMIN_EMAIL, ADMIN_PASS)
+    headers = {"Authorization": f"Bearer {token}", "X-Scenario": "sc_piloto0"}
+    r = httpx.post(
+        f"{API_URL}/api/admin/seed-scenario",
+        json={"scenario": "sc_piloto0", "profile": "empty"},
+        headers=headers,
         timeout=30,
     )
-    assert r.status_code == 200, f"CHECK1 fail: {r.status_code} {r.text}"
+    assert r.status_code == 200
     body = r.json()
-    assert body["scenario"] == "OPTIMAL"
-    print("CHECK1 OK", body["counts"])
+    assert body["counts_post"] == {
+        "build_live": 0, "kanban_tareas": 0, "incidencias_run": 0
+    }
 
-    async def _db_checks():
+
+def test_e2e_seed_primitiva_rechazado():
+    """Admin POST {primitiva, optimal} → 400 (ValueError mapeado)."""
+    token = _login(ADMIN_EMAIL, ADMIN_PASS)
+    headers = {"Authorization": f"Bearer {token}"}
+    r = httpx.post(
+        f"{API_URL}/api/admin/seed-scenario",
+        json={"scenario": "primitiva", "profile": "optimal"},
+        headers=headers,
+        timeout=10,
+    )
+    assert r.status_code == 400
+    assert "primitiva" in r.json()["detail"].lower()
+
+
+def test_e2e_aislamiento_primitiva_intacta():
+    """Tras seedear sc_piloto0, primitiva no cambia."""
+    async def _snapshot_primitiva():
         c = await _conn()
         try:
-            # CHECK 2 — 40 PRJ-SC en build_live
-            n_proj = await c.fetchval(
-                "SELECT COUNT(*) FROM build_live WHERE id_proyecto ~ '^PRJ-SC[A-D]'"
+            await c.execute("SET LOCAL search_path = primitiva, compartido, public")
+            return (
+                await c.fetchval("SELECT COUNT(*) FROM build_live"),
+                await c.fetchval("SELECT COUNT(*) FROM kanban_tareas"),
+                await c.fetchval("SELECT COUNT(*) FROM incidencias_run"),
             )
-            assert n_proj == 40, f"CHECK2 fail: {n_proj}"
-            print("CHECK2 OK")
-
-            # CHECK 3 — 120 KAN-SC
-            n_kan = await c.fetchval(
-                "SELECT COUNT(*) FROM kanban_tareas WHERE id LIKE 'KAN-SC%'"
-            )
-            assert n_kan == 120, f"CHECK3 fail: {n_kan}"
-            print("CHECK3 OK")
-
-            # CHECK 4 — legacy build_live intacto (PRJ-MSF sigue existiendo)
-            n_msf = await c.fetchval(
-                "SELECT COUNT(*) FROM build_live WHERE id_proyecto = 'PRJ-MSF'"
-            )
-            assert n_msf == 1, f"CHECK4 fail: PRJ-MSF = {n_msf}"
-            print("CHECK4 OK")
-
-            # CHECK 5 — cartera_build = 46
-            n_cb = await c.fetchval("SELECT COUNT(*) FROM cartera_build")
-            assert n_cb == 46, f"CHECK5 fail: {n_cb}"
-            print("CHECK5 OK")
         finally:
             await c.close()
-    _run(_db_checks())
 
-    # CHECK 6 — login PM nuevo + my-projects + my-resources
-    pm_token = _login(PM_EMAIL, PM_PASS)
-    headers_pm = {"Authorization": f"Bearer {pm_token}"}
+    pre = _run(_snapshot_primitiva())
 
-    r = httpx.get(f"{API_URL}/api/pm/my-projects", headers=headers_pm, timeout=10)
-    assert r.status_code == 200
-    proj = r.json()
-    # Pablo Rivas (id_usuario=19) tiene 8 proyectos legacy de P98 F2 +
-    # 4 scenario (40 PRJ-SC repartidos entre 10 PMs en round-robin) = 12 totales.
-    # Los invariantes I3/I4 garantizan que la legacy queda intacta.
-    n_scenario = sum(1 for p in proj if p["id_proyecto"].startswith("PRJ-SC"))
-    n_legacy   = len(proj) - n_scenario
-    assert len(proj) == 12, f"CHECK6a fail: {len(proj)} proyectos (esperaba 12 = 8 legacy + 4 scenario)"
-    assert n_scenario == 4, f"CHECK6a fail: {n_scenario} scenario (esperaba 4)"
-    assert n_legacy == 8, f"CHECK6a fail: {n_legacy} legacy (esperaba 8)"
-    print(f"CHECK6a OK ({n_legacy} legacy + {n_scenario} scenario = {len(proj)} total)")
-
-    r = httpx.get(f"{API_URL}/api/pm/my-resources", headers=headers_pm, timeout=10)
-    assert r.status_code == 200
-    humans = r.json().get("humans", [])
-    assert len(humans) > 0, "CHECK6b fail: humans vacío"
-    assert all("pct_capacidad" in h for h in humans)
-    print(f"CHECK6b OK ({len(humans)} humans)")
-
-    # CHECK 7 — POST seed EMPTY → todo a 0 scenario, legacy intacto
+    token = _login(ADMIN_EMAIL, ADMIN_PASS)
+    headers = {"Authorization": f"Bearer {token}", "X-Scenario": "sc_piloto0"}
     r = httpx.post(
         f"{API_URL}/api/admin/seed-scenario",
-        json={"scenario_id": 0, "reset": True},
-        headers=headers_admin,
-        timeout=30,
+        json={"scenario": "sc_piloto0", "profile": "overload"},
+        headers=headers,
+        timeout=60,
     )
     assert r.status_code == 200
-    b = r.json()
-    c2 = b["counts"]
-    assert c2["build_live_scenario"] == 0
-    assert c2["kanban_scenario"] == 0
-    assert c2["build_live_legacy"] == 60
-    # F-ARQ02-06 C.2 cleanup 2026-04-09: kanban_legacy bajó de 341 original a
-    # 332 tras purgar 35 huérfanas + 18 hijas de 4 incidencias residuales.
-    # Baseline 341 irreproducible (3 filas del snapshot original ya no existen).
-    assert c2["kanban_legacy"] == 332
-    assert c2["cartera_build"] == 46
-    print("CHECK7 OK", c2)
 
-    print("E2E 7/7 GREEN")
+    post = _run(_snapshot_primitiva())
+    assert pre == post, f"primitiva contaminada: {pre} → {post}"
 
 
 def test_e2e_seed_scenario_403():
-    """PMO_SENIOR no puede llamar al endpoint admin."""
+    """PM (no admin) no puede llamar al endpoint."""
     pm_token = _login(PM_EMAIL, PM_PASS)
     r = httpx.post(
         f"{API_URL}/api/admin/seed-scenario",
-        json={"scenario_id": 0, "reset": True},
+        json={"scenario": "sc_piloto0", "profile": "empty"},
         headers={"Authorization": f"Bearer {pm_token}"},
         timeout=10,
     )
     assert r.status_code == 403, f"esperaba 403, got {r.status_code} {r.text}"
-    print("CHECK 403 OK")
