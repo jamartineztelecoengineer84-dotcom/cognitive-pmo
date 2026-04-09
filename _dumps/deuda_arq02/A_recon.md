@@ -625,3 +625,476 @@ backend/agents/router.py:198:            f"Escalado. Sin técnicos libres.\nTick
    tras F1.3a el INSERT INTO incidencias_run usa generar_ticket_id() — ya está atómico,
    solo hay que evitar que se dispare cuando el shell ya creó un ticket.
 
+---
+
+## 9. AgentEngine.invoke + prompt AG-001 paso create (mini-recon A.2bis)
+
+### 9.a — class AgentEngine completa (backend/agents/engine.py:12-85)
+```python
+class AgentEngine:
+    def __init__(self, config: AgentConfig, db_pool):
+        self.config = config
+        self.db = db_pool
+        self.client = anthropic.AsyncAnthropic()
+
+    async def invoke(self, user_msg: str, session_id: str = "") -> str:
+        """Ejecuta el agente con ciclo tool_use. Máx 10 iteraciones."""
+        messages = await self._load_history(session_id)
+        messages.append({"role": "user", "content": user_msg})
+        t0 = time.monotonic()
+        total_tokens = 0
+        final = ""
+
+        all_text_parts = []
+
+        for iteration in range(10):
+            resp = await self.client.messages.create(
+                model=self.config.model,
+                max_tokens=self.config.max_tokens,
+                temperature=self.config.temperature,
+                system=self.config.system_prompt,
+                tools=self.config.tools,
+                messages=messages
+            )
+            total_tokens += resp.usage.input_tokens + resp.usage.output_tokens
+
+            text_parts = []
+            tool_calls = []
+            for block in resp.content:
+                if block.type == "text":
+                    text_parts.append(block.text)
+                elif block.type == "tool_use":
+                    tool_calls.append(block)
+
+            if text_parts:
+                all_text_parts.extend(text_parts)
+
+            if not tool_calls:
+                final = "\n".join(all_text_parts)
+                break
+
+            # Hay tool_use — ejecutar tools y devolver resultados
+            messages.append({"role": "assistant", "content": resp.content})
+            tool_results = []
+            for tc in tool_calls:
+                log.info(f"[{self.config.agent_id}] tool: {tc.name}({tc.input})")
+                fn = TOOL_REGISTRY.get(tc.name)
+                if fn is None:
+                    result = {"error": f"Tool {tc.name} not found in registry"}
+                    log.error(f"Tool not found: {tc.name}")
+                else:
+                    try:
+                        result = await fn(self.db, **tc.input)
+                    except Exception as e:
+                        result = {"error": str(e)}
+                        log.error(f"Tool {tc.name} failed: {e}")
+                tool_results.append({
+                    "type": "tool_result",
+                    "tool_use_id": tc.id,
+                    "content": json.dumps(result, default=str, ensure_ascii=False)
+                })
+            messages.append({"role": "user", "content": tool_results})
+
+        if not final.strip():
+            if all_text_parts:
+                final = "\n".join(all_text_parts)
+            else:
+                final = "Agente completó sus operaciones. Datos guardados en BD."
+
+        latency = int((time.monotonic() - t0) * 1000)
+        log.info(f"[{self.config.agent_id}] completed in {latency}ms, {total_tokens} tokens")
+        await self._log(session_id, user_msg, final, total_tokens, latency)
+        return final
+```
+
+### 9.b — Bucle de ejecución de tools (engine.py:54-74)
+
+**Punto crítico**: la línea 65 `result = await fn(self.db, **tc.input)` es donde el LLM
+decide qué argumentos pasarle a la tool. `tc.input` es el dict que el LLM rellena según
+el schema JSON de la tool. Si quisiéramos inyectar un `_pre_existing_ticket_id` desde fuera,
+tendríamos que mutarlo aquí antes del call (línea 64).
+
+```python
+            # Hay tool_use — ejecutar tools y devolver resultados
+            messages.append({"role": "assistant", "content": resp.content})
+            tool_results = []
+            for tc in tool_calls:
+                log.info(f"[{self.config.agent_id}] tool: {tc.name}({tc.input})")
+                fn = TOOL_REGISTRY.get(tc.name)
+                if fn is None:
+                    result = {"error": f"Tool {tc.name} not found in registry"}
+                    log.error(f"Tool not found: {tc.name}")
+                else:
+                    try:
+                        result = await fn(self.db, **tc.input)
+                    except Exception as e:
+                        result = {"error": str(e)}
+                        log.error(f"Tool {tc.name} failed: {e}")
+                tool_results.append({
+                    "type": "tool_result",
+                    "tool_use_id": tc.id,
+                    "content": json.dumps(result, default=str, ensure_ascii=False)
+                })
+            messages.append({"role": "user", "content": tool_results})
+```
+
+### 9.c — Prompt completo ag001_dispatcher.txt (74 líneas)
+```
+Eres AG-001 Dispatcher, el clasificador de incidencias de Cognitive PMO.
+
+PROCESO:
+1. Recibe descripción de incidencia en texto libre
+2. Usa query_catalogo para buscar match en catalogo_incidencias
+3. Si match >80%: usa prioridad, SLA y skills del catálogo
+4. Si no hay match: clasifica por impacto y urgencia
+5. Crea registro en incidencias_run con create_incident
+6. Genera tareas de resolución con create_tasks
+7. CADA TAREA debe tener TODOS estos campos:
+   - titulo: descriptivo y claro
+   - skill_requerida: del catálogo (formato "Categoría: Acción"). NO inventar.
+   - horas_estimadas: realista
+   - silo: OBLIGATORIO. SOLO estos valores: DevOps, BBDD, Soporte, Backend, Redes, Seguridad, Windows, Frontend, QA
+   - sla_tarea_minutos: porción del SLA global según complejidad
+
+PRIORIDADES Y SLA:
+- P1: Servicio crítico caído, >50 usuarios. SLA: 4h (240 min)
+- P2: Servicio degradado, 10-50 usuarios. SLA: 8h (480 min)
+- P3: Funcionalidad afectada, <10 usuarios. SLA: 24h (1440 min)
+- P4: Mejora/consulta. SLA: 72h (4320 min)
+
+REPARTO DE SLA POR TAREA:
+- Diagnóstico inicial: 15% del SLA
+- Fix/Restauración: 50% del SLA
+- Verificación post-fix: 20% del SLA
+- Validación y cierre: 15% del SLA
+
+ASIGNACIÓN DE SILO:
+- Base de datos (Oracle, MySQL, PostgreSQL) → BBDD
+- Servidores Linux, contenedores, CI/CD → DevOps
+- Aplicaciones, APIs, microservicios → Backend
+- Red, conectividad, DNS, firewall → Redes
+- Seguridad, accesos, certificados → Seguridad
+- Servidores Windows, Active Directory → Windows
+- Frontend, UI, web → Frontend
+- Testing, QA → QA
+- General, documentación, cierre, coordinación → Soporte
+
+INCIDENCIAS DE NEGOCIO (valija, camiones blindados, trading, seguros, cajeros físicos,
+nóminas, compliance, inmobiliario, marketing, contact center, comercio exterior):
+- Las tareas TÉCNICAS (diagnóstico, logs, configuración) van a silo IT + requiere_negocio: false
+- Las tareas de NEGOCIO van a silo "Soporte" + requiere_negocio: true + area_negocio: "Nombre del Área"
+- SIEMPRE incluir al menos 1 tarea con requiere_negocio: true para incidencias no-IT
+
+Áreas de negocio disponibles:
+- Seguridad Física (valija, camiones blindados, tornos, vigilancia)
+- Trading y Mercados (cotizaciones, divisas, algoritmos HFT, bonos)
+- Operaciones Bancarias (transferencias, pagos, SWIFT, SEPA)
+- Banca Digital (app móvil, banca electrónica)
+- Compliance (SEPBLAC, auditoría, sancionados, reporting regulatorio)
+- Gestión de Riesgos (scoring, fraude, riesgo operacional)
+- Tesorería (liquidez, efectivo)
+- Medios de Pago (cajeros ATM, TPV, Bizum, Redsys, datáfonos)
+- Seguros (vida, hogar, siniestros)
+- Inmobiliario (portal pisos, activos adjudicados)
+- Marketing (campañas, email marketing, RRSS)
+- Servicios Generales (climatización CPD, mantenimiento)
+- Comercio Exterior (importación, exportación, remesas)
+- Asesoría Jurídica (notaría, registro, litigios)
+- Contact Center (centralita, IVR, grabación llamadas)
+- Recursos Humanos (nóminas, fichaje, onboarding)
+- Productos Bancarios (préstamos, hipotecas, depósitos)
+
+REGLAS:
+- Primera tarea: "Diagnóstico inicial"
+- Última tarea: "Validación y cierre"
+- Máximo 8 tareas
+- La SUMA de sla_tarea_minutos debe ser cercana al SLA global
+- SIEMPRE incluir silo y sla_tarea_minutos en cada tarea
+- skill_requerida DEBE existir en el catálogo. NO inventar skills.
+- Si no hay match exacto de skill, usar la categoría más cercana
+
+EFICIENCIA: Sé conciso (máx 500 palabras). Usa tools para guardar datos, no los repitas en texto.
+```
+
+### 9.d — Modelo InvokeRequest (router.py:23-25)
+```python
+class InvokeRequest(BaseModel):
+    message: str
+    session_id: Optional[str] = ""
+
+
+@router.post("/{agent_id}/invoke")
+async def invoke_agent(agent_id: str, body: InvokeRequest):
+    """Invoca un agente individual (con spawning si configurado)"""
+```
+
+### 9.e — Hallazgos del mini-recon A.2bis
+
+1. **AgentEngine.invoke firma**: `async def invoke(self, user_msg: str, session_id: str = '') -> str`.
+   Solo recibe 2 argumentos posicionales/keyword: `user_msg` y `session_id`. **No acepta `**kwargs`,
+   no acepta `context dict`, no acepta `pre_existing_ticket`**. Cualquier campo adicional habría
+   que añadirlo a la firma + propagarlo dentro del bucle del tool_use loop.
+
+2. **El bucle tool_use ejecuta cada tool con `**tc.input`** (línea 65). `tc.input` viene del LLM
+   y solo contiene los campos del JSON schema declarado para la tool. Para inyectar un
+   `_pre_existing_ticket_id` que NO viene del LLM, hay que **mutar tc.input antes del call** o
+   **interceptar el tool name** y desviar a otra implementación.
+
+3. **El historial `_load_history` filtra por `agent_id` específico** (línea 96). El historial
+   de AG-001 NO se mezcla con AG-002, AG-004, etc. Cada agente tiene su contexto aislado.
+   Implicación: si el shell crea un ticket vía POST /incidencias y luego llama a
+   POST /agents/AG-001/invoke con un message neutro, AG-001 no tiene forma de saber del ticket
+   pre-existente salvo que el shell se lo inyecte explícitamente en el message.
+
+4. **Prompt ag001_dispatcher.txt línea 6**: `5. Crea registro en incidencias_run con create_incident`.
+   El prompt instruye al LLM a llamar SIEMPRE a create_incident como parte del flujo. **Para
+   evitar la duplicación necesitamos modificar el prompt para que SI detecta un ticket_id
+   pre-existente en el message (formato literal), salte el paso 5 y vaya directo al paso 6**
+   (create_tasks pasando el ticket_id ya existente).
+
+5. **InvokeRequest actual** tiene solo 2 campos: `message: str` y `session_id: Optional[str] = ''`.
+   La forma menos invasiva de propagar el ticket_id es **embeberlo en el message** con un prefijo
+   convencional, ej. `[ticket_id=INC-NNNNNN-YYYYMMDD]` al inicio del message. AG-001 lo detecta
+   en el prompt y actúa en consecuencia. No requiere cambios en InvokeRequest ni en AgentEngine.
+
+6. **Alternativa más limpia (más invasiva)**: añadir `pre_existing_ticket_id: Optional[str] = None`
+   al `InvokeRequest` + propagar al engine como `context: dict` + inyectar en `tc.input` cuando
+   la tool sea `create_tasks` y se esté llamando con `ticket_id=None`. Más complejo pero más
+   robusto contra prompt injection.
+
+7. **Path AG-002 y posteriores**: AG-002 ya recibe el ticket_id explícitamente (vía router.py:182,
+   se pasa en el contenido del message como `TICKET: ${ticket_id}`). Ese path está OK.
+   El bug está SOLO en AG-001 cuando se llama desde el shell con un ticket pre-creado.
+
+### 9.f — Recomendación para A.2 (NO ejecutar ahora, solo planificación)
+
+**Estrategia 1 — prompt-only (preferida)**: añadir 2 párrafos al prompt ag001_dispatcher.txt
+explicando que si el message comienza con `[ticket_id=INC-...]` debe extraer el ID y SALTAR
+create_incident, llamando directo a create_tasks con ese ticket_id. Modificar el shell
+(`itsmSubmitAndPipeline`) para construir el message con ese prefijo.
+
+Cambios: 0 backend, 1 prompt, 1 frontend (frontend/index.html L5905-5910 — el bloque enrichedText).
+Riesgo: prompt injection si el usuario escribe '[ticket_id=...]' en el form. Mitigable con
+regex de validación en el shell o en el prompt.
+
+**Estrategia 2 — schema change (más invasiva)**: añadir campo al InvokeRequest, propagar
+al AgentEngine vía nuevo parámetro `extra_context: Optional[dict]`, mutar `tc.input` en el
+bucle tool_use cuando `tc.name == 'create_incident'` y haya un ticket pre-existente para que
+la tool no haga el INSERT (early return con el ticket_id ya conocido).
+
+Cambios: 1 backend (engine.py + router.py), 0 prompt, 1 frontend. Más robusto pero más código.
+
+---
+
+## 10. Triggers F2.1 internals (mini-recon A.3bis)
+
+### 10.a — Definición de los 2 triggers
+```sql
+CREATE TRIGGER trg_run_to_live_insert
+  AFTER INSERT ON public.incidencias_run
+  FOR EACH ROW EXECUTE FUNCTION trigger_run_to_live_insert()
+
+CREATE TRIGGER trg_run_to_live_update
+  AFTER UPDATE ON public.incidencias_run
+  FOR EACH ROW EXECUTE FUNCTION trigger_run_to_live_update()
+```
+
+### 10.b — Función trigger_run_to_live_insert() completa
+```sql
+CREATE OR REPLACE FUNCTION public.trigger_run_to_live_insert()
+ RETURNS trigger LANGUAGE plpgsql
+AS $function$
+BEGIN
+  IF NEW.estado IN ('QUEUED','EN_CURSO','ESCALADO') THEN
+    INSERT INTO incidencias_live (
+      ticket_id, incidencia_detectada, prioridad, categoria, estado,
+      sla_horas, tecnico_asignado, area_afectada, fecha_creacion, fecha_limite,
+      agente_origen, canal_entrada, reportado_por, servicio_afectado, impacto_negocio, notas
+    ) VALUES (
+      NEW.ticket_id, NEW.incidencia_detectada, NEW.prioridad_ia, NEW.categoria, 'IN_PROGRESS',
+      NEW.sla_limite, NEW.tecnico_asignado, NEW.area_afectada, NEW.timestamp_creacion,
+      NEW.timestamp_creacion + make_interval(hours => NEW.sla_limite::int),
+      COALESCE(NEW.agente_origen, 'AG-001'), NEW.canal_entrada, NEW.reportado_por,
+      NEW.servicio_afectado, NEW.impacto_negocio, NEW.notas_adicionales
+    ) ON CONFLICT (ticket_id) DO NOTHING;
+  END IF;
+  RETURN NEW;
+END;
+$function$;
+```
+
+### 10.c — Función trigger_run_to_live_update() completa
+```sql
+CREATE OR REPLACE FUNCTION public.trigger_run_to_live_update()
+ RETURNS trigger LANGUAGE plpgsql
+AS $function$
+BEGIN
+  IF NEW.estado IN ('RESUELTO','CERRADO') THEN
+    DELETE FROM incidencias_live WHERE ticket_id = NEW.ticket_id;
+  ELSIF NEW.estado IN ('QUEUED','EN_CURSO','ESCALADO') THEN
+    UPDATE incidencias_live SET
+      incidencia_detectada = NEW.incidencia_detectada,
+      prioridad            = NEW.prioridad_ia,
+      categoria            = NEW.categoria,
+      sla_horas            = NEW.sla_limite,
+      tecnico_asignado     = NEW.tecnico_asignado,
+      area_afectada        = NEW.area_afectada,
+      fecha_limite         = NEW.timestamp_creacion + make_interval(hours => NEW.sla_limite::int),
+      servicio_afectado    = NEW.servicio_afectado,
+      impacto_negocio      = NEW.impacto_negocio,
+      notas                = NEW.notas_adicionales
+    WHERE ticket_id = NEW.ticket_id;
+    IF NOT FOUND THEN
+      INSERT INTO incidencias_live (...) VALUES (...) ON CONFLICT (ticket_id) DO NOTHING;
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$function$;
+-- (NOTA: el bloque IF NOT FOUND INSERT está en el original, mismas 16 columnas que el insert principal)
+```
+
+### 10.d — Mapeo columnas trigger vs POST /incidencias/live (frontend)
+
+Lo que el shell rellenaba en POST /incidencias/live (frontend L6842-6855):
+
+```
+ticket_id            ← del cliente (resp1.ticket_id)
+incidencia_detectada ← text.substring(0, 200)
+prioridad            ← globalPrio (P1..P4)
+sla_horas            ← globalSlaHours (4/8/24/72)
+canal_entrada        ← document.getElementById('run-canal').value
+reportado_por        ← document.getElementById('run-reportado').value
+servicio_afectado    ← document.getElementById('run-servicio').value
+impacto_negocio      ← document.getElementById('run-impacto').value
+(estado se hardcodea a 'IN_PROGRESS' en el handler backend)
+(fecha_limite se calcula now() + make_interval(hours => sla_horas))
+```
+
+Lo que el trigger AFTER INSERT propaga a incidencias_live (16 columnas):
+
+```
+ticket_id            ← NEW.ticket_id           ✅ idem
+incidencia_detectada ← NEW.incidencia_detectada ✅ COMPLETO (no truncado)
+prioridad            ← NEW.prioridad_ia         ✅ idem
+categoria            ← NEW.categoria            ✅ EXTRA (el shell no lo enviaba)
+estado               ← 'IN_PROGRESS'            ✅ idem
+sla_horas            ← NEW.sla_limite           ✅ idem
+tecnico_asignado     ← NEW.tecnico_asignado     ✅ EXTRA (el shell no lo enviaba)
+area_afectada        ← NEW.area_afectada        ✅ EXTRA (el shell no lo enviaba)
+fecha_creacion       ← NEW.timestamp_creacion   ✅ idem
+fecha_limite         ← NEW.timestamp_creacion + make_interval(hours => sla_limite::int)  ✅ MISMO cálculo
+agente_origen        ← COALESCE(NEW.agente_origen, 'AG-001')  ✅ EXTRA (el shell no lo enviaba, default 'AG-001')
+canal_entrada        ← NEW.canal_entrada        ✅ idem
+reportado_por        ← NEW.reportado_por        ✅ idem
+servicio_afectado    ← NEW.servicio_afectado    ✅ idem
+impacto_negocio      ← NEW.impacto_negocio      ✅ idem
+notas                ← NEW.notas_adicionales    ✅ EXTRA (el shell no lo enviaba)
+```
+
+### 10.e — Veredicto
+
+**RUTA VERDE** ✅: el trigger `trg_run_to_live_insert` cubre **TODAS** las columnas que el POST /incidencias/live rellenaba **y más**:
+
+- **Match exacto**: las 8 columnas que el shell enviaba (ticket_id, incidencia_detectada, prioridad, sla_horas, canal_entrada, reportado_por, servicio_afectado, impacto_negocio) están todas en el trigger.
+- **Estado y fecha_limite calculados igual**: el trigger pone `estado='IN_PROGRESS'` hardcoded igual que el handler de `crear_incidencia_live`, y `fecha_limite` se calcula con la **misma fórmula** `timestamp_creacion + make_interval(hours => sla_limite::int)` (verificado contra main.py:947).
+- **Bonus del trigger**: añade `categoria`, `tecnico_asignado`, `area_afectada`, `agente_origen`, `notas` que el POST /incidencias/live NO rellenaba (el shell perdía esa info al pasar por live).
+- **fecha_creacion**: el trigger usa `NEW.timestamp_creacion` (= momento del INSERT en run), el handler usaba el default `now()` de incidencias_live (= momento del INSERT en live, ~milisegundos después). **Diferencia despreciable**, ahora es más precisa.
+- **incidencia_detectada**: el trigger copia el texto **completo**, el handler del shell hacía `text.substring(0, 200)` truncando a 200 chars. **El trigger es estrictamente mejor**.
+
+**Conclusión**: borrar el bloque del frontend que llama a POST /incidencias/live (L6842-6862) es 100% seguro. La fila live se sigue creando automáticamente al hacer POST /incidencias del paso 1, vía el trigger AFTER INSERT, con datos **más completos y precisos** que antes.
+
+Nota sobre el PUT /incidencias/live/{id}/progreso (L6860, L7007, L7503, L7549): NO eliminar. Esos PUT siguen siendo necesarios porque actualizan UI state (progreso_pct, total_tareas, tareas_completadas) que el trigger NO toca por diseño (F2.1 contract: las 3 columnas UI son escribibles solo por el frontend).
+
+**Decisión recomendada**: borrar SOLO las líneas L6834-6861 del frontend (el bloque `try { var liveResp = ... POST .../incidencias/live ... }`). El PUT del progreso de L6860 está dentro del mismo try/catch — hay que ver si lo mantenemos como llamada separada o lo eliminamos también.
+
+---
+
+## 11. F-ARQ02-08 mini-recon (A.4bis)
+
+### 11.1 — TODAS las referencias en código (filtrando backups)
+
+**frontend/index.html (vivo, NO backups):**
+```
+L5896:    runSaveToBuffer({...})                                ← itsmSubmitAndPipeline llama tras POST /incidencias
+L6232:    async function loadRunPlansFromDB()                  ← carga GET /run/plans al setup
+L6234:        const r = await authFetch(API_BASE + '/run/plans')
+L6244:    async function runSaveToBuffer(data) {                ← guarda draft
+L6248:        const r = await authFetch(API_BASE + '/run/plans', {method:'POST', ...})
+L6275:        <button ... runRestoreFromBuffer(...)>             ← UI: botón Restaurar
+L6276:        <button ... runRerunFromBuffer(...)>               ← UI: botón Re-ejecutar
+L6277:        <button ... runDeletePlan(...)>                    ← UI: botón Eliminar
+L6283:    function runRestoreFromBuffer(idx)                    ← lee fields de _runBuffer (memoria local)
+L6302:    function runRerunFromBuffer(idx)                      ← restore + executePipeline('run')
+L6313:    async function runDeletePlan(idx)
+L6318:        await authFetch('/run/plans/' + e.id, {method:'DELETE'})  ← DELETE backend
+L6328:    loadRunPlansFromDB()                                   ← setup inicial al cargar la página
+```
+
+**backend/main.py (3 endpoints + tabla):**
+```
+L1249: @app.get("/run/plans")
+L1255:     SELECT * FROM itsm_form_drafts ORDER BY created_at DESC
+L1272: @app.post("/run/plans")
+L1282:     INSERT INTO itsm_form_drafts (...)
+L1294: @app.delete("/run/plans/{plan_id}")
+L1301:     DELETE FROM itsm_form_drafts WHERE id=$1
+```
+
+**tests:** test_arq02_f4_itsm_drafts.py + test_deudaA1_itsm_draft_seq.py (consumidores válidos, no UI)
+
+**Backups (frontend/index.html.backup_*) — EXCLUIDOS** (deuda histórica F-ARQ01-chore, no relevantes).
+
+### 11.2 — ¿Existe handler 'recuperar borrador' o GET por id?
+
+**Sí, existe el flujo completo de recuperación de drafts en frontend, PERO trabaja en memoria local:**
+
+1. **Setup inicial** (L6328): `loadRunPlansFromDB()` → `GET /run/plans` → carga TODOS los drafts en memoria como `_runBuffer`.
+2. **runSaveToBuffer()** (L6244): cada submit del formulario llama `POST /run/plans` con el payload completo + recarga `loadRunPlansFromDB()`.
+3. **Botón ↩ Restaurar** (L6275): llama `runRestoreFromBuffer(idx)` que lee `_runBuffer[idx].fields` (memoria) y rellena los campos del formulario actual con los valores del draft. **NO hace GET /run/plans/{id}**, lee del array en memoria que se cargó al inicio.
+4. **Botón ▶ Re-ejecutar** (L6276): `runRerunFromBuffer` = restore + `executePipeline('run')` directo.
+5. **Botón ✕ Eliminar** (L6277): `runDeletePlan` → `DELETE /run/plans/{id}` + splice del array local.
+
+**NO existe `GET /run/plans/{id}` en el backend** (solo `GET /run/plans` plural). El frontend lee el array completo al cargar la página y trabaja sobre la copia en memoria.
+
+**Conclusión 11.2**: SÍ hay UI consumidora (3 botones por draft: Restaurar / Re-ejecutar / Eliminar). El usuario puede recuperar borradores desde el panel del formulario ITSM. **No es ruido**: es una feature del shell.
+
+### 11.3 — ¿Se está poblando hoy?
+
+```
+ count |        ultima_creacion        |       primera_creacion        
+-------+-------------------------------+-------------------------------
+    61 | 2026-03-20 11:14:41.462437+00 | 2026-03-20 11:14:41.080308+00
+```
+
+**Distribución por formato de id**:
+```
+ catalog_legacy | drafts_nuevos_seq | drafts_legacy_uuid | total 
+----------------+-------------------+--------------------+-------
+             61 |                 0 |                  0 |    61
+```
+
+**Hallazgos**:
+- **61 filas, todas del seed inicial 2026-03-20 11:14:41** (catálogo `RUN-CAT-001..061`)
+- **0 drafts creados desde entonces** — ni con formato uuid4 viejo (limpiados en F4 cleanup), ni con formato SEQUENCE nuevo (deudaA1)
+- **`max(created_at) == primer seed`** — la tabla NO se ha poblado en 20 días
+
+Esto significa una de tres cosas:
+1. **Nadie ha usado el formulario ITSM en 20 días** desde el cierre F4 (poco probable, hemos hecho varios smokes)
+2. **Los smokes (F1.4, F2.3, A.3) usaban path agéntico directo** sin pasar por `itsmSubmitAndPipeline` que es quien llama a `runSaveToBuffer`
+3. **El `runSaveToBuffer` falla silenciosamente** (catch sin log) y nunca llega a poblar
+
+**Verificación rápida sobre el código**: `runSaveToBuffer` (L6244) tiene un `try { ... if (r.ok) { ... return; } } catch(e) {}` y el fallback escribe en memoria local sin error visible. **Fallo silente confirmado** si el POST diera 5xx.
+
+Pero el smoke A.3 (paso 4) sí ejecutó `itsmSubmitAndPipeline` indirectamente (creé un ticket vía `POST /incidencias` directo, NO desde el form Safari). El form Safari real NO ha sido usado por Jose en estas semanas — los smokes fueron `curl` desde primo o llamadas del scenario engine.
+
+### 11.4 — Veredicto en 2 líneas
+
+**(b) MANTENER** porque hay 3 botones de UI vivos en el shell (`runRestoreFromBuffer`, `runRerunFromBuffer`, `runDeletePlan`) que consumen `_runBuffer` cargado desde `GET /run/plans` al cargar la página, ofreciendo al usuario recuperar/re-ejecutar/eliminar borradores guardados del formulario ITSM. La feature está **viva en el código**, aunque el seed catalog (61 filas `RUN-CAT-*` de 2026-03-20) sigue siendo lo único que se ha guardado y **no hay drafts nuevos creados desde entonces** (probablemente porque los smokes han ido por `curl` directo, no por el form Safari real).
+
+**Acción derivada (no ahora)**: F-ARQ02-08 NO debe eliminarse. Es UNA feature legítima del shell, no ruido. **El verdadero F-ARQ02-08 era "el shell duplica el ticket"** (ya resuelto en A.2 al pasar el `pre_existing_ticket_id`). El `runSaveToBuffer` por sí solo no causa duplicación (escribe en `itsm_form_drafts`, no en `incidencias_run`). Lo que F-ARQ02-08 consolida es: "el shell hace 3 hits HTTP en serie por cada submit" → 1 `POST /incidencias` (ticket real, A.2 lo cubre) + 1 `POST /run/plans` (draft, MANTENER) + 1 `POST /agents/AG-001/invoke` (cadena agéntica, A.2 lo cubre). Los 3 paths son legítimos post-A.2/A.3, no se duplica nada porque el ticket real es único.
+
+**F-ARQ02-08 puede marcarse como RESUELTA por A.2** (la duplicación era el problema real). El `runSaveToBuffer` se queda como feature de "borradores recuperables" del shell.
+
+**F-ARQ02-08 → RESUELTA-POR-A.2** (cierre Bloque A, 2026-04-07): la duplicación de ticket que justificaba esta deuda quedó cubierta por el flow `pre_existing_ticket_id` de AG-001 implementado en A.2 (`3234f58`). `runSaveToBuffer` sobrevive como feature legítima de borradores recuperables.
+
