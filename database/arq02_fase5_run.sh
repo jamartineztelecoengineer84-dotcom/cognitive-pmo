@@ -40,13 +40,27 @@ SELECT COUNT(*) AS map_apuntando_a_fantasma
 FROM _ticket_id_map m
 WHERE NOT EXISTS (SELECT 1 FROM incidencias_run r WHERE r.ticket_id = m.new_id);
 
-\echo '── Backfill UPDATE ──'
+\echo '── Backfill UPDATE (F-ARQ02-10: regexp_matches global) ──'
+-- Deuda B.2 / F-ARQ02-10: el bug original usaba regexp_match (singular) que
+-- sólo devuelve la PRIMERA coincidencia. Si una fila menciona varios tickets
+-- y el primero NO está en el map, la fila quedaba NULL aunque un match
+-- secundario sí estuviese mapeado. Cambio: regexp_matches(..., 'g') + EXISTS
+-- evalúa TODOS los matches del content contra el map.
+--
+-- Caveat conocido: si una fila contiene 2 matches que mapean a 2 new_id
+-- distintos, el JOIN puede asignar cualquiera de los dos (orden no
+-- determinístico). Aceptable para B.2 porque solo ataca filas NULL — la
+-- corrección de "silent miss-attribution" en filas ya pobladas se trata como
+-- F-ARQ02-15 (fuera de alcance B.2). El WHERE ticket_id IS NULL impide tocar
+-- las 126 filas ya pobladas por la pasada original.
 UPDATE agent_conversations ac
 SET ticket_id = m.new_id
 FROM _ticket_id_map m
 WHERE ac.ticket_id IS NULL
-  AND ac.content ~ 'INC-[0-9]{8}-[A-F0-9]+'
-  AND (regexp_match(ac.content, 'INC-[0-9]{8}-[A-F0-9]+'))[1] = m.old_id;
+  AND EXISTS (
+    SELECT 1 FROM regexp_matches(ac.content, 'INC-[0-9]{8}-[A-F0-9]+', 'g') AS r(match)
+    WHERE r.match[1] = m.old_id
+  );
 
 \echo '── Verificación post-backfill ──'
 SELECT
