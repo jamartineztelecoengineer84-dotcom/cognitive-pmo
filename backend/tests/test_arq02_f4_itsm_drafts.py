@@ -41,7 +41,7 @@ def test_table_renamed():
         c = await _conn()
         try:
             old = await c.fetchval("SELECT to_regclass('public.run_incident_plans')")
-            new = await c.fetchval("SELECT to_regclass('public.itsm_form_drafts')")
+            new = await c.fetchval("SELECT to_regclass('primitiva.itsm_form_drafts')")
             return old, new
         finally:
             await c.close()
