@@ -316,8 +316,88 @@ async def get_tecnicos():
     if pool:
         try:
             async with pool.acquire() as conn:
-                rows = await conn.fetch("SELECT * FROM pmo_staff_skills ORDER BY nombre")
-                return [serialize(r) for r in rows]
+                rows = await conn.fetch("""
+                    SELECT s.*,
+                           COALESCE(inc.n_inc, 0) AS incidencias_activas,
+                           COALESCE(kan.n_kan, 0) AS tareas_activas,
+                           CASE
+                             WHEN COALESCE(inc.n_inc,0)+COALESCE(kan.n_kan,0) = 0 THEN 'DISPONIBLE'
+                             WHEN COALESCE(inc.n_inc,0)+COALESCE(kan.n_kan,0) <= 3 THEN 'ASIGNADO'
+                             ELSE 'OCUPADO'
+                           END AS estado_run_dinamico,
+                           LEAST(COALESCE(inc.n_inc,0)+COALESCE(kan.n_kan,0), 10)*10 AS carga_dinamica
+                    FROM compartido.pmo_staff_skills s
+                    LEFT JOIN (
+                        SELECT tecnico_asignado, COUNT(*) AS n_inc
+                        FROM incidencias_run
+                        WHERE estado NOT IN ('CERRADO','RESUELTO')
+                        GROUP BY tecnico_asignado
+                    ) inc ON inc.tecnico_asignado = s.id_recurso
+                    LEFT JOIN (
+                        SELECT id_tecnico, COUNT(*) AS n_kan
+                        FROM kanban_tareas
+                        WHERE columna NOT IN ('Completado','Backlog')
+                        GROUP BY id_tecnico
+                    ) kan ON kan.id_tecnico = s.id_recurso
+                    ORDER BY s.nombre
+                """)
+                result = []
+                for r in rows:
+                    d = serialize(r)
+                    if 'estado_run_dinamico' in d:
+                        d['estado_run'] = d['estado_run_dinamico']
+                    if 'carga_dinamica' in d:
+                        d['carga_actual'] = d['carga_dinamica']
+                    result.append(d)
+                
+                # B3: Enriquecer con vinculacion para técnicos asignados
+                try:
+                    for d in result:
+                        rid = d.get('id_recurso', '')
+                        if not rid:
+                            continue
+                        est = (d.get('estado_run') or d.get('estado') or '').upper()
+                        if est in ('DISPONIBLE', ''):
+                            d['vinculacion'] = ''
+                            d['tarea_actual'] = ''
+                            continue
+                        # Buscar en incidencias_run activas
+                        inc_row = await conn.fetchrow(
+                            "SELECT ticket_id, incidencia_detectada FROM incidencias_run "
+                            "WHERE tecnico_asignado = $1 AND estado NOT IN ('CERRADO','RESUELTO') "
+                            "ORDER BY timestamp_creacion DESC LIMIT 1", rid
+                        )
+                        if inc_row:
+                            tid = inc_row['ticket_id'] or ''
+                            desc = (inc_row['incidencia_detectada'] or '')[:40]
+                            d['vinculacion'] = f"INC {tid}: {desc}"
+                            d['tarea_actual'] = d['vinculacion']
+                            d['proyecto_actual'] = tid
+                            continue
+                        # Buscar en kanban_tareas activas
+                        kan_row = await conn.fetchrow(
+                            "SELECT id, titulo, id_proyecto FROM kanban_tareas "
+                            "WHERE id_tecnico = $1 "
+                            "AND columna NOT IN ('Completado','Done','Backlog') "
+                            "ORDER BY created_at DESC LIMIT 1", rid
+                        )
+                        if kan_row:
+                            titulo = (kan_row['titulo'] or '')[:35]
+                            proj = kan_row.get('id_proyecto') or ''
+                            d['vinculacion'] = f"BUILD {proj}: {titulo}"
+                            d['tarea_actual'] = d['vinculacion']
+                            d['proyecto_actual'] = proj
+                        else:
+                            d['vinculacion'] = est
+                            d['tarea_actual'] = ''
+                except Exception as e:
+                    logger.warning(f"B3 vinculacion error: {e}")
+
+                # C1: estado_run -> estado para frontend KPIs
+                for d in result:
+                    d['estado'] = d.get('estado_run') or d.get('estado', 'DISPONIBLE')
+
+                return result
         except Exception as e:
             logger.warning(f"DB error in /team/tecnicos: {e}")
     return MOCK_TECNICOS
@@ -662,7 +742,15 @@ async def get_incidencias(estado: Optional[str] = None, limit: int = 50):
                 else:
                     rows = await conn.fetch(
                         "SELECT * FROM incidencias_run ORDER BY timestamp_creacion DESC LIMIT $1", limit)
-                return [serialize(r) for r in rows]
+                result_inc = []
+                for r in rows:
+                    d = serialize(r)
+                    if 'sla_limite' in d and d['sla_limite'] is not None:
+                        d['sla_horas'] = float(d['sla_limite'])
+                    if 'prioridad_ia' in d and 'prioridad' not in d:
+                        d['prioridad'] = d['prioridad_ia']
+                    result_inc.append(d)
+                return result_inc
         except Exception as e:
             logger.warning(f"DB error in GET /incidencias: {e}")
     return []
@@ -1016,7 +1104,31 @@ async def listar_incidencias_live():
                   CASE prioridad WHEN 'P1' THEN 1 WHEN 'P2' THEN 2 WHEN 'P3' THEN 3 ELSE 4 END,
                   fecha_creacion DESC
             """)
-            return [dict(r) for r in rows]
+            # H1: enriquecer incidencias_live con sla_horas REAL por prioridad
+        # Mapeo estándar ITIL: P1=4h, P2=8h, P3=24h, P4=48h
+        SLA_POR_PRIORIDAD = {'P1': 4, 'P2': 8, 'P3': 24, 'P4': 48}
+        result_live = []
+        for r in rows:
+            d = dict(r)
+            # 1) Intentar leer sla_limite real de incidencias_run
+            sla_val = None
+            if d.get('ticket_id'):
+                sla_val = await conn.fetchval(
+                    "SELECT sla_limite FROM incidencias_run WHERE ticket_id = $1",
+                    d['ticket_id']
+                )
+            # 2) Si hay sla_limite numérico válido, usarlo
+            if sla_val is not None and float(sla_val) > 0 and float(sla_val) < 200:
+                d['sla_horas'] = float(sla_val)
+            else:
+                # 3) Fallback por prioridad (P1=4, P2=8, P3=24, P4=48)
+                prio = (d.get('prioridad_ia') or d.get('prioridad') or 'P3').upper()
+                d['sla_horas'] = SLA_POR_PRIORIDAD.get(prio, 24)
+            # Mapear prioridad_ia -> prioridad para frontend
+            if 'prioridad' not in d or not d.get('prioridad'):
+                d['prioridad'] = d.get('prioridad_ia', 'P3')
+            result_live.append(d)
+            return result_live
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -1127,7 +1239,30 @@ async def get_pms():
         try:
             async with pool.acquire() as conn:
                 rows = await conn.fetch("SELECT * FROM pmo_project_managers ORDER BY nombre")
-                return [serialize(r) for r in rows]
+                # C2: Estado PM dinámico per-schema
+                result_pms = []
+                for r in rows:
+                    d = serialize(r)
+                    pm_id = d.get('id_pm', '')
+                    pm_nombre = d.get('nombre', '')
+                    proj_count = await conn.fetchval(
+                        "SELECT COUNT(*) FROM pmo_governance_scoring "
+                        "WHERE (id_pm = $1 OR id_pm = $2) "
+                        "AND gate_status NOT IN ('COMPLETED','CERRADO')",
+                        pm_id, pm_nombre
+                    ) or 0
+                    if proj_count >= 3:
+                        d['estado'] = 'SOBRECARGADO'
+                    elif proj_count == 2:
+                        d['estado'] = 'CERCA_LIMITE'
+                    elif proj_count == 1:
+                        d['estado'] = 'ASIGNADO'
+                    else:
+                        d['estado'] = 'DISPONIBLE'
+                    d['proyectos_activos'] = proj_count
+                    d['carga'] = min(proj_count * 25, 100)
+                    result_pms.append(d)
+                return result_pms
         except Exception as e:
             logger.warning(f"DB error in /pmo/managers: {e}")
     return []
@@ -1240,8 +1375,18 @@ async def governance_dashboard():
     try:
         async with pool.acquire() as conn:
             total_pms = await conn.fetchval("SELECT COUNT(*) FROM pmo_project_managers")
-            asignados = await conn.fetchval("SELECT COUNT(*) FROM pmo_project_managers WHERE estado='ASIGNADO'")
-            sobrecargados = await conn.fetchval("SELECT COUNT(*) FROM pmo_project_managers WHERE estado='SOBRECARGADO'")
+            # P3-v2: PMs DISTINTOS con proyectos activos (via governance_scoring)
+            asignados = await conn.fetchval(
+                "SELECT COUNT(DISTINCT g.id_pm) FROM pmo_governance_scoring g "
+                "WHERE g.id_pm IS NOT NULL AND g.gate_status NOT IN ('COMPLETED','CERRADO')"
+            ) or 0
+            # P3-v2: PMs sobrecargados (>=3 proyectos activos en governance)
+            sobrecargados_rows = await conn.fetch(
+                "SELECT id_pm, COUNT(*) as cnt FROM pmo_governance_scoring "
+                "WHERE id_pm IS NOT NULL AND gate_status NOT IN ('COMPLETED','CERRADO') "
+                "GROUP BY id_pm HAVING COUNT(*) >= 3"
+            )
+            sobrecargados = len(sobrecargados_rows)
             total_gov = await conn.fetchval("SELECT COUNT(*) FROM pmo_governance_scoring")
             avg_score = await conn.fetchval("SELECT AVG(total_score) FROM pmo_governance_scoring")
             avg_compliance = await conn.fetchval("SELECT AVG(compliance_pct) FROM pmo_governance_scoring")
@@ -1249,6 +1394,13 @@ async def governance_dashboard():
             by_gate_phase = await conn.fetch("SELECT current_gate, COUNT(*) as cnt FROM pmo_governance_scoring GROUP BY current_gate ORDER BY current_gate")
             total_changes = await conn.fetchval("SELECT SUM(change_requests) FROM pmo_governance_scoring")
             approved_changes = await conn.fetchval("SELECT SUM(change_approved) FROM pmo_governance_scoring")
+            # P3-v2: Métricas per-schema
+            proyectos_activos = await conn.fetchval(
+                "SELECT COUNT(*) FROM cartera_build WHERE estado NOT IN ('cerrado')"
+            ) or 0
+            carga_media_pm = 0
+            if asignados > 0 and proyectos_activos > 0:
+                carga_media_pm = round(proyectos_activos / max(1, asignados) * 25, 1)
             return {
                 "total_pms": total_pms or 0,
                 "pms_asignados": asignados or 0,
@@ -1260,6 +1412,8 @@ async def governance_dashboard():
                 "by_gate_phase": {r['current_gate']: r['cnt'] for r in by_gate_phase},
                 "total_change_requests": int(total_changes or 0),
                 "change_approval_rate": round(int(approved_changes or 0) / max(1, int(total_changes or 1)) * 100, 1),
+                "proyectos_activos_schema": proyectos_activos,
+                "carga_media_pm": carga_media_pm,
             }
     except Exception as e:
         logger.warning(f"governance dashboard error: {e}")
@@ -2315,7 +2469,12 @@ async def get_presupuestos():
     if pool:
         try:
             async with pool.acquire() as conn:
-                rows = await conn.fetch("SELECT * FROM presupuestos ORDER BY created_at DESC")
+                rows = await conn.fetch("""
+                        SELECT p.*, cb.nombre_proyecto
+                        FROM presupuestos p
+                        LEFT JOIN cartera_build cb ON p.id_proyecto = cb.id_proyecto
+                        ORDER BY p.created_at DESC
+                    """)
                 return [serialize(r) for r in rows]
         except Exception as e:
             logger.warning(f"DB error in GET /presupuestos: {e}")
