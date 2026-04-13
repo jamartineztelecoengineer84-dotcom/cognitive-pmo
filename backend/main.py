@@ -3,7 +3,8 @@ import re
 import json
 import uuid
 import logging
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
+import hashlib
 from typing import Any, Dict, List, Optional
 
 import psycopg2
@@ -4319,6 +4320,1533 @@ async def kanban_flow_metrics():
             "bloqueadas": bloqueadas or 0,
             "ventana_dias": 30,
         }
+
+
+# ── PM Dashboard — Pulido v3 F2: Ficha 360 ────────────────────────────────
+
+@app.get("/api/pm/team/tecnico/{id_tecnico}/ficha-360")
+async def pm_tecnico_ficha_360(id_tecnico: str, pm_id: str = "PM-016"):
+    """Ficha 360 del técnico: KPIs + sparkline + proyectos con detalle."""
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(503, "DB pool no disponible")
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute("SET search_path = primitiva, compartido, public")
+
+            staff = await conn.fetchrow(
+                "SELECT nombre, nivel, silo_especialidad, skill_principal, skills_json, email, telefono "
+                "FROM compartido.pmo_staff_skills WHERE id_recurso = $1", id_tecnico)
+            if not staff:
+                raise HTTPException(404, f"Técnico {id_tecnico} no encontrado")
+
+            today = date.today()
+            month_start = today.replace(day=1)
+            seed_val = int(hashlib.md5(id_tecnico.encode()).hexdigest()[:8], 16) % 100
+
+            # ── KPIs ──
+            horas_mes = await conn.fetchval(
+                "SELECT COALESCE(SUM(horas), 0) FROM primitiva.horas_imputadas "
+                "WHERE id_tecnico = $1 AND fecha >= $2", id_tecnico, month_start)
+            horas_mes = round(float(horas_mes), 1)
+
+            # Projects of this PM where tech participates
+            pm_prj_ids = [r['id_proyecto'] for r in await conn.fetch(
+                "SELECT id_proyecto FROM cartera_build WHERE id_pm_usuario = $1", pm_id)]
+
+            num_proyectos = await conn.fetchval(
+                "SELECT COUNT(DISTINCT id_proyecto) FROM kanban_tareas "
+                "WHERE id_tecnico = $1 AND id_proyecto = ANY($2)", id_tecnico, pm_prj_ids) or 0
+
+            carga_pct = round(horas_mes / 160 * 100)
+            coste_hora = round(45 + seed_val * 0.3, 2)
+
+            # ── Sparkline 12 weeks ──
+            twelve_weeks_ago = today - timedelta(weeks=12)
+            sparkline_rows = await conn.fetch(
+                "SELECT semana_iso, SUM(horas) AS total "
+                "FROM primitiva.horas_imputadas "
+                "WHERE id_tecnico = $1 AND fecha >= $2 "
+                "GROUP BY semana_iso ORDER BY semana_iso",
+                id_tecnico, twelve_weeks_ago)
+            sparkline = [{"semana_iso": r['semana_iso'], "horas": round(float(r['total']), 1)}
+                         for r in sparkline_rows]
+
+            # ── Tareas activas totales ──
+            # ── Tareas activas + liberación estimada ──
+            active_tasks = await conn.fetch(
+                "SELECT horas_estimadas, fecha_creacion FROM kanban_tareas "
+                "WHERE id_tecnico = $1 AND columna NOT IN ('Completado','Done','Backlog')",
+                id_tecnico)
+            total_tareas_activas = len(active_tasks)
+
+            if total_tareas_activas == 0:
+                liberacion = {"tipo": "libre", "fecha": None, "dias_hasta": 0,
+                              "horas_restantes": 0, "num_tareas_activas": 0}
+            else:
+                import math
+                horas_rest = sum(float(t['horas_estimadas'] or 0) for t in active_tasks)
+                max_fc = max((t['fecha_creacion'] for t in active_tasks if t['fecha_creacion']),
+                             default=datetime.now())
+                if hasattr(max_fc, 'date'):
+                    max_fc = max_fc.date()
+                dias_hasta = math.ceil(horas_rest / 8) if horas_rest > 0 else 1
+                fecha_lib = max_fc + timedelta(days=dias_hasta)
+                liberacion = {"tipo": "estimada", "fecha": str(fecha_lib),
+                              "dias_hasta": dias_hasta, "horas_restantes": round(horas_rest, 1),
+                              "num_tareas_activas": total_tareas_activas}
+            ultima_imputacion = await conn.fetchval(
+                "SELECT MAX(fecha) FROM primitiva.horas_imputadas WHERE id_tecnico = $1",
+                id_tecnico)
+
+            # ── Proyectos con detalle ──
+            prj_rows = await conn.fetch(
+                "SELECT h.id_proyecto, cb.nombre_proyecto, "
+                "SUM(h.horas) AS horas_imputadas, COUNT(*) AS num_imputaciones, "
+                "MAX(h.fecha) AS ultima_imputacion "
+                "FROM primitiva.horas_imputadas h "
+                "JOIN cartera_build cb ON h.id_proyecto = cb.id_proyecto "
+                "WHERE h.id_tecnico = $1 AND cb.id_pm_usuario = $2 "
+                "GROUP BY h.id_proyecto, cb.nombre_proyecto "
+                "ORDER BY horas_imputadas DESC",
+                id_tecnico, pm_id)
+
+            proyectos = []
+            for r in prj_rows:
+                pid = r['id_proyecto']
+                h_imp = round(float(r['horas_imputadas']), 1)
+                pct_cons = round(h_imp / 160 * 100)
+
+                # Tareas activas por columna para este proyecto
+                tareas_cols = await conn.fetch(
+                    "SELECT columna, COUNT(*) AS cnt FROM kanban_tareas "
+                    "WHERE id_tecnico = $1 AND id_proyecto = $2 "
+                    "AND columna NOT IN ('Completado','Done','Backlog') "
+                    "GROUP BY columna ORDER BY cnt DESC",
+                    id_tecnico, pid)
+
+                proyectos.append({
+                    "id_proyecto": pid,
+                    "nombre": r['nombre_proyecto'],
+                    "horas_imputadas": h_imp,
+                    "capacidad_asignable": 160,
+                    "pct_consumido": pct_cons,
+                    "num_imputaciones": r['num_imputaciones'],
+                    "ultima_imputacion": str(r['ultima_imputacion']) if r['ultima_imputacion'] else None,
+                    "tareas_activas": [{"columna": t['columna'], "count": t['cnt']} for t in tareas_cols],
+                })
+
+            return {
+                "id_tecnico": id_tecnico,
+                "nombre": staff['nombre'],
+                "nivel": staff['nivel'],
+                "silo": staff['silo_especialidad'],
+                "skill_principal": staff['skill_principal'],
+                "skills": (json.loads(staff['skills_json']) if isinstance(staff['skills_json'], str) else staff['skills_json']) if staff['skills_json'] else [],
+                "kpis": {
+                    "carga_pct": carga_pct,
+                    "horas_mes": horas_mes,
+                    "num_proyectos": int(num_proyectos),
+                    "coste_hora": coste_hora,
+                },
+                "sparkline_12w": sparkline,
+                "total_tareas_activas": total_tareas_activas,
+                "ultima_imputacion": str(ultima_imputacion) if ultima_imputacion else None,
+                "proyectos": proyectos,
+                "liberacion": liberacion,
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning(f"Ficha 360 error: {e}")
+        raise HTTPException(500, str(e))
+
+
+# ── PM Dashboard — Pulido v3 F3: Kanban técnico ───────────────────────────
+
+@app.get("/api/pm/team/tecnico/{id_tecnico}/kanban")
+async def pm_tecnico_kanban(id_tecnico: str):
+    """Tareas kanban del técnico con campos extraídos del JSONB descripcion."""
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(503, "DB pool no disponible")
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute("SET search_path = primitiva, compartido, public")
+            rows = await conn.fetch("""
+                SELECT id, titulo, tipo, prioridad, columna,
+                       id_proyecto, id_incidencia,
+                       horas_estimadas, horas_reales,
+                       fecha_creacion, fecha_inicio_ejecucion, fecha_cierre,
+                       descripcion::text AS descripcion_raw
+                FROM kanban_tareas
+                WHERE id_tecnico = $1
+                ORDER BY
+                  CASE columna
+                    WHEN 'Backlog' THEN 0
+                    WHEN 'Análisis' THEN 1
+                    WHEN 'En Progreso' THEN 2
+                    WHEN 'Code Review' THEN 3
+                    WHEN 'Testing' THEN 4
+                    WHEN 'Despliegue' THEN 5
+                    WHEN 'Bloqueado' THEN 6
+                    WHEN 'Completado' THEN 7
+                  END,
+                  CASE prioridad
+                    WHEN 'Crítica' THEN 0 WHEN 'Alta' THEN 1
+                    WHEN 'Media' THEN 2 ELSE 3
+                  END,
+                  fecha_creacion DESC
+            """, id_tecnico)
+
+            columnas_set = set()
+            tareas = []
+            for r in rows:
+                columnas_set.add(r['columna'])
+                # Parse JSONB description
+                desc = {}
+                try:
+                    if r['descripcion_raw']:
+                        desc = json.loads(r['descripcion_raw'])
+                except:
+                    pass
+
+                checklist = desc.get('checklist', [])
+                instrucciones = desc.get('instrucciones', [])
+
+                tareas.append({
+                    "id": r['id'],
+                    "titulo": r['titulo'],
+                    "tipo": r['tipo'],
+                    "prioridad": r['prioridad'],
+                    "columna": r['columna'],
+                    "id_proyecto": r['id_proyecto'] or '',
+                    "id_incidencia": r['id_incidencia'] or '',
+                    "horas_estimadas": float(r['horas_estimadas'] or 0),
+                    "horas_reales": float(r['horas_reales'] or 0),
+                    "fecha_creacion": r['fecha_creacion'].isoformat() if r['fecha_creacion'] else None,
+                    "fecha_inicio_ejecucion": r['fecha_inicio_ejecucion'].isoformat() if r['fecha_inicio_ejecucion'] else None,
+                    "fecha_cierre": r['fecha_cierre'].isoformat() if r['fecha_cierre'] else None,
+                    "skill_requerida": desc.get('skill_requerida', ''),
+                    "silo": desc.get('silo', ''),
+                    "checklist_total": len(checklist) if isinstance(checklist, list) else 0,
+                    "instrucciones_total": len(instrucciones) if isinstance(instrucciones, list) else 0,
+                    "descripcion_full": desc,
+                })
+
+            return {
+                "id_tecnico": id_tecnico,
+                "columnas_existentes": sorted(columnas_set),
+                "tareas": tareas,
+            }
+    except Exception as e:
+        logger.warning(f"Kanban tecnico error: {e}")
+        raise HTTPException(500, str(e))
+
+
+# ── PM Dashboard — Pulido v3 F4: Salas compartidas PM↔Técnico ──────────────
+
+@app.get("/api/pm/team/tecnico/{id_tecnico}/salas-compartidas")
+async def pm_tecnico_salas_compartidas(id_tecnico: str, pm_id: str = "PM-016"):
+    """Salas de chat donde PM y técnico coinciden via proyectos compartidos."""
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(503, "DB pool no disponible")
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute("SET search_path = primitiva, compartido, public")
+
+            # Projects where PM is owner AND tech has tasks
+            shared_prjs = await conn.fetch("""
+                SELECT DISTINCT cb.id_proyecto, cb.nombre_proyecto,
+                       COUNT(k.id) AS num_tareas
+                FROM cartera_build cb
+                JOIN kanban_tareas k ON k.id_proyecto = cb.id_proyecto
+                WHERE cb.id_pm_usuario = $1 AND k.id_tecnico = $2
+                GROUP BY cb.id_proyecto, cb.nombre_proyecto
+            """, pm_id, id_tecnico)
+
+            # Also get incidencias where tech has kanban tasks linked
+            shared_incs = await conn.fetch("""
+                SELECT DISTINCT k.id_incidencia, COUNT(k.id) AS num_tareas
+                FROM kanban_tareas k
+                WHERE k.id_tecnico = $1 AND k.id_incidencia IS NOT NULL
+                  AND k.id_incidencia != ''
+                GROUP BY k.id_incidencia
+            """, id_tecnico)
+
+            salas = []
+
+            # BUILD salas (by project)
+            for r in shared_prjs:
+                pid = r['id_proyecto']
+                sala = await conn.fetchrow(
+                    "SELECT id, nombre FROM tech_chat_salas "
+                    "WHERE id_referencia = $1 AND activa = true LIMIT 1", pid)
+                if not sala:
+                    continue
+                sid = sala['id']
+                num_msgs = await conn.fetchval(
+                    "SELECT COUNT(*) FROM tech_chat_mensajes WHERE id_sala = $1", sid) or 0
+                last = await conn.fetchrow(
+                    "SELECT mensaje, created_at FROM tech_chat_mensajes "
+                    "WHERE id_sala = $1 ORDER BY created_at DESC LIMIT 1", sid)
+                salas.append({
+                    "id_sala": sid,
+                    "tipo": "build",
+                    "id_referencia": pid,
+                    "titulo_referencia": r['nombre_proyecto'],
+                    "num_mensajes": num_msgs,
+                    "ultimo_mensaje_at": last['created_at'].isoformat() if last and last['created_at'] else None,
+                    "ultimo_mensaje_preview": (last['mensaje'][:60] if last and last['mensaje'] else None),
+                    "compartido_porque": f"El técnico tiene {r['num_tareas']} tareas en este proyecto",
+                })
+
+            # RUN salas (by incidencia)
+            for r in shared_incs:
+                inc_id = r['id_incidencia']
+                sala = await conn.fetchrow(
+                    "SELECT id, nombre FROM tech_chat_salas "
+                    "WHERE id_referencia = $1 AND activa = true AND tipo = 'run' LIMIT 1", inc_id)
+                if not sala:
+                    continue
+                sid = sala['id']
+                num_msgs = await conn.fetchval(
+                    "SELECT COUNT(*) FROM tech_chat_mensajes WHERE id_sala = $1", sid) or 0
+                last = await conn.fetchrow(
+                    "SELECT mensaje, created_at FROM tech_chat_mensajes "
+                    "WHERE id_sala = $1 ORDER BY created_at DESC LIMIT 1", sid)
+                salas.append({
+                    "id_sala": sid,
+                    "tipo": "run",
+                    "id_referencia": inc_id,
+                    "titulo_referencia": sala['nombre'] or inc_id,
+                    "num_mensajes": num_msgs,
+                    "ultimo_mensaje_at": last['created_at'].isoformat() if last and last['created_at'] else None,
+                    "ultimo_mensaje_preview": (last['mensaje'][:60] if last and last['mensaje'] else None),
+                    "compartido_porque": f"El técnico tiene {r['num_tareas']} tareas vinculadas",
+                })
+
+            # Sort by last activity
+            salas.sort(key=lambda s: s.get('ultimo_mensaje_at') or '', reverse=True)
+
+            return {"id_tecnico": id_tecnico, "salas": salas}
+    except Exception as e:
+        logger.warning(f"Salas compartidas error: {e}")
+        raise HTTPException(500, str(e))
+
+
+# ── PM Dashboard — Pulido v2: Detalle técnico + Detalle proyecto ───────────
+
+@app.get("/api/pm/team/tecnico/{id_tecnico}/detalle")
+async def pm_tecnico_detalle(id_tecnico: str, pm_id: str = "PM-016"):
+    """Pulido v2: Detalle completo de un técnico del pool del PM."""
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(503, "DB pool no disponible")
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute("SET search_path = primitiva, compartido, public")
+            staff = await conn.fetchrow(
+                "SELECT * FROM compartido.pmo_staff_skills WHERE id_recurso = $1", id_tecnico)
+            if not staff:
+                raise HTTPException(404, f"Técnico {id_tecnico} no encontrado")
+            sd = dict(staff)
+            seed_val = int(hashlib.md5(id_tecnico.encode()).hexdigest()[:8], 16) % 100
+
+            # Projects of this PM where this tech participates
+            pm_prjs = await conn.fetch(
+                "SELECT DISTINCT k.id_proyecto, cb.nombre_proyecto "
+                "FROM kanban_tareas k "
+                "JOIN cartera_build cb ON k.id_proyecto = cb.id_proyecto "
+                "WHERE k.id_tecnico = $1 AND cb.id_pm_usuario = $2", id_tecnico, pm_id)
+            prj_list = [{"id_proyecto": r['id_proyecto'], "nombre": r['nombre_proyecto'],
+                         "pct_dedicacion": min(40, round(100 / max(len(pm_prjs), 1)))} for r in pm_prjs]
+
+            # Hours this month
+            today = date.today()
+            month_start = today.replace(day=1)
+            horas_mes = await conn.fetchval(
+                "SELECT COALESCE(SUM(horas), 0) FROM primitiva.horas_imputadas "
+                "WHERE id_tecnico = $1 AND fecha >= $2", id_tecnico, month_start)
+            horas_mes = round(float(horas_mes), 1)
+            carga_pct = round(horas_mes / 160 * 100)
+
+            # Sparkline 12 weeks
+            sparkline = []
+            for w in range(12, 0, -1):
+                w_start = today - timedelta(weeks=w)
+                w_end = w_start + timedelta(days=7)
+                h = await conn.fetchval(
+                    "SELECT COALESCE(SUM(horas), 0) FROM primitiva.horas_imputadas "
+                    "WHERE id_tecnico = $1 AND fecha >= $2 AND fecha < $3",
+                    id_tecnico, w_start, w_end)
+                sparkline.append({"semana": f"S{w_start.isocalendar()[1]}", "horas": round(float(h), 1)})
+
+            # Active kanban tasks
+            tareas = await conn.fetch(
+                "SELECT id, titulo, columna, id_proyecto, horas_estimadas, created_at "
+                "FROM kanban_tareas WHERE id_tecnico = $1 "
+                "AND columna NOT IN ('Completado','Done','Backlog') ORDER BY created_at DESC", id_tecnico)
+            tareas_list = [{"id": r['id'], "titulo": r['titulo'][:50], "columna": r['columna'],
+                            "id_proyecto": r['id_proyecto'] or '', "horas_est": float(r['horas_estimadas'] or 0)}
+                           for r in tareas]
+
+            # Skills from skills_json
+            skills_raw = sd.get('skills_json', [])
+            skills = skills_raw if isinstance(skills_raw, list) else []
+
+            # SINTETICO: manager, ausencias, disponibilidad
+            managers = ["María García", "Carlos López", "Ana Fernández", "Pedro Ruiz"]
+            manager = managers[seed_val % len(managers)]
+
+            disponibilidad = []
+            for w in range(4):
+                w_date = today + timedelta(weeks=w)
+                libre = max(0, 100 - carga_pct + (seed_val + w * 7) % 20 - 10)
+                disponibilidad.append({"semana": f"S{w_date.isocalendar()[1]}", "pct_libre": min(100, libre)})
+
+            ausencias = []
+            if seed_val % 3 == 0:
+                aus_start = today + timedelta(days=14 + seed_val % 20)
+                ausencias.append({"tipo": "Vacaciones", "desde": str(aus_start),
+                                   "hasta": str(aus_start + timedelta(days=5 + seed_val % 5)),
+                                   "estado": "Aprobada"})
+
+            return {
+                "id_tecnico": id_tecnico,
+                "nombre": sd.get('nombre', ''),
+                "nivel": sd.get('nivel', ''),
+                "silo": sd.get('silo_especialidad', ''),
+                "skill_principal": sd.get('skill_principal', ''),
+                "email": sd.get('email', ''),
+                "telefono": sd.get('telefono', ''),
+                "manager": manager,
+                "fecha_alta": str(sd.get('fecha_alta', '')) if sd.get('fecha_alta') else None,
+                "kpis": {
+                    "carga_pct": carga_pct,
+                    "horas_mes": horas_mes,
+                    "num_proyectos": len(pm_prjs),
+                    "coste_hora": round(45 + seed_val * 0.3, 2),
+                },
+                "skills": skills,
+                "sparkline": sparkline,
+                "tareas_activas": tareas_list,
+                "disponibilidad": disponibilidad,
+                "ausencias": ausencias,
+                "proyectos": prj_list,
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning(f"PM tecnico detalle error: {e}")
+        raise HTTPException(500, str(e))
+
+
+@app.get("/api/pm/project/{id_proyecto}/detalle")
+async def pm_project_detalle(id_proyecto: str):
+    """Pulido v2: Detalle enriquecido de un proyecto para modal."""
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(503, "DB pool no disponible")
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute("SET search_path = primitiva, compartido, public")
+            prj = await conn.fetchrow(
+                "SELECT * FROM cartera_build WHERE id_proyecto = $1", id_proyecto)
+            if not prj:
+                raise HTTPException(404, f"Proyecto {id_proyecto} no encontrado")
+            pd = dict(prj)
+            seed_val = int(hashlib.md5(id_proyecto.encode()).hexdigest()[:8], 16) % 100
+
+            # Presupuesto
+            pres = await conn.fetchrow(
+                "SELECT * FROM presupuestos WHERE id_proyecto = $1 ORDER BY version DESC LIMIT 1", id_proyecto)
+            bac = float(pres['bac_total']) if pres and pres['bac_total'] else float(pd.get('horas_estimadas', 100)) * 110
+
+            # Dates
+            today = date.today()
+            fi = pd.get('fecha_inicio') or (pres['fecha_inicio'] if pres and pres.get('fecha_inicio') else None)
+            ff = pd.get('fecha_fin_plan') or (pres['fecha_fin'] if pres and pres.get('fecha_fin') else None)
+            if hasattr(fi, 'date'): fi = fi.date()
+            if hasattr(ff, 'date'): ff = ff.date()
+            if not fi: fi = today - timedelta(days=180)
+            if not ff: ff = fi + timedelta(days=180)
+            total_days = max((ff - fi).days, 1)
+            elapsed = max(min((today - fi).days, total_days), 0)
+            pct_time = elapsed / total_days
+
+            pct_avance = int(pd.get('pct_avance') or 0) / 100
+            ac = float(pd.get('ac') or 0)
+
+            # EVM
+            pv = round(bac * pct_time, 2)
+            ev = round(bac * pct_avance, 2)
+            if ac <= 0:
+                ac = round(ev * (0.85 + seed_val / 100 * 0.3), 2) if ev > 0 else round(pv * 0.3, 2)
+            cpi = round(ev / ac, 3) if ac > 0 else 1.0
+            spi = round(ev / pv, 3) if pv > 0 else 1.0
+
+            # Estimated end date from SPI
+            if spi > 0 and spi != 1.0:
+                remaining_work = 1.0 - pct_avance
+                days_remaining = round(remaining_work * total_days / spi)
+                fecha_fin_est = today + timedelta(days=days_remaining)
+            else:
+                fecha_fin_est = ff
+            dias_restantes = (ff - today).days
+
+            # BAC breakdown (from presupuestos or synthetic)
+            if pres:
+                capex = float(pres.get('total_capex') or 0)
+                opex = float(pres.get('total_opex') or 0)
+                labor = float(pres.get('total_labor') or 0)
+                proveedores = float(pres.get('total_proveedores') or 0)
+                rrhh = float(pres.get('total_rrhh') or 0)
+                reservas = float(pres.get('total_reservas') or 0)
+            else:
+                capex = round(bac * 0.25, 2)
+                opex = round(bac * 0.15, 2)
+                labor = round(bac * 0.35, 2)
+                proveedores = round(bac * 0.15, 2)
+                rrhh = round(bac * 0.05, 2)
+                reservas = round(bac * 0.05, 2)
+
+            bac_desglose = {
+                "capex": capex, "opex": opex, "labor": labor,
+                "proveedores": proveedores, "rrhh": rrhh, "reservas": reservas,
+                "internos": labor + rrhh, "externos": proveedores + capex,
+            }
+
+            # Hitos (7)
+            hitos_labels = [
+                (0.0, "Kick-off · Charter"), (0.15, "Análisis requisitos"),
+                (0.30, "Diseño arquitectura"), (0.50, "Desarrollo core"),
+                (0.70, "Testing integración"), (0.85, "UAT · Pre-producción"),
+                (1.0, "Go-live · Cierre"),
+            ]
+            hitos = []
+            for pct_h, nombre_h in hitos_labels:
+                fecha_h = fi + timedelta(days=int(total_days * pct_h))
+                completado = pct_avance >= pct_h
+                hitos.append({"nombre": nombre_h, "fecha_objetivo": str(fecha_h),
+                              "estado": "COMPLETADO" if completado else ("EN_CURSO" if abs(pct_avance - pct_h) < 0.1 else "PENDIENTE"),
+                              "responsable": pd.get('responsable_asignado') or 'PM-016'})
+
+            # Riesgos top 3
+            risk_rows = await conn.fetch(
+                "SELECT descripcion, probabilidad, impacto, score, plan_mitigacion, responsable "
+                "FROM build_risks WHERE id_proyecto = $1 ORDER BY score DESC LIMIT 3", id_proyecto)
+            if not risk_rows:
+                riesgos = [
+                    {"descripcion": "Retraso proveedor externo", "score": 12, "mitigacion": "Seguimiento semanal", "owner": "PM"},
+                    {"descripcion": "Rotación personal clave", "score": 10, "mitigacion": "Documentación cruzada", "owner": "RRHH"},
+                    {"descripcion": "Cambio regulatorio", "score": 8, "mitigacion": "Vigilancia normativa", "owner": "Legal"},
+                ]
+            else:
+                riesgos = [{"descripcion": r['descripcion'][:60], "score": float(r['score']),
+                            "mitigacion": (r['plan_mitigacion'] or '')[:60], "owner": r['responsable'] or 'PM'} for r in risk_rows]
+
+            # SINTETICO: Identificación
+            sponsors = ["Director General IT", "CIO", "VP Operaciones", "Director Digital"]
+            resp_negocio = ["Jefe Área Banca Comercial", "Resp. Operaciones", "Dir. Riesgos", "Resp. Compliance"]
+
+            # SINTETICO: Histórico cambios scope
+            cambios_scope = []
+            for i in range(2 + seed_val % 2):
+                fecha_c = fi + timedelta(days=30 + i * 45 + seed_val % 20)
+                motivos = ["Ampliación funcional por regulación DORA", "Reducción scope módulo reporting",
+                           "Inclusión migración datos legacy", "Ajuste timeline por dependencia externa"]
+                impactos = ["+15% BAC, +3 semanas", "-8% BAC, sin impacto fecha",
+                            "+20% BAC, +4 semanas", "Sin impacto BAC, +2 semanas"]
+                cambios_scope.append({"fecha": str(fecha_c), "motivo": motivos[i % len(motivos)],
+                                       "impacto": impactos[i % len(impactos)],
+                                       "aprobado_por": "Comité de cambios"})
+
+            # SINTETICO: Documentación
+            docs = [
+                {"nombre": "Project Charter", "tipo": "Charter", "fecha": str(fi), "estado": "Aprobado"},
+                {"nombre": "Plan de Proyecto", "tipo": "Plan", "fecha": str(fi + timedelta(days=15)), "estado": "Vigente"},
+                {"nombre": "Registro de Riesgos", "tipo": "Riesgos", "fecha": str(fi + timedelta(days=20)), "estado": "Actualizado"},
+                {"nombre": "Plan de Calidad", "tipo": "QA", "fecha": str(fi + timedelta(days=25)), "estado": "Vigente"},
+                {"nombre": "Acta de Cierre", "tipo": "Cierre", "fecha": str(ff), "estado": "Pendiente" if pct_avance < 1.0 else "Firmado"},
+            ]
+
+            return {
+                "proyecto": {
+                    "id": pd['id_proyecto'], "nombre": pd['nombre_proyecto'],
+                    "estado": pd.get('estado', ''), "prioridad": pd.get('prioridad_estrategica', ''),
+                    "silo": pd.get('perfil_requerido') or pd.get('skills_requeridas', '')[:30] or 'IT General',
+                    "tipo": "BUILD",
+                },
+                "identificacion": {
+                    "sponsor": sponsors[seed_val % len(sponsors)],
+                    "responsable_negocio": resp_negocio[seed_val % len(resp_negocio)],
+                    "pm": "Pablo Rivas Camacho (PM-016)",
+                },
+                "fechas": {
+                    "inicio": str(fi), "fin_plan": str(ff),
+                    "fin_estimado_spi": str(fecha_fin_est),
+                    "dias_restantes": dias_restantes,
+                    "pct_tiempo": round(pct_time * 100, 1),
+                    "pct_avance": round(pct_avance * 100, 1),
+                    "desviacion": "OK" if abs(pct_time - pct_avance) < 0.1 else ("ALERTA" if pct_time > pct_avance else "ADELANTADO"),
+                },
+                "evm": {
+                    "bac": bac, "pv": pv, "ev": ev, "ac": ac,
+                    "cpi": cpi, "spi": spi,
+                    "eac": round(bac / cpi, 2) if cpi > 0 else bac * 2,
+                    "vac": round(bac - (bac / cpi if cpi > 0 else bac * 2), 2),
+                },
+                "bac_desglose": bac_desglose,
+                "hitos": hitos,
+                "riesgos": riesgos,
+                "cambios_scope": cambios_scope,
+                "documentacion": docs,
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning(f"PM project detalle error: {e}")
+        raise HTTPException(500, str(e))
+
+
+# ── PM Dashboard — Fase D (Equipo del PM) ──────────────────────────────────
+
+@app.get("/api/pm/dashboard/team")
+async def pm_dashboard_team(pm_id: str = "PM-016"):
+    """Equipo agregado del PM: técnicos únicos en todos sus proyectos."""
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(503, "DB pool no disponible")
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute("SET search_path = primitiva, compartido, public")
+
+            # Projects of this PM
+            pm_projects = await conn.fetch(
+                "SELECT id_proyecto, nombre_proyecto FROM cartera_build WHERE id_pm_usuario = $1",
+                pm_id)
+            if not pm_projects:
+                return []
+            prj_ids = [r['id_proyecto'] for r in pm_projects]
+            prj_names = {r['id_proyecto']: r['nombre_proyecto'] for r in pm_projects}
+
+            # Distinct technicians across all PM projects
+            tech_rows = await conn.fetch("""
+                SELECT k.id_tecnico,
+                       array_agg(DISTINCT k.id_proyecto) AS proyectos
+                FROM kanban_tareas k
+                WHERE k.id_proyecto = ANY($1) AND k.id_tecnico IS NOT NULL
+                GROUP BY k.id_tecnico
+                ORDER BY COUNT(DISTINCT k.id_proyecto) DESC, k.id_tecnico
+            """, prj_ids)
+
+            today = date.today()
+            month_start = today.replace(day=1)
+            result = []
+
+            for row in tech_rows:
+                tid = row['id_tecnico']
+                tech_prjs = row['proyectos']
+                n_proy = len(tech_prjs)
+
+                # Staff info
+                staff = await conn.fetchrow(
+                    "SELECT nombre, skill_principal, silo_especialidad, nivel "
+                    "FROM compartido.pmo_staff_skills WHERE id_recurso = $1", tid)
+                nombre = staff['nombre'] if staff else tid
+                skill = staff['skill_principal'] if staff else ''
+                silo = staff['silo_especialidad'] if staff else ''
+                nivel = staff['nivel'] if staff else ''
+
+                # Hours this month
+                horas_mes = await conn.fetchval(
+                    "SELECT COALESCE(SUM(horas), 0) FROM primitiva.horas_imputadas "
+                    "WHERE id_tecnico = $1 AND fecha >= $2", tid, month_start)
+                horas_mes = round(float(horas_mes), 1)
+
+                # Estimated dedication per project (~40% each, realistic for PM projects)
+                pct_per_proj = min(40, round(100 / max(n_proy, 1), 0))
+                total_pct = pct_per_proj * n_proy
+                capacidad_h = 160  # Fixed FTE capacity
+
+                # Load state based on actual hours vs capacity
+                load_pct = round(horas_mes / capacidad_h * 100, 0)
+                if load_pct > 100:
+                    estado_carga = 'SOBRECARGA'
+                elif load_pct > 85:
+                    estado_carga = 'AJUSTADO'
+                else:
+                    estado_carga = 'OK'
+
+                # Conflict: >2 projects (combined dedication exceeds realistic capacity)
+                conflicto = n_proy > 2
+
+                # Project details
+                proyectos_detail = []
+                for pid in tech_prjs:
+                    proyectos_detail.append({
+                        "id_proyecto": pid,
+                        "nombre": prj_names.get(pid, pid),
+                        "pct_dedicacion_estimado": pct_per_proj,
+                    })
+
+                result.append({
+                    "id_tecnico": tid,
+                    "nombre": nombre,
+                    "skill": skill,
+                    "silo": silo,
+                    "nivel": nivel,
+                    "num_proyectos": n_proy,
+                    "proyectos": proyectos_detail,
+                    "horas_imputadas_mes": horas_mes,
+                    "horas_estimadas_mes": capacidad_h,
+                    "carga_pct": load_pct,
+                    "estado_carga": estado_carga,
+                    "conflicto": conflicto,
+                })
+
+            return result
+    except Exception as e:
+        logger.warning(f"PM dashboard team error: {e}")
+        raise HTTPException(500, str(e))
+
+
+# ── PM Dashboard — Fase B/C (Shell + Mis Proyectos) ────────────────────────
+# Schema: primitiva (sin scope multi-escenario)
+
+@app.get("/api/pm/dashboard/projects")
+async def pm_dashboard_projects(pm_id: str = "PM-016"):
+    """Lista proyectos del PM con EVM precalculado para el dashboard."""
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(503, "DB pool no disponible")
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute("SET search_path = primitiva, compartido, public")
+            rows = await conn.fetch(
+                "SELECT cb.*, p.bac_total, p.fecha_inicio AS p_fecha_inicio, p.fecha_fin AS p_fecha_fin "
+                "FROM cartera_build cb "
+                "LEFT JOIN presupuestos p ON cb.id_proyecto = p.id_proyecto "
+                "WHERE cb.id_pm_usuario = $1 ORDER BY cb.id_proyecto", pm_id)
+            today = date.today()
+            result = []
+            for r in rows:
+                d = dict(r)
+                bac = float(d.get('bac_total') or d.get('horas_estimadas', 100) * 110)
+                pct_avance = int(d.get('pct_avance') or 0)
+                ac_val = float(d.get('ac') or 0)
+                fi = d.get('fecha_inicio') or d.get('p_fecha_inicio') or d.get('fecha_creacion')
+                ff = d.get('fecha_fin_plan') or d.get('p_fecha_fin')
+                if hasattr(fi, 'date'):
+                    fi = fi.date()
+                if hasattr(ff, 'date'):
+                    ff = ff.date()
+                if not fi:
+                    fi = today - timedelta(days=180)
+                if not ff:
+                    ff = fi + timedelta(days=180)
+                total_d = max((ff - fi).days, 1)
+                elapsed = max(min((today - fi).days, total_d), 0)
+                pct_time = round(elapsed / total_d * 100, 1)
+                ev = bac * pct_avance / 100
+                pv = bac * elapsed / total_d
+                cpi = round(ev / ac_val, 2) if ac_val > 0 else (1.0 if pct_avance == 0 else 0)
+                spi = round(ev / pv, 2) if pv > 0 else (1.0 if pct_avance == 0 else 0)
+
+                # Team (quick count)
+                team_rows = await conn.fetch(
+                    "SELECT DISTINCT k.id_tecnico, s.nombre "
+                    "FROM kanban_tareas k LEFT JOIN compartido.pmo_staff_skills s ON k.id_tecnico=s.id_recurso "
+                    "WHERE k.id_proyecto=$1 AND k.id_tecnico IS NOT NULL LIMIT 8", d['id_proyecto'])
+
+                # Next milestone
+                proximo_hito = None
+                hitos_syn = [
+                    (0.25, "Kick-off"), (0.50, "Diseño"), (0.75, "Dev+Test"), (1.0, "Go-live")
+                ]
+                for pct_h, nombre_h in hitos_syn:
+                    fecha_h = fi + timedelta(days=int(total_d * pct_h))
+                    if fecha_h >= today:
+                        proximo_hito = {"nombre": nombre_h, "fecha": str(fecha_h), "dias_para": (fecha_h - today).days}
+                        break
+                if not proximo_hito and hitos_syn:
+                    fecha_h = ff
+                    proximo_hito = {"nombre": "Go-live", "fecha": str(fecha_h), "dias_para": (fecha_h - today).days}
+
+                result.append({
+                    "id_proyecto": d['id_proyecto'],
+                    "nombre_proyecto": d['nombre_proyecto'],
+                    "estado": d.get('estado', ''),
+                    "prioridad": d.get('prioridad_estrategica', 'Media'),
+                    "bac": bac,
+                    "pct_avance": pct_avance,
+                    "pct_tiempo": pct_time,
+                    "cpi": cpi,
+                    "spi": spi,
+                    "team": [{"nombre": t['nombre'] or t['id_tecnico']} for t in team_rows],
+                    "proximo_hito": proximo_hito,
+                })
+            return result
+    except Exception as e:
+        logger.warning(f"PM dashboard projects error: {e}")
+        raise HTTPException(500, str(e))
+
+
+# ── PM Dashboard — Fase F (Chat War Room) ──────────────────────────────────
+
+@app.get("/api/pm/chat/rooms")
+async def pm_chat_rooms(pm_id: str = "PM-016"):
+    """Fase F: Lista de salas de chat del PM (una por proyecto)."""
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(503, "DB pool no disponible")
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute("SET search_path = primitiva, compartido, public")
+            projects = await conn.fetch(
+                "SELECT id_proyecto, nombre_proyecto, estado FROM cartera_build "
+                "WHERE id_pm_usuario = $1 ORDER BY id_proyecto", pm_id)
+            rooms = []
+            for prj in projects:
+                pid = prj['id_proyecto']
+                sala = await conn.fetchrow(
+                    "SELECT id, nombre FROM tech_chat_salas "
+                    "WHERE id_referencia = $1 AND activa = true LIMIT 1", pid)
+                if not sala:
+                    sala = await conn.fetchrow(
+                        "INSERT INTO tech_chat_salas (tipo, id_referencia, nombre, activa) "
+                        "VALUES ('build', $1, $2, true) RETURNING id, nombre",
+                        pid, f"{pid} — {prj['nombre_proyecto'][:50]}")
+                sid = sala['id']
+                total_msgs = await conn.fetchval(
+                    "SELECT COUNT(*) FROM tech_chat_mensajes WHERE id_sala = $1", sid) or 0
+                last_msg = await conn.fetchrow(
+                    "SELECT m.mensaje, m.id_autor, m.created_at, "
+                    "COALESCE(pm.nombre, s.nombre, m.id_autor) AS autor_nombre "
+                    "FROM tech_chat_mensajes m "
+                    "LEFT JOIN compartido.pmo_project_managers pm ON m.id_autor = pm.id_pm "
+                    "LEFT JOIN compartido.pmo_staff_skills s ON m.id_autor = s.id_recurso "
+                    "WHERE m.id_sala = $1 ORDER BY m.created_at DESC LIMIT 1", sid)
+                participants = await conn.fetchval(
+                    "SELECT COUNT(DISTINCT id_autor) FROM tech_chat_mensajes WHERE id_sala = $1", sid) or 0
+                rooms.append({
+                    "id_sala": sid,
+                    "id_proyecto": pid,
+                    "nombre_proyecto": prj['nombre_proyecto'],
+                    "estado_proyecto": prj['estado'],
+                    "num_mensajes": total_msgs,
+                    "num_participantes": participants,
+                    "num_no_leidos": max(0, (hash(pid) % 5) - 2),  # synthetic 0-2
+                    "ultimo_mensaje": {
+                        "texto": last_msg['mensaje'][:80] if last_msg else None,
+                        "autor": last_msg['autor_nombre'] if last_msg else None,
+                        "timestamp": last_msg['created_at'].isoformat() if last_msg and last_msg['created_at'] else None,
+                    } if last_msg else None,
+                })
+            rooms.sort(key=lambda r: r['ultimo_mensaje']['timestamp'] if r.get('ultimo_mensaje') and r['ultimo_mensaje'].get('timestamp') else '', reverse=True)
+            return rooms
+    except Exception as e:
+        logger.warning(f"PM chat rooms error: {e}")
+        raise HTTPException(500, str(e))
+
+
+@app.get("/api/pm/chat/room/{id_sala}/messages")
+async def pm_chat_room_messages(id_sala: int, limit: int = 100):
+    """Fase F: Hilo de mensajes de una sala."""
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(503, "DB pool no disponible")
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute("SET search_path = primitiva, compartido, public")
+            msgs = await conn.fetch(
+                "SELECT m.id, m.id_autor, m.rol_autor, m.mensaje, m.created_at, "
+                "COALESCE(pm.nombre, s.nombre, m.id_autor) AS autor_nombre "
+                "FROM tech_chat_mensajes m "
+                "LEFT JOIN compartido.pmo_project_managers pm ON m.id_autor = pm.id_pm "
+                "LEFT JOIN compartido.pmo_staff_skills s ON m.id_autor = s.id_recurso "
+                "WHERE m.id_sala = $1 ORDER BY m.created_at ASC LIMIT $2", id_sala, limit)
+            return [{"id": r['id'], "autor_id": r['id_autor'], "autor_nombre": r['autor_nombre'],
+                     "autor_rol": r['rol_autor'], "texto": r['mensaje'],
+                     "timestamp": r['created_at'].isoformat() if r['created_at'] else None} for r in msgs]
+    except Exception as e:
+        logger.warning(f"PM chat room messages error: {e}")
+        raise HTTPException(500, str(e))
+
+
+class PMChatRoomMessage(BaseModel):
+    autor_id: str = "PM-016"
+    texto: str
+
+
+@app.post("/api/pm/chat/room/{id_sala}/send")
+async def pm_chat_room_send(id_sala: int, body: PMChatRoomMessage):
+    """Fase F: Enviar mensaje a una sala."""
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(503, "DB pool no disponible")
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute("SET search_path = primitiva, compartido, public")
+            msg = await conn.fetchrow(
+                "INSERT INTO tech_chat_mensajes (id_sala, id_autor, rol_autor, mensaje) "
+                "VALUES ($1, $2, 'pm', $3) RETURNING id, created_at",
+                id_sala, body.autor_id, body.texto)
+            nombre = await conn.fetchval(
+                "SELECT nombre FROM compartido.pmo_project_managers WHERE id_pm = $1", body.autor_id)
+            return {"id": msg['id'], "timestamp": msg['created_at'].isoformat() if msg['created_at'] else None,
+                    "autor_nombre": nombre or body.autor_id}
+    except Exception as e:
+        logger.warning(f"PM chat room send error: {e}")
+        raise HTTPException(500, str(e))
+
+
+# ── PM Dashboard — Fase E (Seguimiento PMBOK Full) ─────────────────────────
+
+@app.get("/api/pm/project/{id_proyecto}/pmbok-full")
+async def pm_project_pmbok_full(id_proyecto: str):
+    """Fase E: PMBOK cockpit completo — 8 secciones en una llamada."""
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(503, "DB pool no disponible")
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute("SET search_path = primitiva, compartido, public")
+
+            # ── Proyecto base ──
+            prj = await conn.fetchrow(
+                "SELECT * FROM cartera_build WHERE id_proyecto = $1", id_proyecto)
+            if not prj:
+                raise HTTPException(404, f"Proyecto {id_proyecto} no encontrado")
+            prj_d = dict(prj)
+
+            # ── Presupuesto ──
+            pres = await conn.fetchrow(
+                "SELECT bac_total, fecha_inicio, fecha_fin FROM presupuestos "
+                "WHERE id_proyecto = $1 ORDER BY version DESC LIMIT 1", id_proyecto)
+
+            bac = float(pres['bac_total']) if pres and pres['bac_total'] else float(prj_d.get('horas_estimadas', 100)) * 110
+            fi = prj_d.get('fecha_inicio') or (pres['fecha_inicio'] if pres and pres.get('fecha_inicio') else None)
+            ff = prj_d.get('fecha_fin_plan') or (pres['fecha_fin'] if pres and pres.get('fecha_fin') else None)
+            if hasattr(fi, 'date'): fi = fi.date()
+            if hasattr(ff, 'date'): ff = ff.date()
+            today = date.today()
+            if not fi: fi = today - timedelta(days=180)
+            if not ff: ff = fi + timedelta(days=180)
+            total_days = max((ff - fi).days, 1)
+            elapsed = max(min((today - fi).days, total_days), 0)
+            pct_time = elapsed / total_days
+
+            db_avance = prj_d.get('pct_avance')
+            pct_avance = int(db_avance) / 100 if db_avance and int(db_avance) > 0 else 0
+
+            db_ac = prj_d.get('ac')
+            seed_val = int(hashlib.md5(id_proyecto.encode()).hexdigest()[:8], 16) % 100
+
+            # ── EVM ──
+            pv = round(bac * pct_time, 2)
+            ev = round(bac * pct_avance, 2)
+            ac = round(float(db_ac), 2) if db_ac and float(db_ac) > 0 else round(ev * (0.85 + seed_val / 100 * 0.3), 2)
+            cpi = round(ev / ac, 3) if ac > 0 else 1.0
+            spi = round(ev / pv, 3) if pv > 0 else 1.0
+            cv = round(ev - ac, 2)
+            sv = round(ev - pv, 2)
+            eac = round(bac / cpi, 2) if cpi > 0 else bac * 2
+            etc_val = round(eac - ac, 2)
+            vac = round(bac - eac, 2)
+            if cpi >= 1.0:
+                interp = f"Proyecto dentro de presupuesto (CPI={cpi}). Ahorro estimado: {abs(vac):,.0f}€"
+            elif cpi >= 0.9:
+                interp = f"Desviación moderada (CPI={cpi}). Sobrecostará ~{abs(vac):,.0f}€"
+            else:
+                interp = f"Sobrecostes significativos (CPI={cpi}). EAC: {eac:,.0f}€ vs BAC: {bac:,.0f}€"
+
+            evm = {"pv": pv, "ev": ev, "ac": ac, "cpi": cpi, "spi": spi,
+                   "cv": cv, "sv": sv, "eac": eac, "etc": etc_val, "vac": vac,
+                   "interpretacion": interp}
+
+            # ── EVM Curve-S (12 semanas) — SINTETICO ──
+            evm_curve = []
+            for w in range(12, 0, -1):
+                w_date = today - timedelta(weeks=w)
+                w_elapsed = max(min((w_date - fi).days, total_days), 0)
+                w_pct_time = w_elapsed / total_days
+                # Avance progresivo (sigmoid-like)
+                w_avance = pct_avance * min(1.0, w_pct_time / max(pct_time, 0.01))
+                w_pv = round(bac * w_pct_time, 0)
+                w_ev = round(bac * w_avance, 0)
+                # AC with noise
+                noise = 1.0 + (hash(f"{id_proyecto}-{w}") % 20 - 10) / 100
+                w_ac = round(w_ev / max(cpi, 0.5) * noise, 0) if w_ev > 0 else round(w_pv * 0.2, 0)
+                iso_week = w_date.isocalendar()[1]
+                evm_curve.append({"semana": f"S{iso_week}", "pv": w_pv, "ev": w_ev, "ac": w_ac})
+
+            # ── Calidad ──
+            total_tasks = await conn.fetchval(
+                "SELECT COUNT(*) FROM kanban_tareas WHERE id_proyecto = $1", id_proyecto) or 0
+            done_tasks = await conn.fetchval(
+                "SELECT COUNT(*) FROM kanban_tareas WHERE id_proyecto = $1 "
+                "AND columna IN ('Completado','Done')", id_proyecto) or 0
+            defectos_abiertos = max(0, total_tasks - done_tasks)
+            defectos_cerrados = done_tasks
+            ratio_calidad = round(done_tasks / max(total_tasks, 1) * 100, 1) if total_tasks > 0 else round(pct_avance * 85 + 10, 1)
+            tasa_retrabajo = round(max(0, 100 - ratio_calidad) * 0.3, 1)
+            # SINTETICO: top defectos
+            defect_types = ["Fallo integración API", "Error validación datos", "Timeout en carga masiva",
+                            "UI no responsive en móvil", "Pérdida de sesión LDAP", "Error cálculo fiscal",
+                            "Deadlock en transacciones", "Memory leak en batch"]
+            defectos_top = [{"id": f"DEF-{i+1:03d}", "descripcion": defect_types[(seed_val + i) % len(defect_types)],
+                             "severidad": ["Crítica", "Alta", "Media", "Baja"][(seed_val + i) % 4]}
+                            for i in range(min(5, defectos_abiertos))]
+
+            calidad = {"defectos_abiertos": defectos_abiertos, "defectos_cerrados": defectos_cerrados,
+                       "ratio_calidad": min(ratio_calidad, 100), "total_entregables": max(total_tasks, 1),
+                       "tasa_retrabajo": tasa_retrabajo, "defectos_top": defectos_top}
+
+            # ── Riesgos ──
+            risk_rows = await conn.fetch(
+                "SELECT id, descripcion, probabilidad, impacto, score, plan_mitigacion, responsable "
+                "FROM build_risks WHERE id_proyecto = $1 ORDER BY score DESC", id_proyecto)
+            if risk_rows:
+                riesgos = [{"id": r['id'][:12], "descripcion": r['descripcion'], "probabilidad": r['probabilidad'],
+                            "impacto": r['impacto'], "score": float(r['score']),
+                            "mitigacion": r['plan_mitigacion'], "owner": r['responsable'] or ''} for r in risk_rows]
+            else:
+                # SINTETICO
+                risk_templates = [
+                    ("Retraso proveedor externo", 3, 4, "Penalización contractual + seguimiento semanal"),
+                    ("Rotación personal clave", 2, 5, "Documentación cruzada + backup conocimiento"),
+                    ("Cambio regulatorio inesperado", 2, 4, "Vigilancia normativa + buffer scope"),
+                    ("Integración legacy fallida", 4, 3, "PoC temprana + plan contingencia rollback"),
+                    ("Sobrecarga equipo técnico", 3, 3, "Monitorizar carga + refuerzo externo"),
+                    ("Requisitos inestables", 4, 4, "Sprint 0 validación + change control"),
+                    ("Brecha seguridad en testing", 2, 5, "Pentest previo + checklist OWASP"),
+                ]
+                riesgos = []
+                for i, (desc, p, im, mit) in enumerate(risk_templates[:5 + seed_val % 3]):
+                    p_adj = max(1, min(5, p + (seed_val + i) % 3 - 1))
+                    im_adj = max(1, min(5, im + (seed_val + i + 2) % 3 - 1))
+                    riesgos.append({"id": f"R-{i+1:03d}", "descripcion": desc,
+                                    "probabilidad": p_adj, "impacto": im_adj,
+                                    "score": p_adj * im_adj, "mitigacion": mit,
+                                    "owner": ["Jefe Proyecto", "Arquitecto", "QA Lead", "Sponsor"][(seed_val + i) % 4]})
+                riesgos.sort(key=lambda r: -r['score'])
+
+            # ── Cronograma / Hitos ──
+            hitos_labels = [
+                (0.0, "Kick-off · Charter"), (0.15, "Análisis requisitos"),
+                (0.30, "Diseño arquitectura"), (0.50, "Desarrollo core"),
+                (0.70, "Testing integración"), (0.85, "UAT + Pre-producción"),
+                (1.0, "Go-live · Cierre"),
+            ]
+            hitos = []
+            for pct_h, nombre_h in hitos_labels:
+                fecha_h = fi + timedelta(days=int(total_days * pct_h))
+                completado = pct_avance >= pct_h
+                hitos.append({"nombre": nombre_h, "fecha_objetivo": str(fecha_h),
+                              "fecha_real": str(fecha_h) if completado else None,
+                              "dias_para": (fecha_h - today).days,
+                              "estado": "COMPLETADO" if completado else ("EN_CURSO" if abs(pct_avance - pct_h) < 0.1 else "PENDIENTE"),
+                              "responsable": prj_d.get('responsable_asignado') or ''})
+
+            # SINTETICO: camino crítico
+            critico_tareas = [
+                "Definición arquitectura", "Desarrollo módulo core", "Integración sistemas legacy",
+                "Migración datos producción", "Testing E2E", "Despliegue producción",
+            ]
+            camino_critico = []
+            for i, tarea in enumerate(critico_tareas):
+                pct_t = (i + 1) / len(critico_tareas)
+                fecha_t = fi + timedelta(days=int(total_days * pct_t))
+                holgura = 0 if i in (1, 2, 4) else (seed_val % 5 + 1) * (i + 1)
+                camino_critico.append({"tarea": tarea, "fecha_fin": str(fecha_t),
+                                       "holgura_dias": holgura, "en_critico": holgura == 0})
+
+            cronograma = {"hitos": hitos, "camino_critico": camino_critico}
+
+            # ── Imputaciones ──
+            total_horas = await conn.fetchval(
+                "SELECT COALESCE(SUM(horas), 0) FROM primitiva.horas_imputadas "
+                "WHERE id_proyecto = $1", id_proyecto)
+            total_horas = round(float(total_horas), 1)
+
+            top_imp = await conn.fetch(
+                "SELECT h.id_tecnico, s.nombre, SUM(h.horas) as total_h "
+                "FROM primitiva.horas_imputadas h "
+                "LEFT JOIN compartido.pmo_staff_skills s ON h.id_tecnico = s.id_recurso "
+                "WHERE h.id_proyecto = $1 GROUP BY h.id_tecnico, s.nombre "
+                "ORDER BY total_h DESC LIMIT 5", id_proyecto)
+
+            serie_sem = await conn.fetch(
+                "SELECT semana_iso, SUM(horas) as total "
+                "FROM primitiva.horas_imputadas WHERE id_proyecto = $1 "
+                "GROUP BY semana_iso ORDER BY semana_iso DESC LIMIT 8", id_proyecto)
+
+            horas_estimadas_proy = float(prj_d.get('horas_estimadas', 0) or 0)
+            imputaciones = {
+                "total_horas_proyecto": total_horas,
+                "horas_estimadas": horas_estimadas_proy,
+                "top_imputadores": [{"tecnico": r['nombre'] or r['id_tecnico'],
+                                      "horas": round(float(r['total_h']), 1)} for r in top_imp],
+                "serie_semanal": [{"semana": f"S{r['semana_iso']}",
+                                    "horas": round(float(r['total']), 1)} for r in serie_sem],
+            }
+
+            # ── Stakeholders — SINTETICO por silo ──
+            sth_rows = await conn.fetch(
+                "SELECT nombre, cargo, nivel_poder, nivel_interes, estrategia, rol_raci "
+                "FROM build_stakeholders WHERE id_proyecto = $1 "
+                "ORDER BY nivel_poder DESC", id_proyecto)
+            if sth_rows:
+                stakeholders = [{"nombre": r['nombre'], "rol": r['cargo'] or '',
+                                 "poder": r['nivel_poder'], "interes": r['nivel_interes'],
+                                 "estrategia": r['estrategia'] or ''} for r in sth_rows]
+            else:
+                silo = prj_d.get('perfil_requerido') or prj_d.get('skills_requeridas') or 'IT'
+                stakeholders = [
+                    {"nombre": "Director General IT", "rol": "Sponsor", "poder": 5, "interes": 3, "estrategia": "Mantener satisfecho"},
+                    {"nombre": "CIO", "rol": "Executive Sponsor", "poder": 5, "interes": 4, "estrategia": "Gestionar de cerca"},
+                    {"nombre": "Resp. Área Negocio", "rol": "Product Owner", "poder": 3, "interes": 5, "estrategia": "Gestionar de cerca"},
+                    {"nombre": "Jefe Operaciones", "rol": "Beneficiario", "poder": 4, "interes": 4, "estrategia": "Gestionar de cerca"},
+                    {"nombre": "Compliance Officer", "rol": "Auditor", "poder": 4, "interes": 2, "estrategia": "Mantener satisfecho"},
+                    {"nombre": "Arquitecto Jefe", "rol": "Technical Lead", "poder": 2, "interes": 5, "estrategia": "Mantener informado"},
+                    {"nombre": "QA Manager", "rol": "Quality Gate", "poder": 2, "interes": 4, "estrategia": "Mantener informado"},
+                    {"nombre": "Usuarios finales", "rol": "End Users", "poder": 1, "interes": 3, "estrategia": "Monitorizar"},
+                ]
+
+            # ── Nivel riesgo agregado ──
+            avg_risk = round(sum(r['score'] for r in riesgos) / max(len(riesgos), 1), 1) if riesgos else 0
+
+            return {
+                "proyecto": {
+                    "id": prj_d['id_proyecto'], "nombre": prj_d['nombre_proyecto'],
+                    "estado": prj_d.get('estado', ''), "prioridad": prj_d.get('prioridad_estrategica', ''),
+                    "bac": bac, "pct_avance": round(pct_avance * 100, 1), "pct_tiempo": round(pct_time * 100, 1),
+                    "fecha_inicio": str(fi), "fecha_fin": str(ff),
+                },
+                "evm": evm,
+                "evm_curve": evm_curve,
+                "calidad": calidad,
+                "riesgos": riesgos,
+                "cronograma": cronograma,
+                "imputaciones": imputaciones,
+                "stakeholders": stakeholders,
+                "riesgo_nivel": avg_risk,
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning(f"PM pmbok-full error: {e}")
+        raise HTTPException(500, str(e))
+
+
+# ── PM Dashboard — Fase E/F legacy (Seguimiento PMBOK + Chat) ──────────────
+
+@app.get("/api/pm/project/{id_proyecto}/pmbok")
+async def pm_project_pmbok(id_proyecto: str):
+    """A1: Seguimiento PMBOK completo de un proyecto."""
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(503, "DB pool no disponible")
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute("SET search_path = primitiva, compartido, public")
+
+            # ── Proyecto base ──
+            prj = await conn.fetchrow(
+                "SELECT * FROM cartera_build WHERE id_proyecto = $1", id_proyecto)
+            if not prj:
+                raise HTTPException(404, f"Proyecto {id_proyecto} no encontrado")
+            prj_d = dict(prj)
+
+            # ── Presupuesto (BAC) ──
+            pres = await conn.fetchrow(
+                "SELECT bac_total, total_labor, total_proveedores, total_opex, "
+                "total_capex, fecha_inicio, fecha_fin FROM presupuestos "
+                "WHERE id_proyecto = $1 ORDER BY version DESC LIMIT 1", id_proyecto)
+
+            bac = float(pres['bac_total']) if pres and pres['bac_total'] else float(prj_d.get('horas_estimadas', 100)) * 110
+            # Dates: prefer cartera_build fields, then presupuestos, then defaults
+            fecha_inicio = prj_d.get('fecha_inicio') or (pres['fecha_inicio'] if pres and pres.get('fecha_inicio') else None)
+            if not fecha_inicio:
+                fc = prj_d.get('fecha_creacion')
+                fecha_inicio = fc.date() if hasattr(fc, 'date') else (fc or datetime.now().date())
+            fecha_fin = prj_d.get('fecha_fin_plan') or (pres['fecha_fin'] if pres and pres.get('fecha_fin') else None)
+            if not fecha_fin:
+                fecha_fin = fecha_inicio + timedelta(days=180) if isinstance(fecha_inicio, date) else date.today() + timedelta(days=180)
+
+            # ── Governance scoring ──
+            gov = await conn.fetchrow(
+                "SELECT * FROM pmo_governance_scoring WHERE id_proyecto = $1", id_proyecto)
+
+            # ── EVM — SINTETICO si no hay datos reales ──
+            today = date.today()
+            if isinstance(fecha_inicio, datetime):
+                fecha_inicio = fecha_inicio.date()
+            if isinstance(fecha_fin, datetime):
+                fecha_fin = fecha_fin.date()
+            total_days = max((fecha_fin - fecha_inicio).days, 1)
+            elapsed_days = max(min((today - fecha_inicio).days, total_days), 0)
+            pct_time = elapsed_days / total_days
+
+            # Task counts (needed for calidad + avance)
+            total_tasks = await conn.fetchval(
+                "SELECT COUNT(*) FROM kanban_tareas WHERE id_proyecto = $1", id_proyecto) or 0
+            done_tasks = await conn.fetchval(
+                "SELECT COUNT(*) FROM kanban_tareas WHERE id_proyecto = $1 "
+                "AND columna IN ('Completado','Done')", id_proyecto) or 0
+
+            # Real pct_avance from cartera_build, fallback to kanban
+            db_avance = prj_d.get('pct_avance')
+            if db_avance and int(db_avance) > 0:
+                pct_avance = int(db_avance) / 100
+            else:
+                pct_avance = done_tasks / max(total_tasks, 1)
+
+            # EVM calculations — use real AC if available, else synthetic
+            pv = round(bac * pct_time, 2)
+            ev = round(bac * pct_avance, 2)
+            seed_val = int(hashlib.md5(id_proyecto.encode()).hexdigest()[:8], 16) % 100
+            db_ac = prj_d.get('ac')
+            if db_ac and float(db_ac) > 0:
+                ac = round(float(db_ac), 2)
+            else:
+                cost_factor = 0.85 + (seed_val / 100) * 0.3
+                ac = round(ev * cost_factor, 2) if ev > 0 else round(pv * 0.3, 2)
+
+            cpi = round(ev / ac, 3) if ac > 0 else 1.0
+            spi = round(ev / pv, 3) if pv > 0 else 1.0
+            cv = round(ev - ac, 2)
+            sv = round(ev - pv, 2)
+            eac = round(bac / cpi, 2) if cpi > 0 else bac * 2
+            etc_val = round(eac - ac, 2)
+            vac = round(bac - eac, 2)
+
+            if cpi >= 1.0:
+                interp = f"Proyecto dentro de presupuesto (CPI={cpi}). Ahorro estimado: {abs(vac):,.0f}€"
+            elif cpi >= 0.9:
+                interp = f"Proyecto con desviación moderada (CPI={cpi}). Sobrecostará ~{abs(vac):,.0f}€"
+            else:
+                interp = f"Proyecto con sobrecostes significativos (CPI={cpi}). EAC: {eac:,.0f}€ vs BAC: {bac:,.0f}€"
+
+            evm = {
+                "pv": pv, "ev": ev, "ac": ac,
+                "cpi": cpi, "spi": spi, "cv": cv, "sv": sv,
+                "eac": eac, "etc": etc_val, "vac": vac,
+                "interpretacion": interp,
+            }
+
+            # ── Calidad (build_quality_gates) ──
+            qg_total = await conn.fetchval(
+                "SELECT COUNT(*) FROM build_quality_gates WHERE id_proyecto = $1", id_proyecto) or 0
+            qg_passed = await conn.fetchval(
+                "SELECT COUNT(*) FROM build_quality_gates WHERE id_proyecto = $1 "
+                "AND estado IN ('APROBADO','aprobado','PASSED','passed')", id_proyecto) or 0
+            # SINTETICO: defectos y retrabajo
+            defectos = max(0, total_tasks - done_tasks)
+            ratio_calidad = round(qg_passed / max(qg_total, 1) * 100, 1) if qg_total > 0 else round(pct_avance * 85 + 10, 1)
+            tasa_retrabajo = round(max(0, 100 - ratio_calidad) * 0.3, 1)
+
+            calidad = {
+                "defectos_abiertos": defectos,
+                "total_entregables": max(qg_total, total_tasks),
+                "ratio_calidad": min(ratio_calidad, 100),
+                "tasa_retrabajo": tasa_retrabajo,
+            }
+
+            # ── Riesgos (build_risks) ──
+            risk_rows = await conn.fetch(
+                "SELECT id, descripcion, probabilidad, impacto, score, "
+                "plan_mitigacion, estado FROM build_risks WHERE id_proyecto = $1 "
+                "ORDER BY score DESC", id_proyecto)
+            if risk_rows:
+                riesgos = [dict(r) for r in risk_rows]
+            else:
+                # SINTETICO: riesgos placeholder
+                riesgos = [
+                    {"id": "R-SYN-001", "descripcion": "Retraso en entrega de proveedor externo",
+                     "probabilidad": 3, "impacto": 4, "score": 12,
+                     "plan_mitigacion": "Seguimiento semanal con proveedor, penalización contractual",
+                     "estado": "ABIERTO"},
+                    {"id": "R-SYN-002", "descripcion": "Rotación de personal clave del equipo",
+                     "probabilidad": 2, "impacto": 5, "score": 10,
+                     "plan_mitigacion": "Documentación cruzada, backup de conocimiento",
+                     "estado": "ABIERTO"},
+                ]
+
+            # ── Hitos (build_sprints como proxy) ──
+            sprint_rows = await conn.fetch(
+                "SELECT id, nombre, fecha_inicio, fecha_fin, estado, "
+                "story_points_planificados, story_points_completados "
+                "FROM build_sprints WHERE id_proyecto = $1 ORDER BY sprint_number", id_proyecto)
+            if sprint_rows:
+                hitos = []
+                for s in sprint_rows:
+                    dias_para = (s['fecha_fin'] - today).days if s['fecha_fin'] else None
+                    hitos.append({
+                        "nombre": s['nombre'] or s['id'],
+                        "fecha_objetivo": str(s['fecha_fin']) if s['fecha_fin'] else None,
+                        "fecha_real": str(s['fecha_fin']) if s['estado'] in ('DONE','COMPLETADO','completado') else None,
+                        "dias_para": dias_para,
+                        "estado": s['estado'],
+                        "responsable": prj_d.get('responsable_asignado', ''),
+                    })
+            else:
+                # SINTETICO: hitos basados en timeline
+                hitos = []
+                for i, (pct_h, nombre_h) in enumerate([
+                    (0.25, "Kick-off + Análisis"), (0.50, "Diseño completado"),
+                    (0.75, "Desarrollo + Testing"), (1.0, "Go-live")
+                ]):
+                    fecha_h = fecha_inicio + timedelta(days=int(total_days * pct_h))
+                    hitos.append({
+                        "nombre": nombre_h, "fecha_objetivo": str(fecha_h),
+                        "fecha_real": str(fecha_h) if pct_time >= pct_h else None,
+                        "dias_para": (fecha_h - today).days,
+                        "estado": "COMPLETADO" if pct_time >= pct_h else "PENDIENTE",
+                        "responsable": prj_d.get('responsable_asignado', ''),
+                    })
+
+            # ── Imputaciones (horas_imputadas si existe, fallback kanban) ──
+            has_imput = await conn.fetchval(
+                "SELECT EXISTS(SELECT 1 FROM information_schema.tables "
+                "WHERE table_name='horas_imputadas' AND table_schema='primitiva')")
+            if has_imput:
+                # Real data from horas_imputadas
+                week_data = await conn.fetch(
+                    "SELECT h.id_tecnico, s.nombre, SUM(h.horas) as total_h "
+                    "FROM primitiva.horas_imputadas h "
+                    "LEFT JOIN compartido.pmo_staff_skills s ON h.id_tecnico = s.id_recurso "
+                    "WHERE h.id_proyecto = $1 AND h.fecha >= CURRENT_DATE - INTERVAL '7 days' "
+                    "GROUP BY h.id_tecnico, s.nombre ORDER BY total_h DESC", id_proyecto)
+                semana_actual = [{"tecnico_id": r['id_tecnico'], "nombre": r['nombre'] or r['id_tecnico'],
+                                  "horas": round(float(r['total_h']), 1)} for r in week_data]
+
+                weeks_summary = await conn.fetch(
+                    "SELECT semana_iso, SUM(horas) as total "
+                    "FROM primitiva.horas_imputadas WHERE id_proyecto = $1 "
+                    "GROUP BY semana_iso ORDER BY semana_iso DESC LIMIT 4", id_proyecto)
+                ultimas_4 = [{"semana": f"S{r['semana_iso']}", "total_horas": round(float(r['total']), 1)}
+                             for r in weeks_summary]
+
+                top3_rows = await conn.fetch(
+                    "SELECT h.id_tecnico, s.nombre, SUM(h.horas) as total_h "
+                    "FROM primitiva.horas_imputadas h "
+                    "LEFT JOIN compartido.pmo_staff_skills s ON h.id_tecnico = s.id_recurso "
+                    "WHERE h.id_proyecto = $1 "
+                    "GROUP BY h.id_tecnico, s.nombre ORDER BY total_h DESC LIMIT 3", id_proyecto)
+                top3 = [{"nombre": r['nombre'] or r['id_tecnico'],
+                         "horas_acumuladas": round(float(r['total_h']), 1)} for r in top3_rows]
+            else:
+                # Fallback: kanban horas
+                week_tasks = await conn.fetch(
+                    "SELECT k.id_tecnico, s.nombre, k.horas_reales "
+                    "FROM kanban_tareas k LEFT JOIN compartido.pmo_staff_skills s "
+                    "ON k.id_tecnico = s.id_recurso "
+                    "WHERE k.id_proyecto = $1 AND k.horas_reales > 0 "
+                    "ORDER BY k.horas_reales DESC", id_proyecto)
+                semana_actual = [{"tecnico_id": r['id_tecnico'], "nombre": r['nombre'] or r['id_tecnico'],
+                                  "horas": float(r['horas_reales'])} for r in week_tasks[:10]]
+                top3 = [{"nombre": r['nombre'] or r['id_tecnico'],
+                         "horas_acumuladas": float(r['horas_reales'])} for r in week_tasks[:3]]
+                total_horas = sum(float(r['horas_reales'] or 0) for r in week_tasks)
+                ultimas_4 = [{"semana": f"S{i}", "total_horas": round(total_horas / 4 * (0.8 + i * 0.1), 1)}
+                             for i in range(1, 5)]
+
+            imputaciones = {
+                "semana_actual": semana_actual,
+                "ultimas_4_semanas": ultimas_4,
+                "top3_tecnicos": top3,
+            }
+
+            # ── Stakeholders ──
+            sth_rows = await conn.fetch(
+                "SELECT nombre, cargo, estrategia, rol_raci, frecuencia_comunicacion "
+                "FROM build_stakeholders WHERE id_proyecto = $1 ORDER BY nivel_poder DESC", id_proyecto)
+            if sth_rows:
+                stakeholders = [{"nombre": r['nombre'], "rol": r['cargo'] or r['rol_raci'],
+                                 "ultima_comunicacion": str(today - timedelta(days=seed_val % 14)),
+                                 "proxima_reunion": str(today + timedelta(days=7 if r['frecuencia_comunicacion'] == 'Semanal' else 14))}
+                                for r in sth_rows]
+            else:
+                # SINTETICO
+                stakeholders = [
+                    {"nombre": "Director Área", "rol": "Sponsor",
+                     "ultima_comunicacion": str(today - timedelta(days=3)),
+                     "proxima_reunion": str(today + timedelta(days=7))},
+                    {"nombre": "Responsable Negocio", "rol": "Product Owner",
+                     "ultima_comunicacion": str(today - timedelta(days=1)),
+                     "proxima_reunion": str(today + timedelta(days=3))},
+                ]
+
+            return {
+                "proyecto": {
+                    "id": prj_d['id_proyecto'], "nombre": prj_d['nombre_proyecto'],
+                    "estado": prj_d.get('estado', ''), "prioridad": prj_d.get('prioridad_estrategica', ''),
+                    "bac": bac, "fecha_inicio": str(fecha_inicio), "fecha_fin_plan": str(fecha_fin),
+                    "pct_avance": round(pct_avance * 100, 1), "pct_tiempo": round(pct_time * 100, 1),
+                },
+                "evm": evm,
+                "calidad": calidad,
+                "riesgos": riesgos,
+                "hitos": hitos,
+                "imputaciones": imputaciones,
+                "stakeholders": stakeholders,
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning(f"PM pmbok error: {e}")
+        raise HTTPException(500, str(e))
+
+
+@app.get("/api/pm/project/{id_proyecto}/team")
+async def pm_project_team(id_proyecto: str):
+    """A2: Equipo asignado a un proyecto específico."""
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(503, "DB pool no disponible")
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute("SET search_path = primitiva, compartido, public")
+
+            # Verificar que el proyecto existe
+            prj = await conn.fetchval(
+                "SELECT id_proyecto FROM cartera_build WHERE id_proyecto = $1", id_proyecto)
+            if not prj:
+                raise HTTPException(404, f"Proyecto {id_proyecto} no encontrado")
+
+            # Técnicos en kanban_tareas de este proyecto
+            rows = await conn.fetch("""
+                SELECT DISTINCT k.id_tecnico,
+                       s.nombre, s.silo_especialidad AS silo, s.nivel,
+                       COUNT(*) FILTER (WHERE k.columna NOT IN ('Completado','Done','Backlog')) AS tareas_activas,
+                       COALESCE(SUM(k.horas_reales), 0) AS horas_imputadas
+                FROM kanban_tareas k
+                LEFT JOIN compartido.pmo_staff_skills s ON k.id_tecnico = s.id_recurso
+                WHERE k.id_proyecto = $1 AND k.id_tecnico IS NOT NULL
+                GROUP BY k.id_tecnico, s.nombre, s.silo_especialidad, s.nivel
+                ORDER BY tareas_activas DESC, horas_imputadas DESC
+            """, id_proyecto)
+
+            result = []
+            for r in rows:
+                # Ocupación total: contar tareas activas en TODOS sus proyectos
+                total_active = await conn.fetchval(
+                    "SELECT COUNT(*) FROM kanban_tareas "
+                    "WHERE id_tecnico = $1 AND columna NOT IN ('Completado','Done','Backlog')",
+                    r['id_tecnico']) or 0
+                ocu_pct = min(total_active * 20, 100)  # ~20% por tarea activa
+                result.append({
+                    "tecnico_id": r['id_tecnico'],
+                    "nombre": r['nombre'] or r['id_tecnico'],
+                    "silo": r['silo'] or '',
+                    "nivel": r['nivel'] or '',
+                    "tareas_activas_proyecto": int(r['tareas_activas']),
+                    "horas_imputadas_mes": round(float(r['horas_imputadas']), 1),
+                    "ocupacion_total_pct": ocu_pct,
+                })
+            return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning(f"PM project team error: {e}")
+        raise HTTPException(500, str(e))
+
+
+@app.get("/api/pm/chat/{id_proyecto}/messages")
+async def pm_chat_messages(id_proyecto: str):
+    """A3: Histórico del chat war-room del proyecto."""
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(503, "DB pool no disponible")
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute("SET search_path = primitiva, compartido, public")
+
+            # Buscar sala existente
+            sala = await conn.fetchrow(
+                "SELECT id, nombre FROM tech_chat_salas "
+                "WHERE id_referencia = $1 AND activa = true LIMIT 1", id_proyecto)
+
+            if not sala:
+                # Auto-crear sala on first access
+                sala_nombre = f"{id_proyecto} - War Room PM"
+                sala = await conn.fetchrow(
+                    "INSERT INTO tech_chat_salas (tipo, id_referencia, nombre, activa) "
+                    "VALUES ('build', $1, $2, true) RETURNING id, nombre",
+                    id_proyecto, sala_nombre)
+
+            sala_id = sala['id']
+
+            # Obtener mensajes
+            msgs = await conn.fetch(
+                "SELECT m.id, m.id_autor, m.rol_autor, m.mensaje, m.created_at, "
+                "COALESCE(pm.nombre, s.nombre, m.id_autor) AS autor_nombre "
+                "FROM tech_chat_mensajes m "
+                "LEFT JOIN compartido.pmo_project_managers pm ON m.id_autor = pm.id_pm "
+                "LEFT JOIN compartido.pmo_staff_skills s ON m.id_autor = s.id_recurso "
+                "WHERE m.id_sala = $1 ORDER BY m.created_at ASC LIMIT 100", sala_id)
+
+            return [
+                {
+                    "id": r['id'], "autor_nombre": r['autor_nombre'],
+                    "autor_rol": r['rol_autor'], "texto": r['mensaje'],
+                    "created_at": r['created_at'].isoformat() if r['created_at'] else None,
+                }
+                for r in msgs
+            ]
+    except Exception as e:
+        logger.warning(f"PM chat messages error: {e}")
+        raise HTTPException(500, str(e))
+
+
+class PMChatMessage(BaseModel):
+    texto: str
+
+
+@app.post("/api/pm/chat/{id_proyecto}/send")
+async def pm_chat_send(id_proyecto: str, body: PMChatMessage):
+    """A4: Enviar mensaje al chat war-room del proyecto."""
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(503, "DB pool no disponible")
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute("SET search_path = primitiva, compartido, public")
+
+            # Buscar sala (o crearla)
+            sala = await conn.fetchrow(
+                "SELECT id FROM tech_chat_salas "
+                "WHERE id_referencia = $1 AND activa = true LIMIT 1", id_proyecto)
+            if not sala:
+                sala = await conn.fetchrow(
+                    "INSERT INTO tech_chat_salas (tipo, id_referencia, nombre, activa) "
+                    "VALUES ('build', $1, $2, true) RETURNING id",
+                    id_proyecto, f"{id_proyecto} - War Room PM")
+            sala_id = sala['id']
+
+            # Insertar mensaje (autor = PM-016 por defecto, rol = pm)
+            autor_id = "PM-016"  # TODO: extraer de auth/session
+            msg = await conn.fetchrow(
+                "INSERT INTO tech_chat_mensajes (id_sala, id_autor, rol_autor, mensaje) "
+                "VALUES ($1, $2, 'pm', $3) RETURNING id, created_at",
+                sala_id, autor_id, body.texto)
+
+            # Nombre del autor
+            pm_nombre = await conn.fetchval(
+                "SELECT nombre FROM compartido.pmo_project_managers WHERE id_pm = $1", autor_id)
+
+            return {
+                "id": msg['id'], "autor_nombre": pm_nombre or autor_id,
+                "autor_rol": "pm", "texto": body.texto,
+                "created_at": msg['created_at'].isoformat() if msg['created_at'] else None,
+            }
+    except Exception as e:
+        logger.warning(f"PM chat send error: {e}")
+        raise HTTPException(500, str(e))
 
 
 # ── War Room Cognitivo (Sub-App) ───────────────────────────────────────────
