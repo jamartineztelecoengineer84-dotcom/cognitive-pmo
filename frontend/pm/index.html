@@ -46,8 +46,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
 .tb.a::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:2px;border-radius:2px 2px 0 0}
 .tb[data-tab="0"].a::after{background:var(--acc-bl)}
 .tb[data-tab="1"].a::after{background:var(--acc-gn)}
-.tb[data-tab="2"].a::after{background:var(--acc-pu)}
-.tb[data-tab="3"].a::after{background:var(--acc-or)}
+.tb[data-tab="2"].a::after{background:var(--acc-cy)}
+.tb[data-tab="3"].a::after{background:var(--acc-pu)}
+.tb[data-tab="4"].a::after{background:var(--acc-or)}
 .tb svg{width:16px;height:16px}
 .cnt{padding:18px 22px;max-width:1440px;margin:0 auto}
 .tp{display:none}.tp.a{display:block;animation:fadeIn .25s ease}
@@ -247,6 +248,41 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
 .ficha-content{max-width:1200px;margin:0 auto;padding:20px 24px}
 .ficha-panel{display:none}.ficha-panel.active{display:block;animation:fadeIn .2s ease}
 
+/* ── Gantt ── */
+:root{--gantt-row-h:28px;--gantt-day-w:8px}
+.gantt-wrap{display:flex;height:calc(100vh - 200px);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.gantt-toolbar{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--border);background:var(--bg2);flex-wrap:wrap}
+.gantt-btn{background:var(--bg-el);color:var(--tx2);border:1px solid var(--border);padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit}
+.gantt-btn:hover{color:var(--tx);border-color:var(--acc-bl)}
+.gantt-zoom{display:flex;gap:2px;background:var(--bg-el);border-radius:6px;padding:2px}
+.gantt-zoom-btn{padding:3px 10px;border:none;background:none;color:var(--tx2);font-size:10px;font-weight:600;cursor:pointer;border-radius:4px}
+.gantt-zoom-btn.active{background:var(--acc-cy);color:#fff}
+.gantt-left{width:35%;min-width:280px;background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;resize:horizontal}
+.gantt-right{flex:1;overflow:auto;position:relative;background:var(--bg)}
+.gantt-tl-hdr{position:sticky;top:0;z-index:1;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;min-height:36px}
+.gantt-today{position:absolute;top:0;bottom:0;width:0;border-left:2px dashed var(--acc-rd);z-index:2;pointer-events:none}
+
+/* ── Gantt edit modal ── */
+.gantt-edit-overlay{display:none;position:fixed;inset:0;z-index:350;background:rgba(13,17,23,.92);align-items:center;justify-content:center}
+.gantt-edit-overlay.open{display:flex}
+.gantt-edit-modal{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;width:480px;max-height:85vh;overflow-y:auto;padding:24px;position:relative;box-shadow:0 20px 60px var(--shd-lg)}
+.gantt-edit-modal label{display:block;font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;margin-bottom:3px;margin-top:10px}
+.gantt-edit-modal input,.gantt-edit-modal select,.gantt-edit-modal textarea{width:100%;background:var(--bg-el);color:var(--tx);border:1px solid var(--border);padding:7px 10px;border-radius:6px;font-size:12px;font-family:inherit}
+.gantt-edit-modal textarea{min-height:60px;resize:vertical}
+.gantt-edit-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.gantt-edit-btns{display:flex;gap:8px;margin-top:16px;justify-content:flex-end}
+.gantt-edit-btns button{padding:8px 20px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:none}
+.gantt-save{background:var(--acc-bl);color:#fff}
+.gantt-cancel{background:var(--bg-el);color:var(--tx2);border:1px solid var(--border) !important}
+.gantt-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--acc-gn);color:#fff;padding:10px 20px;border-radius:8px;font-size:12px;font-weight:600;z-index:400;display:none;animation:fadeIn .2s}
+
+/* ── Gantt tree + bars ── */
+.gantt-tree-prj{padding:0 10px;height:var(--gantt-row-h);display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;border-bottom:1px solid var(--border);background:var(--bg-el);cursor:pointer}
+.gantt-tree-prj:hover{background:var(--bg-l2)}
+.gantt-tree-task{padding:0 10px 0 24px;height:var(--gantt-row-h);display:flex;align-items:center;gap:6px;font-size:10px;border-bottom:1px solid rgba(48,54,61,.3);color:var(--tx2)}
+.gantt-tree-task:hover{background:rgba(88,166,255,.03)}
+.gantt-color-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+
 /* ── Responsive ── */
 @media(max-width:768px){
   .prj-grid{grid-template-columns:1fr}
@@ -287,10 +323,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
     EQUIPO
   </button>
   <button class="tb" data-tab="2" onclick="switchTab(2)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><rect x="7" y="8" width="4" height="2" rx="1"/><rect x="9" y="12" width="6" height="2" rx="1"/><rect x="6" y="16" width="8" height="2" rx="1"/></svg>
+    GANTT
+  </button>
+  <button class="tb" data-tab="3" onclick="switchTab(3)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
     SEGUIMIENTO PMBOK
   </button>
-  <button class="tb" data-tab="3" onclick="switchTab(3)">
+  <button class="tb" data-tab="4" onclick="switchTab(4)">
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M2 3h12v8H6l-3 2.5V11H2z" stroke-linejoin="round"/><circle cx="5.5" cy="7" r=".7" fill="currentColor" stroke="none"/><circle cx="8" cy="7" r=".7" fill="currentColor" stroke="none"/><circle cx="10.5" cy="7" r=".7" fill="currentColor" stroke="none"/></svg>
     CHAT
   </button>
@@ -406,8 +446,45 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
   <div class="fkan-toast" id="fkan-toast">Cambio NO persistido — edición disponible en v4</div>
 </div>
 
-<!-- ── TAB 2: SEGUIMIENTO PMBOK ── -->
+<!-- ── TAB 2: GANTT ── -->
 <div class="tp" id="tab-2">
+  <div class="gantt-toolbar" id="gantt-toolbar">
+    <button class="gantt-btn" onclick="ganttScrollToday()">Hoy</button>
+    <button class="gantt-btn" onclick="ganttScroll(-200)">«</button>
+    <button class="gantt-btn" onclick="ganttScroll(200)">»</button>
+    <div class="gantt-zoom">
+      <button class="gantt-zoom-btn" data-gz="dia" onclick="setGanttZoom('dia')">Día</button>
+      <button class="gantt-zoom-btn" data-gz="semana" onclick="setGanttZoom('semana')">Semana</button>
+      <button class="gantt-zoom-btn active" data-gz="mes" onclick="setGanttZoom('mes')">Mes</button>
+    </div>
+    <span id="gantt-stats" style="font-size:10px;color:var(--tx3)"></span>
+    <div style="flex:1"></div>
+    <select id="gantt-prj-filter" onchange="renderGantt()" style="background:var(--bg-el);color:var(--tx);border:1px solid var(--border);padding:4px 10px;border-radius:6px;font-size:11px;font-family:inherit">
+      <option value="">Todos los proyectos</option>
+    </select>
+  </div>
+  <div class="gantt-wrap">
+    <div class="gantt-left" id="gantt-left">
+      <div style="padding:8px 14px;border-bottom:1px solid var(--border);font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;height:36px;display:flex;align-items:center">Tareas</div>
+      <div id="gantt-tree"></div>
+    </div>
+    <div class="gantt-right" id="gantt-right">
+      <div class="gantt-tl-hdr" id="gantt-hdr"></div>
+      <div id="gantt-canvas" style="position:relative"></div>
+    </div>
+  </div>
+  <div id="gantt-tooltip" style="display:none;position:fixed;z-index:350;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:10px;box-shadow:0 4px 16px var(--shd-lg);max-width:280px;pointer-events:none"></div>
+  <div class="gantt-edit-overlay" id="gantt-edit-overlay" onclick="if(event.target===this)closeGanttEdit()">
+    <div class="gantt-edit-modal">
+      <button onclick="closeGanttEdit()" style="position:absolute;top:12px;right:16px;background:none;border:none;color:var(--tx2);font-size:18px;cursor:pointer">✕</button>
+      <div id="gantt-edit-body"></div>
+    </div>
+  </div>
+  <div class="gantt-toast" id="gantt-toast-ok">Tarea actualizada</div>
+</div>
+
+<!-- ── TAB 3: SEGUIMIENTO PMBOK ── -->
+<div class="tp" id="tab-3">
   <!-- Selector proyecto + mini KPIs -->
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
     <select id="pmbok-prj-select" onchange="loadPmbokFull(this.value)" style="background:var(--bg-el);color:var(--tx);border:1px solid var(--border);padding:8px 14px;border-radius:8px;font-size:13px;font-family:inherit;min-width:320px"></select>
@@ -432,8 +509,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
   </div>
 </div>
 
-<!-- ── TAB 3: CHAT ── -->
-<div class="tp" id="tab-3">
+<!-- ── TAB 4: CHAT ── -->
+<div class="tp" id="tab-4">
   <div style="display:flex;height:calc(100vh - 130px);gap:0;border:1px solid var(--border);border-radius:12px;overflow:hidden">
     <!-- Sidebar salas -->
     <div style="width:320px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column">
@@ -497,9 +574,10 @@ function switchTab(n){
   localStorage.setItem('pm-active-tab', n);
   closeDrawer();
   if(n === 1 && ALL_TEAM_PM.length === 0) loadTeam();
-  if(n === 2) initPmbokSelector();
-  if(n === 3 && chatRooms.length === 0) loadChatRooms();
-  if(n !== 3 && chatPollTimer){ clearInterval(chatPollTimer); chatPollTimer = null; }
+  if(n === 2) loadGantt();
+  if(n === 3) initPmbokSelector();
+  if(n === 4 && chatRooms.length === 0) loadChatRooms();
+  if(n !== 4 && chatPollTimer){ clearInterval(chatPollTimer); chatPollTimer = null; }
 }
 
 // ── API fetch (no auth for dev) ──
@@ -738,7 +816,7 @@ async function openProjectModal(idEnc){
 }
 
 function closeModal(){ document.getElementById('modal-overlay').classList.remove('show'); }
-document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeFicha(); closeModal(); } });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeGanttEdit(); closeFicha(); closeModal(); } });
 
 // ══════════════════════════════════════════════
 // TAB 1: EQUIPO
@@ -1321,6 +1399,147 @@ async function sendChatMsg(){
   } catch(e){ console.warn('Send error:', e); input.value = texto; }
 }
 
+// ── Gantt edit modal ──
+let ganttEditTid = null;
+
+function openGanttEdit(tid){
+  const t = ganttData?.tareas?.find(x=>x.id===tid);
+  if(!t) return;
+  ganttEditTid = tid;
+
+  const columnas = ['Backlog','Análisis','En Progreso','Code Review','Testing','Despliegue','Bloqueado','Completado'];
+  const prioridades = ['Crítica','Alta','Media','Baja'];
+  const pool = ganttData?.tecnicos_pool || [];
+
+  document.getElementById('gantt-edit-body').innerHTML = `
+    <label style="margin-top:0">Título</label>
+    <input type="text" id="ge-titulo" value="${esc(t.titulo)}">
+
+    <label>Proyecto</label>
+    <div style="background:var(--bg-el);padding:7px 10px;border-radius:6px;font-size:12px;color:var(--tx2)">${esc(t.id_proyecto)}</div>
+
+    <div class="gantt-edit-row">
+      <div>
+        <label>Técnico</label>
+        <select id="ge-tecnico">
+          <option value="">— Sin asignar —</option>
+          ${pool.map(p=>`<option value="${p.id}" ${p.id===t.id_tecnico?'selected':''}>${esc(p.nombre)} (${esc(p.skill)})</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label>Columna</label>
+        <select id="ge-columna">
+          ${columnas.map(c=>`<option ${c===t.columna?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+
+    <div class="gantt-edit-row">
+      <div>
+        <label>Prioridad</label>
+        <select id="ge-prioridad">
+          ${prioridades.map(p=>`<option ${p===t.prioridad?'selected':''}>${p}</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label>Horas estimadas</label>
+        <input type="number" id="ge-horas" value="${t.horas_estimadas}" min="0.5" step="0.5">
+      </div>
+    </div>
+
+    <div class="gantt-edit-row">
+      <div>
+        <label>% Completado</label>
+        <input type="number" id="ge-pct" value="${t.pct_completado}" min="0" max="100" step="5">
+      </div>
+      <div></div>
+    </div>
+
+    <div class="gantt-edit-row">
+      <div>
+        <label>Fecha inicio</label>
+        <input type="date" id="ge-inicio" value="${t.inicio}">
+      </div>
+      <div>
+        <label>Fecha fin</label>
+        <input type="date" id="ge-fin" value="${t.fin}">
+      </div>
+    </div>
+
+    ${(t.historial && t.historial.length) ? `<details style="margin-top:12px;border-top:1px solid var(--border);padding-top:8px">
+      <summary style="font-size:10px;font-weight:700;color:var(--tx3);cursor:pointer">Historial (${t.historial.length})</summary>
+      <div style="margin-top:6px;max-height:120px;overflow-y:auto">${t.historial.slice().reverse().map(h => {
+        const ts = h.ts ? new Date(h.ts).toLocaleString('es-ES',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
+        const keys = Object.keys(h.changes||{}).filter(k=>k!=='gantt').join(', ');
+        const ganttKeys = h.changes?.gantt ? Object.keys(h.changes.gantt).map(k=>'gantt.'+k).join(', ') : '';
+        const allKeys = [keys, ganttKeys].filter(Boolean).join(', ');
+        return `<div style="font-size:9px;padding:3px 0;border-bottom:1px solid rgba(48,54,61,.3);color:var(--tx2)"><span style="font-family:'JetBrains Mono',monospace;color:var(--tx3)">${ts}</span> — ${allKeys||'sin detalle'}</div>`;
+      }).join('')}</div>
+    </details>` : ''}
+    <div class="gantt-edit-btns">
+      <button class="gantt-cancel" onclick="closeGanttEdit()">Cancelar</button>
+      <button class="gantt-save" onclick="saveGanttEdit()">Guardar</button>
+    </div>
+  `;
+  document.getElementById('gantt-edit-overlay').classList.add('open');
+}
+
+function closeGanttEdit(){
+  document.getElementById('gantt-edit-overlay').classList.remove('open');
+  ganttEditTid = null;
+}
+
+async function saveGanttEdit(){
+  if(!ganttEditTid) return;
+  const titulo = document.getElementById('ge-titulo').value.trim();
+  const id_tecnico = document.getElementById('ge-tecnico').value;
+  const columna = document.getElementById('ge-columna').value;
+  const prioridad = document.getElementById('ge-prioridad').value;
+  const horas = parseFloat(document.getElementById('ge-horas').value);
+  const pct = parseInt(document.getElementById('ge-pct').value);
+  const inicio = document.getElementById('ge-inicio').value;
+  const fin = document.getElementById('ge-fin').value;
+
+  // Validation
+  if(!titulo){ alert('Título requerido'); return; }
+  if(horas <= 0){ alert('Horas debe ser > 0'); return; }
+  if(pct < 0 || pct > 100){ alert('% debe ser 0-100'); return; }
+  if(fin < inicio){ alert('Fecha fin debe ser >= inicio'); return; }
+
+  const body = {
+    titulo, id_tecnico: id_tecnico || null, columna, prioridad,
+    horas_estimadas: horas,
+    gantt: { start: inicio, end: fin, pct: pct }
+  };
+
+  try {
+    const resp = await fetch(API + `/api/pm/gantt/tarea/${encodeURIComponent(ganttEditTid)}`, {
+      method: 'PATCH', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    if(resp.ok){
+      // Update local cache
+      const t = ganttData.tareas.find(x=>x.id===ganttEditTid);
+      if(t){
+        t.titulo = titulo; t.id_tecnico = id_tecnico;
+        t.tecnico_nombre = (ganttData.tecnicos_pool.find(p=>p.id===id_tecnico)||{}).nombre || id_tecnico;
+        t.columna = columna; t.prioridad = prioridad;
+        t.horas_estimadas = horas; t.pct_completado = pct;
+        t.inicio = inicio; t.fin = fin; t.fuente_fechas = 'stored';
+      }
+      closeGanttEdit();
+      renderGantt();
+      // Toast
+      const toast = document.getElementById('gantt-toast-ok');
+      toast.style.display = 'block';
+      setTimeout(()=>{toast.style.display='none'},2500);
+    } else {
+      const err = await resp.json().catch(()=>({}));
+      alert('Error: ' + (err.detail || resp.status));
+    }
+  } catch(e){ alert('Error de conexión'); console.warn(e); }
+}
+
 // ══════════════════════════════════════════════
 // FICHA TAB 2: TAREAS KANBAN
 // ══════════════════════════════════════════════
@@ -1624,8 +1843,294 @@ function renderFichaSkills(d){
     </div>`;
 }
 
+// ══════════════════════════════════════════════
+// TAB 2: GANTT CHART
+// ══════════════════════════════════════════════
+let ganttData = null;
+let ganttZoom = 'mes';
+const GANTT_DAY_W = {dia:16, semana:8, mes:4};
+const ROW_H = 28;
+const HDR_H = 36;
+
+function setGanttZoom(z){
+  ganttZoom = z;
+  document.querySelectorAll('.gantt-zoom-btn').forEach(b=>b.classList.remove('active'));
+  const btn = document.querySelector(`.gantt-zoom-btn[data-gz="${z}"]`);
+  if(btn) btn.classList.add('active');
+  if(ganttData) renderGantt();
+}
+
+async function loadGantt(){
+  if(ganttData) { renderGantt(); return; }
+  document.getElementById('gantt-tree').innerHTML='<div style="padding:20px;text-align:center;color:var(--tx3)">Cargando...</div>';
+  const d = await apiFetch('/api/pm/gantt?pm_id=PM-016');
+  if(!d){ document.getElementById('gantt-tree').innerHTML='<div style="color:var(--acc-rd);padding:20px">Error</div>'; return; }
+  ganttData = d;
+  // Populate filter
+  const sel = document.getElementById('gantt-prj-filter');
+  sel.innerHTML = '<option value="">Todos los proyectos</option>' +
+    d.proyectos.map(p=>`<option value="${p.id}">${esc(p.id.split(' ')[0])} — ${esc(p.nombre).substring(0,30)}</option>`).join('');
+  renderGantt();
+}
+
+function renderGantt(){
+  if(!ganttData) return;
+  const filter = document.getElementById('gantt-prj-filter').value;
+  const dayW = GANTT_DAY_W[ganttZoom];
+
+  // Filter tasks
+  let tareas = ganttData.tareas;
+  let proyectos = ganttData.proyectos;
+  if(filter){
+    tareas = tareas.filter(t=>t.id_proyecto===filter);
+    proyectos = proyectos.filter(p=>p.id===filter);
+  }
+
+  // Date range
+  const allDates = tareas.flatMap(t=>[t.inicio, t.fin]);
+  if(!allDates.length){ document.getElementById('gantt-tree').innerHTML='<div style="padding:20px;color:var(--tx3)">Sin tareas</div>'; return; }
+  const minD = new Date(Math.min(...allDates.map(d=>new Date(d).getTime())) - 7*864e5);
+  const maxD = new Date(Math.max(...allDates.map(d=>new Date(d).getTime())) + 14*864e5);
+  const totalDays = Math.ceil((maxD - minD) / 864e5);
+  const totalW = totalDays * dayW;
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  const dayOf = d => Math.floor((new Date(d) - minD) / 864e5);
+
+  // Stats
+  document.getElementById('gantt-stats').textContent = `${tareas.length} tareas · ${proyectos.length} proyectos`;
+
+  // Build ordered rows: project headers + tasks
+  const rows = [];
+  const prjMap = {};
+  proyectos.forEach(p=>{ prjMap[p.id] = p; });
+  const prjOrder = proyectos.map(p=>p.id);
+  prjOrder.forEach(pid => {
+    const prjTasks = tareas.filter(t=>t.id_proyecto===pid);
+    if(!prjTasks.length) return;
+    rows.push({type:'project', id:pid, data:prjMap[pid], n:prjTasks.length});
+    prjTasks.forEach(t=>rows.push({type:'task', data:t, color:prjMap[pid]?.color||'#58a6ff'}));
+  });
+
+  // ── Left panel: tree ──
+  let treeHtml = '';
+  rows.forEach(r => {
+    if(r.type==='project'){
+      treeHtml += `<div class="gantt-tree-prj"><div class="gantt-color-dot" style="background:${r.data.color}"></div>${esc(r.data.nombre).substring(0,28)} <span style="color:var(--tx3);font-weight:400;font-size:9px">(${r.n})</span></div>`;
+    } else {
+      const t = r.data;
+      treeHtml += `<div class="gantt-tree-task"><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.titulo).substring(0,30)}</span><span style="font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--tx3);flex-shrink:0">${t.horas_estimadas}h</span></div>`;
+    }
+  });
+  document.getElementById('gantt-tree').innerHTML = treeHtml;
+
+  // ── Right panel: header + SVG ──
+  // Header: months
+  let hdrHtml = '';
+  const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  let curMonth = -1;
+  for(let d=0; d<totalDays; d++){
+    const dt = new Date(minD.getTime() + d*864e5);
+    const m = dt.getMonth();
+    if(m !== curMonth){
+      // Calculate width of this month
+      let mDays = 0;
+      for(let d2=d; d2<totalDays; d2++){
+        if(new Date(minD.getTime()+d2*864e5).getMonth()!==m) break;
+        mDays++;
+      }
+      hdrHtml += `<div style="width:${mDays*dayW}px;padding:0 4px;font-size:9px;font-weight:700;color:var(--tx2);border-right:1px solid var(--border);display:flex;align-items:center;flex-shrink:0">${months[m]} ${dt.getFullYear()}</div>`;
+      curMonth = m;
+    }
+  }
+  document.getElementById('gantt-hdr').innerHTML = hdrHtml;
+  document.getElementById('gantt-hdr').style.width = totalW + 'px';
+
+  // SVG canvas
+  const svgH = rows.length * ROW_H;
+  let svg = `<svg width="${totalW}" height="${svgH}" style="display:block">`;
+
+  // Row backgrounds (alternating)
+  let rowIdx = 0;
+  rows.forEach(r => {
+    const y = rowIdx * ROW_H;
+    if(r.type==='project'){
+      svg += `<rect x="0" y="${y}" width="${totalW}" height="${ROW_H}" fill="var(--bg-el)" opacity="0.5"/>`;
+    } else if(rowIdx % 2 === 0){
+      svg += `<rect x="0" y="${y}" width="${totalW}" height="${ROW_H}" fill="rgba(255,255,255,0.01)"/>`;
+    }
+    // Row border
+    svg += `<line x1="0" y1="${y+ROW_H}" x2="${totalW}" y2="${y+ROW_H}" stroke="var(--border)" stroke-width="0.3"/>`;
+    rowIdx++;
+  });
+
+  // Month grid lines
+  curMonth = -1;
+  for(let d=0; d<totalDays; d++){
+    const dt = new Date(minD.getTime() + d*864e5);
+    if(dt.getMonth() !== curMonth){ curMonth=dt.getMonth(); if(d>0) svg+=`<line x1="${d*dayW}" y1="0" x2="${d*dayW}" y2="${svgH}" stroke="var(--border)" stroke-width="0.5"/>`; }
+    // Weekend shading (Sat/Sun)
+    if(dt.getDay()===0||dt.getDay()===6) svg+=`<rect x="${d*dayW}" y="0" width="${dayW}" height="${svgH}" fill="rgba(255,255,255,0.015)"/>`;
+  }
+
+  // Task bars
+  rowIdx = 0;
+  rows.forEach(r => {
+    if(r.type==='task'){
+      const t = r.data;
+      const x = dayOf(t.inicio) * dayW;
+      const w = Math.max((dayOf(t.fin) - dayOf(t.inicio)) * dayW, dayW);
+      const y = rowIdx * ROW_H + 6;
+      const h = ROW_H - 12;
+      const pctW = w * t.pct_completado / 100;
+
+      // Draggable bar group
+      svg += `<g class="gantt-bar" data-tid="${t.id}" data-inicio="${t.inicio}" data-fin="${t.fin}" data-origx="${x}" data-w="${w}" data-color="${r.color}" style="cursor:grab"
+        onmousedown="ganttDragStart(evt,this)"
+        onmouseover="showGanttTip(evt,'${esc(t.titulo).replace(/'/g,"\\'")}','${esc(t.tecnico_nombre)}','${t.inicio}','${t.fin}',${t.pct_completado})"
+        onmouseout="hideGanttTip()">`;
+      svg += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="${r.color}" opacity="0.2" class="gantt-bar-bg"/>`;
+      if(pctW > 0) svg += `<rect x="${x}" y="${y}" width="${pctW}" height="${h}" rx="3" fill="${r.color}" opacity="0.8" class="gantt-bar-fill"/>`;
+      if(w > 30) svg += `<text x="${x+4}" y="${y+h-3}" fill="#fff" font-size="8" font-weight="700" opacity="0.9">${t.pct_completado}%</text>`;
+      svg += `</g>`;
+    }
+    rowIdx++;
+  });
+
+  // Today line
+  const todayX = dayOf(today.toISOString().slice(0,10)) * dayW;
+  if(todayX > 0 && todayX < totalW){
+    svg += `<line x1="${todayX}" y1="0" x2="${todayX}" y2="${svgH}" stroke="var(--acc-rd)" stroke-width="2" stroke-dasharray="6,4"/>`;
+    svg += `<text x="${todayX+4}" y="12" fill="var(--acc-rd)" font-size="8" font-weight="700">HOY</text>`;
+  }
+
+  svg += '</svg>';
+  document.getElementById('gantt-canvas').innerHTML = svg;
+  document.getElementById('gantt-canvas').style.width = totalW + 'px';
+
+  // Sync scroll left↔right
+  const left = document.getElementById('gantt-left');
+  const right = document.getElementById('gantt-right');
+  right.onscroll = ()=>{ left.scrollTop = right.scrollTop; };
+  left.onscroll = ()=>{ right.scrollTop = left.scrollTop; };
+}
+
+function ganttScroll(dx){ document.getElementById('gantt-right').scrollLeft += dx; }
+function ganttScrollToday(){
+  if(!ganttData) return;
+  const dayW = GANTT_DAY_W[ganttZoom];
+  const allDates = ganttData.tareas.map(t=>t.inicio);
+  if(!allDates.length) return;
+  const minD = new Date(Math.min(...allDates.map(d=>new Date(d).getTime())) - 7*864e5);
+  const today = new Date();
+  const todayX = Math.floor((today - minD) / 864e5) * dayW;
+  document.getElementById('gantt-right').scrollLeft = Math.max(0, todayX - 200);
+}
+
+function showGanttTip(evt, titulo, tecnico, inicio, fin, pct){
+  const tip = document.getElementById('gantt-tooltip');
+  tip.innerHTML = `<div style="font-weight:700;margin-bottom:3px">${titulo}</div>
+    <div style="color:var(--tx2)">${tecnico}</div>
+    <div style="margin-top:4px;font-family:'JetBrains Mono',monospace">${inicio} → ${fin}</div>
+    <div style="margin-top:2px">Completado: <strong style="color:${pct>=75?'var(--acc-gn)':pct>=25?'var(--acc-or)':'var(--tx2)'}">${pct}%</strong></div>`;
+  tip.style.display = 'block';
+  tip.style.left = (evt.clientX + 12) + 'px';
+  tip.style.top = (evt.clientY - 20) + 'px';
+}
+function hideGanttTip(){ document.getElementById('gantt-tooltip').style.display='none'; }
+
+// ── Gantt drag ──
+let ganttDragState = null;
+
+function ganttDragStart(evt, gEl){
+  evt.preventDefault();
+  hideGanttTip();
+  const dayW = GANTT_DAY_W[ganttZoom];
+  const tid = gEl.getAttribute('data-tid');
+  const origX = parseFloat(gEl.getAttribute('data-origx'));
+  const w = parseFloat(gEl.getAttribute('data-w'));
+  const color = gEl.getAttribute('data-color');
+  const inicio = gEl.getAttribute('data-inicio');
+  const fin = gEl.getAttribute('data-fin');
+
+  // Add highlight stroke
+  const bg = gEl.querySelector('.gantt-bar-bg');
+  if(bg){ bg.setAttribute('stroke', color); bg.setAttribute('stroke-width','2'); }
+  gEl.style.cursor = 'grabbing';
+  document.body.style.cursor = 'grabbing';
+
+  ganttDragState = { gEl, tid, origX, w, color, inicio, fin, startClientX: evt.clientX, dayW, deltaDays: 0 };
+
+  document.addEventListener('mousemove', ganttDragMove);
+  document.addEventListener('mouseup', ganttDragEnd);
+}
+
+function ganttDragMove(evt){
+  if(!ganttDragState) return;
+  const s = ganttDragState;
+  const dx = evt.clientX - s.startClientX;
+  s.deltaDays = Math.round(dx / s.dayW);
+  const newX = s.origX + s.deltaDays * s.dayW;
+
+  // Move all child rects/text
+  const bg = s.gEl.querySelector('.gantt-bar-bg');
+  const fill = s.gEl.querySelector('.gantt-bar-fill');
+  const txt = s.gEl.querySelector('text');
+  if(bg) bg.setAttribute('x', newX);
+  if(fill) fill.setAttribute('x', newX);
+  if(txt) txt.setAttribute('x', newX + 4);
+}
+
+async function ganttDragEnd(evt){
+  document.removeEventListener('mousemove', ganttDragMove);
+  document.removeEventListener('mouseup', ganttDragEnd);
+  document.body.style.cursor = '';
+  if(!ganttDragState) return;
+  const s = ganttDragState;
+
+  // Remove highlight
+  const bg = s.gEl.querySelector('.gantt-bar-bg');
+  if(bg){ bg.removeAttribute('stroke'); bg.removeAttribute('stroke-width'); }
+  s.gEl.style.cursor = 'grab';
+
+  // Click threshold: if moved < 5px, treat as click → open edit modal
+  if(Math.abs(evt.clientX - s.startClientX) < 5){
+    ganttDragState = null;
+    openGanttEdit(s.tid);
+    return;
+  }
+
+  if(s.deltaDays === 0){ ganttDragState = null; return; }
+
+  // Calculate new dates
+  const addDays = (ds, n) => { const d = new Date(ds); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); };
+  const newInicio = addDays(s.inicio, s.deltaDays);
+  const newFin = addDays(s.fin, s.deltaDays);
+
+  // PATCH backend
+  try {
+    const resp = await fetch(API + `/api/pm/gantt/tarea/${encodeURIComponent(s.tid)}`, {
+      method: 'PATCH', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({gantt: {start: newInicio, end: newFin}})
+    });
+    if(resp.ok){
+      // Update local data
+      const task = ganttData.tareas.find(t=>t.id===s.tid);
+      if(task){ task.inicio = newInicio; task.fin = newFin; task.fuente_fechas = 'stored'; }
+      renderGantt();
+    }
+  } catch(e){ console.warn('Gantt drag save error:', e); renderGantt(); }
+  ganttDragState = null;
+}
+
 // ── Init ──
 document.addEventListener('DOMContentLoaded', ()=>{
+  // Migration: tabs reindexed (Gantt inserted at 2, PMBOK 2→3, Chat 3→4)
+  if(!localStorage.getItem('pm-tabs-migrated-v3')){
+    const old = parseInt(localStorage.getItem('pm-active-tab')||'0');
+    if(old >= 2) localStorage.setItem('pm-active-tab', String(old+1));
+    localStorage.setItem('pm-tabs-migrated-v3','true');
+  }
   const savedTab = localStorage.getItem('pm-active-tab');
   if(savedTab) switchTab(parseInt(savedTab));
   setView(currentView);

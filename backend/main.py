@@ -4322,6 +4322,212 @@ async def kanban_flow_metrics():
         }
 
 
+# ── P100 Gantt F4: PATCH gantt metadata en descripcion ─────────────────────
+
+class GanttPatch(BaseModel):
+    titulo: Optional[str] = None
+    id_tecnico: Optional[str] = None
+    columna: Optional[str] = None
+    prioridad: Optional[str] = None
+    horas_estimadas: Optional[float] = None
+    gantt: Optional[dict] = None
+
+
+@app.patch("/api/pm/gantt/tarea/{task_id}")
+async def pm_gantt_patch_tarea(task_id: str, body: GanttPatch):
+    """Update kanban task fields + merge gantt metadata into descripcion."""
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(503, "DB pool no disponible")
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute("SET search_path = primitiva, compartido, public")
+            exists = await conn.fetchval(
+                "SELECT id FROM kanban_tareas WHERE id = $1", task_id)
+            if not exists:
+                raise HTTPException(404, f"Tarea {task_id} no encontrada")
+
+            # Native column updates
+            sets = []
+            vals = [task_id]  # $1
+            idx = 2
+            if body.titulo is not None:
+                sets.append(f"titulo = ${idx}"); vals.append(body.titulo); idx += 1
+            if body.id_tecnico is not None:
+                sets.append(f"id_tecnico = ${idx}"); vals.append(body.id_tecnico); idx += 1
+            if body.columna is not None:
+                sets.append(f"columna = ${idx}"); vals.append(body.columna); idx += 1
+            if body.prioridad is not None:
+                sets.append(f"prioridad = ${idx}"); vals.append(body.prioridad); idx += 1
+            if body.horas_estimadas is not None:
+                sets.append(f"horas_estimadas = ${idx}"); vals.append(body.horas_estimadas); idx += 1
+
+            if sets:
+                sql = f"UPDATE kanban_tareas SET {', '.join(sets)} WHERE id = $1"
+                await conn.execute(sql, *vals)
+
+            # Gantt metadata merge into descripcion JSONB
+            if body.gantt:
+                gantt_json = json.dumps({"gantt": body.gantt})
+                await conn.execute(
+                    "UPDATE kanban_tareas "
+                    "SET descripcion = (COALESCE(descripcion,'{}')::jsonb || $1::jsonb)::text "
+                    "WHERE id = $2",
+                    gantt_json, task_id)
+
+            # Audit trail: append to descripcion->'historial'
+            changes = {k: v for k, v in body.dict().items() if v is not None}
+            if changes:
+                entry = json.dumps({"ts": datetime.now().isoformat(), "user": "PM-016", "changes": changes})
+                await conn.execute(
+                    "UPDATE kanban_tareas SET descripcion = jsonb_set("
+                    "  COALESCE(descripcion,'{}')::jsonb,"
+                    "  '{historial}',"
+                    "  COALESCE((COALESCE(descripcion,'{}')::jsonb)->'historial','[]'::jsonb) || $1::jsonb"
+                    ")::text WHERE id = $2",
+                    entry, task_id)
+
+            return {"ok": True, "task_id": task_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning(f"Gantt patch error: {e}")
+        raise HTTPException(500, str(e))
+
+
+# ── P100 Gantt F2: Endpoint datos Gantt ────────────────────────────────────
+
+@app.get("/api/pm/gantt")
+async def pm_gantt(pm_id: str = "PM-016"):
+    """Datos Gantt: proyectos + tareas con fechas planificadas."""
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(503, "DB pool no disponible")
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute("SET search_path = primitiva, compartido, public")
+
+            # Projects
+            prj_rows = await conn.fetch(
+                "SELECT id_proyecto, nombre_proyecto FROM cartera_build "
+                "WHERE id_pm_usuario = $1 ORDER BY id_proyecto", pm_id)
+            prj_ids = [r['id_proyecto'] for r in prj_rows]
+            if not prj_ids:
+                return {"proyectos": [], "tareas": [], "tecnicos_pool": []}
+
+            # Color palette per project
+            colors = ['#58a6ff','#3fb950','#f85149','#d29922','#bc8cff',
+                      '#39d2c0','#f778ba','#79c0ff','#7ee787','#ffa657',
+                      '#d2a8ff','#56d4dd']
+
+            proyectos = []
+            for i, r in enumerate(prj_rows):
+                n_tareas = await conn.fetchval(
+                    "SELECT COUNT(*) FROM kanban_tareas WHERE id_proyecto = $1", r['id_proyecto']) or 0
+                proyectos.append({
+                    "id": r['id_proyecto'], "nombre": r['nombre_proyecto'],
+                    "color": colors[i % len(colors)], "n_tareas": n_tareas,
+                })
+
+            # Tasks
+            task_rows = await conn.fetch("""
+                SELECT k.id, k.titulo, k.id_proyecto, k.id_tecnico,
+                       k.columna, k.prioridad, k.horas_estimadas,
+                       k.fecha_creacion, k.descripcion
+                FROM kanban_tareas k
+                WHERE k.id_proyecto = ANY($1)
+                ORDER BY k.id_proyecto, k.fecha_creacion
+            """, prj_ids)
+
+            today = date.today()
+            tareas = []
+            for r in task_rows:
+                # Parse gantt metadata from descripcion JSONB (text column)
+                desc = {}
+                fuente = 'derived'
+                if r['descripcion']:
+                    try:
+                        desc = json.loads(r['descripcion']) if isinstance(r['descripcion'], str) else r['descripcion']
+                    except:
+                        pass
+
+                gantt_meta = desc.get('gantt', {}) if isinstance(desc, dict) else {}
+
+                h_est = float(r['horas_estimadas'] or 1)
+                fc = r['fecha_creacion']
+                fc_date = fc.date() if hasattr(fc, 'date') else (fc or today)
+
+                if gantt_meta and gantt_meta.get('start'):
+                    inicio = gantt_meta['start']
+                    fin = gantt_meta.get('end') or str(fc_date + timedelta(days=max(1, int(h_est / 8))))
+                    fuente = 'stored'
+                else:
+                    inicio = str(fc_date)
+                    dur_days = max(1, int(h_est / 8 + 0.99))
+                    fin = str(fc_date + timedelta(days=dur_days))
+
+                # % completado from columna
+                col_pct = {'Backlog': 0, 'Análisis': 10, 'En Progreso': 40,
+                           'Code Review': 60, 'Testing': 75, 'Despliegue': 90,
+                           'Bloqueado': 30, 'Completado': 100, 'Done': 100}
+                pct = gantt_meta.get('pct', col_pct.get(r['columna'], 0))
+
+                # Predecessors
+                pred = gantt_meta.get('pred', [])
+                if isinstance(pred, str):
+                    pred = [pred] if pred else []
+
+                # Technician name
+                tec_nombre = None
+                if r['id_tecnico']:
+                    tec_nombre = await conn.fetchval(
+                        "SELECT nombre FROM compartido.pmo_staff_skills WHERE id_recurso = $1",
+                        r['id_tecnico'])
+
+                tareas.append({
+                    "id": r['id'], "titulo": r['titulo'],
+                    "id_proyecto": r['id_proyecto'],
+                    "id_tecnico": r['id_tecnico'] or '',
+                    "tecnico_nombre": tec_nombre or r['id_tecnico'] or '',
+                    "columna": r['columna'], "prioridad": r['prioridad'],
+                    "horas_estimadas": h_est,
+                    "inicio": inicio, "fin": fin,
+                    "pct_completado": pct,
+                    "predecesoras": pred,
+                    "fuente_fechas": fuente,
+                    "historial": (desc.get('historial', []) if isinstance(desc, dict) else [])[-5:],
+                })
+
+            # Technician pool (for reassignment dropdown)
+            month_start = today.replace(day=1)
+            pool_rows = await conn.fetch("""
+                SELECT s.id_recurso, s.nombre, s.skill_principal,
+                       COALESCE(h.total_h, 0) AS carga_h
+                FROM compartido.pmo_staff_skills s
+                LEFT JOIN (
+                    SELECT id_tecnico, SUM(horas) AS total_h
+                    FROM primitiva.horas_imputadas
+                    WHERE fecha >= $1
+                    GROUP BY id_tecnico
+                ) h ON h.id_tecnico = s.id_recurso
+                ORDER BY s.nombre
+            """, month_start)
+
+            tecnicos_pool = [{"id": r['id_recurso'], "nombre": r['nombre'],
+                              "skill": r['skill_principal'] or '',
+                              "carga_actual_h": round(float(r['carga_h']), 1)}
+                             for r in pool_rows]
+
+            return {
+                "proyectos": proyectos,
+                "tareas": tareas,
+                "tecnicos_pool": tecnicos_pool,
+            }
+    except Exception as e:
+        logger.warning(f"Gantt error: {e}")
+        raise HTTPException(500, str(e))
+
+
 # ── PM Dashboard — Pulido v3 F2: Ficha 360 ────────────────────────────────
 
 @app.get("/api/pm/team/tecnico/{id_tecnico}/ficha-360")
