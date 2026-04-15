@@ -807,6 +807,54 @@ body{background:var(--bg);color:var(--tx);font-family:var(--font);font-size:12px
 .bg-pc-foot .cpi.rd{color:var(--acc-rd);background:rgba(248,81,73,.1)}
 .bg-pc-ai{position:absolute;top:6px;right:30px;color:var(--acc-pu);font-size:10px}
 </style>
+<!-- ═══ P99 MULTI-ESCENARIO ═══ -->
+<script src="/js/scenario-bridge.js"></script>
+<script>
+/* P99: Monkey-patch fetch -> auto-inject X-Scenario */
+(function(){
+  var _F = window.fetch;
+  window.fetch = function(url, opts) {
+    opts = opts || {};
+    if (!opts.headers) opts.headers = {};
+    if (typeof opts.headers.set === 'function') {
+      if (!opts.headers.has('X-Scenario'))
+        opts.headers.set('X-Scenario', window.ScenarioBridge ? ScenarioBridge.get() : 'sc_norte');
+    } else {
+      if (!opts.headers['X-Scenario'])
+        opts.headers['X-Scenario'] = window.ScenarioBridge ? ScenarioBridge.get() : 'sc_norte';
+    }
+    return _F.call(this, url, opts);
+  };
+  if (window.ScenarioBridge) {
+    ScenarioBridge.onChange(function(sc) {
+      console.log('[P99] Scenario changed to ' + sc + ' - reloading...');
+      /* FIX 1: guardar tab activa antes de reload */
+      var ap = document.querySelector('.page.active');
+      if (ap) sessionStorage.setItem('p99_active_tab', ap.id.replace('page-',''));
+      /* Guardar scroll position */
+      sessionStorage.setItem('p99_scroll', window.scrollY.toString());
+      window.location.reload();
+    });
+    /* FIX 1: restaurar tab despues de reload por cambio de escenario */
+    var savedTab = sessionStorage.getItem('p99_active_tab');
+    if (savedTab) {
+      sessionStorage.removeItem('p99_active_tab');
+      window.addEventListener('DOMContentLoaded', function(){
+        setTimeout(function(){
+          var tabBtn = document.querySelector('.nav-tab.' + savedTab);
+          if (tabBtn && window.showPage) {
+            showPage(savedTab, tabBtn);
+            var sy = parseInt(sessionStorage.getItem('p99_scroll')||'0');
+            sessionStorage.removeItem('p99_scroll');
+            if (sy) window.scrollTo(0, sy);
+          }
+        }, 200);
+      });
+    }
+  }
+})();
+</script>
+<!-- ═══ END P99 MULTI-ESCENARIO ═══ -->
 </head>
 <body>
 
@@ -825,7 +873,7 @@ body{background:var(--bg);color:var(--tx);font-family:var(--font);font-size:12px
     <div class="bg-login-grid">
       <div class="bg-login-card l-super" data-role="SUPERADMIN">
         <div class="bg-login-avatar">AN</div>
-        <div class="bg-login-meta"><div class="bg-login-name">Alex Núñez</div><div class="bg-login-role">SUPERADMIN</div><span class="bg-login-scope">scope: TODOS+</span></div>
+        <div class="bg-login-meta"><div class="bg-login-name">Administrador del Sistema</div><div class="bg-login-role">SUPERADMIN</div><span class="bg-login-scope">scope: TODOS+</span></div>
       </div>
       <div class="bg-login-card l-c" data-role="CEO">
         <div class="bg-login-avatar">AV</div>
@@ -1854,7 +1902,7 @@ function toggleDash(){
 // ═══════════════ RBAC ENGINE (bg- prefix) ═══════════════
 // Perfiles de usuario — en producción vendrán de la tabla `usuarios` JOIN `rbac_roles`
 const bgRoleProfiles = {
-  SUPERADMIN:    {name:'Alex Núñez',         avatar:'AN', roleLabel:'SUPERADMIN · bypass',     desc:'Bypass total RBAC. Ve absolutamente todo, incluidos salarios individuales. Solo 1 usuario en el sistema.',                                       scope:'TODOS+',     rgpd:'✓ Salarios ind.', rgpdOk:true},
+  SUPERADMIN:    {name:'Administrador del Sistema', avatar:'AS', roleLabel:'SUPERADMIN · bypass',     desc:'Bypass total RBAC. Ve absolutamente todo, incluidos salarios individuales. Solo 1 usuario en el sistema.',                                       scope:'TODOS+',     rgpd:'✓ Salarios ind.', rgpdOk:true},
   CEO:           {name:'Alejandro Vidal',    avatar:'AV', roleLabel:'CEO · Banco',             desc:'Acceso a TODOS los datos económicos agregados (RUN+BUILD+IA). Salarios individuales bloqueados por RGPD.',                                       scope:'TODOS',      rgpd:'🔒 Sin salarios ind.', rgpdOk:false},
   CFO:           {name:'Francisco Herrera',  avatar:'FH', roleLabel:'CFO · Financiero',        desc:'Único rol con visibilidad de salarios individuales (ver_salario_ind=true). Acceso completo a facturas, OPEX, CAPEX y labor.',                    scope:'TODOS+SAL',  rgpd:'✓ Salarios ind.', rgpdOk:true},
   CTO:           {name:'Carmen Delgado',     avatar:'CD', roleLabel:'CTO · Tecnología',        desc:'Acceso económico completo a todos los silos IT. Sin salarios individuales. Ve facturas y nombres en facturas.',                                  scope:'TODOS',      rgpd:'🔒 Sin salarios ind.', rgpdOk:false},
