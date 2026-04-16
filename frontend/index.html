@@ -1492,9 +1492,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;disp
 .llm-dd-divider{height:1px;background:rgba(255,255,255,0.1);margin:6px 4px;}
 .llm-dd-add{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;color:#60a5fa;font-size:13px;font-weight:500;transition:background 0.15s;}
 .llm-dd-add:hover{background:rgba(96,165,250,0.08);}
-.free-pulse{position:relative;}
-.free-pulse::after{content:'';position:absolute;inset:-2px;border-radius:6px;background:rgba(52,211,153,0.15);animation:freePulse 2s ease-in-out infinite;z-index:-1;}
-@keyframes freePulse{0%,100%{opacity:0}50%{opacity:1}}
+/* free-pulse removed — ChatGPT is author's Plus account, not free */
 .llm-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:10001;}
 .llm-modal-overlay.open{display:flex;animation:llmFadeIn 0.25s ease;}
 @keyframes llmFadeIn{from{opacity:0}to{opacity:1}}
@@ -19178,7 +19176,7 @@ function kg_init(){
 <div class="provider-badge" id="llmBadgeBtn">
 <span class="dot" id="llmBadgeDot"></span>
 <div class="badge-logo" id="llmBadgeLogo"><svg><use href="#logo-openai"/></svg></div>
-<div class="info"><span class="name" id="llmBadgeName">ChatGPT Plus</span><span class="model" id="llmBadgeModel">gpt-5.4 · $0/llamada</span></div>
+<div class="info"><span class="name" id="llmBadgeName">ChatGPT Plus</span><span class="model" id="llmBadgeModel">gpt-5.4 · cuenta del autor</span></div>
 <span class="chevron">&#9660;</span>
 <div class="llm-dropdown" id="llmDropdown"></div>
 </div>
@@ -19217,7 +19215,7 @@ function kg_init(){
 <div class="collision-item info"><span class="ci-icon">&#128274;</span><div class="ci-text"><strong>Ventaja: Zero Data Exposure</strong> &mdash; Los datos nunca salen del servidor. Ideal para entornos donde la confidencialidad prima sobre la calidad de respuesta. Ning&uacute;n tercero accede a las consultas.</div></div>
 </div>
 </div>
-<div class="ollama-footer"><button class="llm-btn llm-btn-cancel llm-btn-ollama-cancel" onclick="llmCloseOllama()">Volver a ChatGPT ($0)</button><button class="llm-btn llm-btn-ollama-ok" onclick="llmConfirmOllama()">Entendido, activar Ollama</button></div>
+<div class="ollama-footer"><button class="llm-btn llm-btn-cancel llm-btn-ollama-cancel" onclick="llmCloseOllama()">Volver a ChatGPT Plus</button><button class="llm-btn llm-btn-ollama-ok" onclick="llmConfirmOllama()">Entendido, activar Ollama</button></div>
 </div>
 </div>
 
@@ -19249,7 +19247,7 @@ function kg_init(){
 'use strict';
 var LLM_PASS='joseanto',llmAttempts=0,LLM_MAX_ATTEMPTS=5,llmPendingProvider=null,llmUnlocked=new Set();
 var PROVIDER_CONFIG={
-chatgpt:{protected:false,logo:'logo-openai',bg:'bg-openai',badgeClass:'llm-badge-oauth',badgeText:'$0 FREE',free:true},
+chatgpt:{protected:false,logo:'logo-openai',bg:'bg-openai',badgeClass:'llm-badge-oauth',badgeText:'PLUS'},
 anthropic:{protected:'password',logo:'logo-anthropic',bg:'bg-claude',badgeClass:'llm-badge-api',badgeText:'API',cost:'~$0.05/invocación · facturación directa API',reason:'Este proveedor genera costes directos por cada invocación a la API de Anthropic (~$0.05/llamada). Un pipeline completo de 15 agentes con tool_use puede superar $3.00 por ejecución. El acceso está restringido para evitar consumo no autorizado de créditos durante la fase de evaluación por terceros.'},
 openai:{protected:'password',logo:'logo-openai',bg:'bg-openai',badgeClass:'llm-badge-api',badgeText:'API',cost:'~$0.03/invocación · requiere billing OpenAI',reason:'Este proveedor requiere una cuenta de facturación activa en OpenAI (api.openai.com). A diferencia de ChatGPT Plus, cada llamada API tiene coste directo por tokens consumidos. El acceso está restringido para evitar cargos inesperados durante la fase de evaluación por terceros.'},
 ollama:{protected:'ollama-warn',logo:'logo-ollama',bg:'bg-ollama',badgeClass:'llm-badge-local',badgeText:'Local'}
@@ -19272,8 +19270,8 @@ var models=config.models||[];
 var model=models[0]||p.provider_name;
 html+='<div class="llm-dd-item '+(isActive?'active':'')+'" data-id="'+p.id+'" data-provider="'+p.provider_name+'" data-name="'+p.display_name+'" data-model="'+model+'" data-protected="'+(cfg.protected||false)+'">';
 html+='<div class="icon-wrap '+cfg.bg+'"><svg><use href="#'+cfg.logo+'"/></svg></div>';
-html+='<div class="details"><div class="pname">'+p.display_name+'</div><div class="pmodel">'+model+(cfg.free?' · $0/llamada':'')+'</div></div>';
-html+='<span class="llm-badge '+cfg.badgeClass+(cfg.free?' free-pulse':'')+'">'+cfg.badgeText+'</span>';
+html+='<div class="details"><div class="pname">'+p.display_name+'</div><div class="pmodel">'+model+'</div></div>';
+html+='<span class="llm-badge '+cfg.badgeClass+'">'+cfg.badgeText+'</span>';
 if(cfg.protected==='password')html+='<div class="lock-icon"><svg><use href="#icon-lock"/></svg></div>';
 if(cfg.protected==='ollama-warn')html+='<div class="warn-icon"><svg><use href="#icon-warn-triangle"/></svg></div>';
 html+='</div>';
@@ -19286,7 +19284,7 @@ var cfg=PROVIDER_CONFIG[defaultProv.provider_name]||{};
 var config=typeof defaultProv.config_json==='string'?JSON.parse(defaultProv.config_json):defaultProv.config_json||{};
 var models=config.models||[];
 document.getElementById('llmBadgeName').textContent=defaultProv.display_name;
-document.getElementById('llmBadgeModel').textContent=(models[0]||defaultProv.provider_name)+(cfg.free?' · $0/llamada':'');
+document.getElementById('llmBadgeModel').textContent=(models[0]||defaultProv.provider_name);
 if(cfg.logo)document.getElementById('llmBadgeLogo').innerHTML='<svg><use href="#'+cfg.logo+'"/></svg>';
 }
 dd.querySelectorAll('.llm-dd-item').forEach(function(item){item.addEventListener('click',function(){handleProviderClick(item)});});
