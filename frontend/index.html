@@ -19364,6 +19364,18 @@ window.llmSelectType=function(el){document.querySelectorAll('.llm-type-btn').for
 window.llmSimulateTest=function(){var dot=document.getElementById('llmTestDot'),text=document.getElementById('llmTestText');dot.className='test-status loading';text.textContent='Probando conexión...';setTimeout(function(){dot.className='test-status ok';text.textContent='✓ Conexión OK — modelo responde';document.getElementById('llmSaveBtn').disabled=false;},1800);};
 
 function llmShowToast(msg){var t=document.getElementById('llmToast');t.textContent=msg;t.style.display='block';setTimeout(function(){t.style.display='none'},3000);}
+
+// Ocultar badge cuando el usuario se loguea (login-screen desaparece)
+var loginEl=document.getElementById('login-screen');
+if(loginEl){
+  var obs=new MutationObserver(function(){
+    var hidden=loginEl.style.display==='none';
+    badge.style.display=hidden?'none':'flex';
+    if(hidden)dd.classList.remove('open');
+  });
+  obs.observe(loginEl,{attributes:true,attributeFilter:['style']});
+}
+
 loadProviders();
 })();
 </script>
