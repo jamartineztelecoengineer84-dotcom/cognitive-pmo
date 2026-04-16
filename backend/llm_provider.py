@@ -5,6 +5,7 @@ Cognitive PMO v6.0
 Abstrae las llamadas a LLM para soportar múltiples providers:
 - AnthropicProvider: SDK anthropic (actual, producción)
 - OpenAIProvider: API OpenAI via OAuth/API key
+- ChatGPTCodexProvider: ChatGPT Plus via chatgpt.com/backend-api (OAuth, $0)
 - OllamaProvider: HTTP local contra localhost:11434
 
 Cada provider traduce internamente:
@@ -620,6 +621,232 @@ class OllamaProvider(LLMProvider):
 
 
 # ============================================================
+# ChatGPTCodexProvider — ChatGPT Plus via backend-api
+# ============================================================
+
+class ChatGPTCodexProvider(LLMProvider):
+    """
+    Provider para ChatGPT Plus via chatgpt.com/backend-api/codex/responses.
+    Usa el OAuth token de OpenClaw (ChatGPT Plus subscription).
+    Coste: $0 (incluido en la suscripción Plus).
+
+    Diferencias con OpenAI API estándar:
+    - Endpoint: chatgpt.com/backend-api/codex/responses (no api.openai.com)
+    - Formato: Responses API (instructions + input, no messages)
+    - Streaming obligatorio (SSE)
+    - Soporta tool_use via campo "tools" en el payload
+    """
+
+    MODEL_MAP = {
+        "claude-sonnet-4-20250514": "gpt-5.4",
+        "claude-haiku-4-5-20251001": "gpt-5.4",
+    }
+
+    BASE_URL = "https://chatgpt.com/backend-api/codex/responses"
+
+    def __init__(self, oauth_token: Optional[str] = None, **_kwargs):
+        self.oauth_token = oauth_token or os.environ.get("CHATGPT_OAUTH_TOKEN", "")
+
+    def _map_model(self, model: str) -> str:
+        return self.MODEL_MAP.get(model, model)
+
+    def _get_headers(self) -> dict:
+        if not self.oauth_token:
+            raise ValueError("ChatGPTCodexProvider: oauth_token no configurado")
+        return {
+            "Authorization": f"Bearer {self.oauth_token}",
+            "Content-Type": "application/json",
+        }
+
+    @staticmethod
+    def _translate_messages_to_input(messages: list) -> list:
+        """Traduce mensajes Anthropic → formato input del Responses API."""
+        result = []
+        for msg in messages:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+
+            # Mensaje assistant con tool_use blocks (Anthropic format)
+            if role == "assistant" and isinstance(content, list):
+                text_parts = []
+                for block in content:
+                    if isinstance(block, dict):
+                        if block.get("type") == "text":
+                            text_parts.append(block.get("text", ""))
+                        elif block.get("type") == "tool_use":
+                            result.append({
+                                "type": "function_call",
+                                "call_id": block["id"],
+                                "name": block["name"],
+                                "arguments": json.dumps(block.get("input", {})),
+                            })
+                if text_parts:
+                    result.append({"role": "assistant", "content": "\n".join(text_parts)})
+
+            # Mensaje user con tool_result blocks (Anthropic format)
+            elif role == "user" and isinstance(content, list):
+                for block in content:
+                    if isinstance(block, dict) and block.get("type") == "tool_result":
+                        result.append({
+                            "type": "function_call_output",
+                            "call_id": block["tool_use_id"],
+                            "output": block.get("content", ""),
+                        })
+
+            # Mensajes normales
+            else:
+                result.append({
+                    "role": role,
+                    "content": content if isinstance(content, str) else str(content),
+                })
+        return result
+
+    async def create_message(
+        self,
+        model: str,
+        system,
+        messages: list,
+        tools: Optional[list] = None,
+        max_tokens: int = 2048,
+        temperature: float = 0.3
+    ) -> LLMResponse:
+        codex_model = self._map_model(model)
+        system_text = _extract_system_text(system)
+
+        payload: Dict[str, Any] = {
+            "model": codex_model,
+            "instructions": system_text,
+            "input": self._translate_messages_to_input(messages),
+            "stream": True,
+            "store": False,
+        }
+
+        if tools:
+            # Responses API uses flat format: {type:"function", name, description, parameters}
+            payload["tools"] = [{
+                "type": "function",
+                "name": t["name"],
+                "description": t.get("description", ""),
+                "parameters": t.get("input_schema", {"type": "object", "properties": {}}),
+            } for t in tools]
+
+        # Parsear SSE stream
+        text_parts = []
+        tool_calls_raw: Dict[str, dict] = {}  # call_id → {name, arguments}
+        usage = {}
+        raw_events = []
+        stop_reason = "end_turn"
+
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            async with client.stream(
+                "POST", self.BASE_URL,
+                headers=self._get_headers(),
+                json=payload,
+            ) as resp:
+                if resp.status_code != 200:
+                    body = await resp.aread()
+                    raise RuntimeError(
+                        f"ChatGPT Codex API error {resp.status_code}: {body.decode()[:500]}"
+                    )
+
+                async for line in resp.aiter_lines():
+                    if not line.startswith("data: "):
+                        continue
+                    data_str = line[6:]
+                    if data_str == "[DONE]":
+                        break
+                    try:
+                        event = json.loads(data_str)
+                    except json.JSONDecodeError:
+                        continue
+
+                    etype = event.get("type", "")
+                    raw_events.append(etype)
+
+                    # Text deltas
+                    if etype == "response.output_text.delta":
+                        text_parts.append(event.get("delta", ""))
+
+                    # Tool call: function_call events
+                    elif etype == "response.function_call_arguments.delta":
+                        item_id = event.get("item_id", "")
+                        if item_id not in tool_calls_raw:
+                            tool_calls_raw[item_id] = {"name": "", "arguments": ""}
+                        tool_calls_raw[item_id]["arguments"] += event.get("delta", "")
+
+                    elif etype == "response.output_item.added":
+                        item = event.get("item", {})
+                        if item.get("type") == "function_call":
+                            item_id = item.get("id", "")
+                            tool_calls_raw[item_id] = {
+                                "name": item.get("name", ""),
+                                "arguments": item.get("arguments", ""),
+                                "call_id": item.get("call_id", item_id),
+                            }
+
+                    # Completion — extract usage
+                    elif etype == "response.completed":
+                        r = event.get("response", {})
+                        usage = r.get("usage", {})
+                        status = r.get("status", "completed")
+                        if status == "incomplete":
+                            stop_reason = "max_tokens"
+
+        # Build normalized tool_calls
+        parsed_tool_calls = []
+        for item_id, tc_data in tool_calls_raw.items():
+            if tc_data.get("name"):
+                args_str = tc_data["arguments"]
+                try:
+                    args = json.loads(args_str) if args_str else {}
+                except json.JSONDecodeError:
+                    args = {"_raw": args_str}
+                parsed_tool_calls.append(ToolCall(
+                    id=tc_data.get("call_id", item_id),
+                    name=tc_data["name"],
+                    input=args,
+                ))
+
+        if parsed_tool_calls and stop_reason == "end_turn":
+            stop_reason = "tool_use"
+
+        # Concatenate text deltas into single part
+        full_text = "".join(text_parts)
+
+        return LLMResponse(
+            text_parts=[full_text] if full_text else [],
+            tool_calls=parsed_tool_calls,
+            input_tokens=usage.get("input_tokens", 0),
+            output_tokens=usage.get("output_tokens", 0),
+            stop_reason=stop_reason,
+            raw_response=raw_events,
+        )
+
+    def format_tool_result(self, tool_call_id: str, result: str) -> dict:
+        """Formato Anthropic (el engine trabaja en Anthropic format internamente)."""
+        return {
+            "type": "tool_result",
+            "tool_use_id": tool_call_id,
+            "content": result
+        }
+
+    def format_assistant_tool_use(self, response: LLMResponse) -> dict:
+        """Formato Anthropic para el historial del engine."""
+        content = []
+        for text in response.text_parts:
+            if text:
+                content.append({"type": "text", "text": text})
+        for tc in response.tool_calls:
+            content.append({
+                "type": "tool_use",
+                "id": tc.id,
+                "name": tc.name,
+                "input": tc.input
+            })
+        return {"role": "assistant", "content": content}
+
+
+# ============================================================
 # Factory — obtener provider por nombre
 # ============================================================
 
@@ -628,6 +855,7 @@ _PROVIDER_REGISTRY = {
     "anthropic": AnthropicProvider,
     "openai": OpenAIProvider,
     "ollama": OllamaProvider,
+    "chatgpt": ChatGPTCodexProvider,
 }
 
 

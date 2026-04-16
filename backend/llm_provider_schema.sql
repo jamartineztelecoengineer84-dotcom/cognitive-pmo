@@ -12,3 +12,5 @@ INSERT INTO primitiva.llm_provider_config (provider_name, display_name, auth_typ
 INSERT INTO primitiva.llm_provider_config (provider_name, display_name, auth_type, is_active, is_default, config_json) VALUES ('openai', 'OpenAI', 'api_key', FALSE, FALSE, '{"models":["gpt-4.1","gpt-4o-mini"]}'::jsonb) ON CONFLICT (provider_name) DO NOTHING;
 
 INSERT INTO primitiva.llm_provider_config (provider_name, display_name, auth_type, is_active, is_default, config_json) VALUES ('ollama', 'Ollama (Local)', 'none', FALSE, FALSE, '{"models":["llama3:8b","gemma3:1b"],"base_url":"http://localhost:11434"}'::jsonb) ON CONFLICT (provider_name) DO NOTHING;
+
+INSERT INTO primitiva.llm_provider_config (provider_name, display_name, auth_type, is_active, is_default, config_json) VALUES ('chatgpt', 'ChatGPT Plus (Codex)', 'oauth', FALSE, FALSE, '{"models":["gpt-5.4"],"endpoint":"chatgpt.com/backend-api/codex/responses","note":"Requires OpenClaw OAuth token"}'::jsonb) ON CONFLICT (provider_name) DO NOTHING;

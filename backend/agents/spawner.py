@@ -26,6 +26,8 @@ _COST_RATES = {
     # OpenAI models (ARQ-04)
     "gpt-4.1":                  {"input": 2.0,  "output": 8.0,  "cache_read": 0.50, "cache_create": 0.0},
     "gpt-4o-mini":              {"input": 0.15, "output": 0.60, "cache_read": 0.0,  "cache_create": 0.0},
+    # ChatGPT Codex via Plus subscription — zero marginal cost (ARQ-04 F6b)
+    "gpt-5.4":                  {"input": 0.0,  "output": 0.0,  "cache_read": 0.0,  "cache_create": 0.0},
     # Ollama local models — zero cost (ARQ-04)
     "llama3:8b":                {"input": 0.0,  "output": 0.0,  "cache_read": 0.0,  "cache_create": 0.0},
     "gemma3:1b":                {"input": 0.0,  "output": 0.0,  "cache_read": 0.0,  "cache_create": 0.0},
