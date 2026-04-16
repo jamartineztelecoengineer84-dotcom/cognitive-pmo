@@ -1,4 +1,3 @@
-import anthropic
 import re
 import time
 import json
@@ -6,6 +5,7 @@ import logging
 from uuid import uuid4
 from agents.config import AgentConfig
 from agents.tools import TOOL_REGISTRY
+from llm_provider import get_provider
 
 log = logging.getLogger("agents.engine")
 
@@ -20,7 +20,7 @@ class AgentEngine:
     def __init__(self, config: AgentConfig, db_pool):
         self.config = config
         self.db = db_pool
-        self.client = anthropic.AsyncAnthropic()
+        self.provider = get_provider(config.provider)
         # Último uso de tokens (se actualiza tras cada invoke)
         self.last_input_tokens = 0
         self.last_output_tokens = 0
@@ -49,7 +49,7 @@ class AgentEngine:
         all_text_parts = []
 
         for iteration in range(10):
-            resp = await self.client.messages.create(
+            resp = await self.provider.create_message(
                 model=self.config.model,
                 max_tokens=self.config.max_tokens,
                 temperature=self.config.temperature,
@@ -57,31 +57,23 @@ class AgentEngine:
                 tools=self.config.tools,
                 messages=messages
             )
-            total_tokens += resp.usage.input_tokens + resp.usage.output_tokens
-            self.last_input_tokens += resp.usage.input_tokens
-            self.last_output_tokens += resp.usage.output_tokens
-            self.last_cache_read_tokens += getattr(resp.usage, 'cache_read_input_tokens', 0) or 0
-            self.last_cache_creation_tokens += getattr(resp.usage, 'cache_creation_input_tokens', 0) or 0
+            total_tokens += resp.input_tokens + resp.output_tokens
+            self.last_input_tokens += resp.input_tokens
+            self.last_output_tokens += resp.output_tokens
+            self.last_cache_read_tokens += resp.cache_read_tokens
+            self.last_cache_creation_tokens += resp.cache_creation_tokens
 
-            text_parts = []
-            tool_calls = []
-            for block in resp.content:
-                if block.type == "text":
-                    text_parts.append(block.text)
-                elif block.type == "tool_use":
-                    tool_calls.append(block)
+            if resp.text_parts:
+                all_text_parts.extend(resp.text_parts)
 
-            if text_parts:
-                all_text_parts.extend(text_parts)
-
-            if not tool_calls:
+            if not resp.has_tool_calls:
                 final = "\n".join(all_text_parts)
                 break
 
             # Hay tool_use — ejecutar tools y devolver resultados
-            messages.append({"role": "assistant", "content": resp.content})
+            messages.append(self.provider.format_assistant_tool_use(resp))
             tool_results = []
-            for tc in tool_calls:
+            for tc in resp.tool_calls:
                 log.info(f"[{self.config.agent_id}] tool: {tc.name}({tc.input})")
                 fn = TOOL_REGISTRY.get(tc.name)
                 if fn is None:
@@ -93,11 +85,9 @@ class AgentEngine:
                     except Exception as e:
                         result = {"error": str(e)}
                         log.error(f"Tool {tc.name} failed: {e}")
-                tool_results.append({
-                    "type": "tool_result",
-                    "tool_use_id": tc.id,
-                    "content": json.dumps(result, default=str, ensure_ascii=False)
-                })
+                tool_results.append(self.provider.format_tool_result(
+                    tc.id, json.dumps(result, default=str, ensure_ascii=False)
+                ))
             messages.append({"role": "user", "content": tool_results})
 
         if not final.strip():

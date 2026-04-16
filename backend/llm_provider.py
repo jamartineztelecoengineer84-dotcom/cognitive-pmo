@@ -47,6 +47,8 @@ class LLMResponse:
     tool_calls: List[ToolCall] = field(default_factory=list)
     input_tokens: int = 0
     output_tokens: int = 0
+    cache_read_tokens: int = 0
+    cache_creation_tokens: int = 0
     stop_reason: str = "end_turn"  # "end_turn" | "tool_use" | "max_tokens"
     raw_response: Any = None  # respuesta original para debug
 
@@ -208,6 +210,15 @@ def translate_messages_to_openai(messages: List[dict]) -> List[dict]:
 # Provider base (ABC)
 # ============================================================
 
+def _extract_system_text(system) -> str:
+    """Extrae texto plano de system prompt (str o list con cache_control)."""
+    if isinstance(system, str):
+        return system
+    if isinstance(system, list):
+        return " ".join(b.get("text", "") for b in system if isinstance(b, dict))
+    return str(system)
+
+
 class LLMProvider(ABC):
     """Clase base abstracta para providers LLM."""
 
@@ -215,7 +226,7 @@ class LLMProvider(ABC):
     async def create_message(
         self,
         model: str,
-        system: str,
+        system,
         messages: list,
         tools: Optional[list] = None,
         max_tokens: int = 2048,
@@ -278,7 +289,7 @@ class AnthropicProvider(LLMProvider):
     async def create_message(
         self,
         model: str,
-        system: str,
+        system,
         messages: list,
         tools: Optional[list] = None,
         max_tokens: int = 2048,
@@ -286,7 +297,7 @@ class AnthropicProvider(LLMProvider):
     ) -> LLMResponse:
         kwargs = {
             "model": model,
-            "system": system,
+            "system": system,  # str o list (cache_control) — SDK acepta ambos
             "messages": messages,
             "max_tokens": max_tokens,
             "temperature": temperature,
@@ -314,6 +325,8 @@ class AnthropicProvider(LLMProvider):
             tool_calls=tool_calls,
             input_tokens=resp.usage.input_tokens,
             output_tokens=resp.usage.output_tokens,
+            cache_read_tokens=getattr(resp.usage, 'cache_read_input_tokens', 0) or 0,
+            cache_creation_tokens=getattr(resp.usage, 'cache_creation_input_tokens', 0) or 0,
             stop_reason=resp.stop_reason,  # "end_turn" | "tool_use" | "max_tokens"
             raw_response=resp
         )
@@ -385,7 +398,7 @@ class OpenAIProvider(LLMProvider):
     async def create_message(
         self,
         model: str,
-        system: str,
+        system,
         messages: list,
         tools: Optional[list] = None,
         max_tokens: int = 2048,
@@ -395,7 +408,8 @@ class OpenAIProvider(LLMProvider):
         openai_model = self._map_model(model)
 
         # Traducir mensajes (Anthropic → OpenAI)
-        openai_messages = [{"role": "system", "content": system}]
+        system_text = _extract_system_text(system)
+        openai_messages = [{"role": "system", "content": system_text}]
         openai_messages.extend(translate_messages_to_openai(messages))
 
         # Traducir tool schemas
@@ -511,7 +525,7 @@ class OllamaProvider(LLMProvider):
     async def create_message(
         self,
         model: str,
-        system: str,
+        system,
         messages: list,
         tools: Optional[list] = None,
         max_tokens: int = 2048,
@@ -520,7 +534,8 @@ class OllamaProvider(LLMProvider):
         ollama_model = self._map_model(model)
 
         # Ollama usa formato OpenAI en /v1/chat/completions
-        ollama_messages = [{"role": "system", "content": system}]
+        system_text = _extract_system_text(system)
+        ollama_messages = [{"role": "system", "content": system_text}]
         ollama_messages.extend(translate_messages_to_openai(messages))
 
         payload = {

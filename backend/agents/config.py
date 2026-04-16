@@ -13,6 +13,7 @@ class AgentConfig:
     max_tokens: int = 2048
     temperature: float = 0.3
     cache_system: bool = False
+    provider: str = "anthropic"
 
 
 def load_prompt(filename: str) -> str:

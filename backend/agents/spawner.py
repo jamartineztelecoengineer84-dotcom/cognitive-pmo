@@ -23,6 +23,12 @@ _HAIKU_MODEL = "claude-haiku-4-5-20251001"
 _COST_RATES = {
     "claude-sonnet-4-20250514": {"input": 3.0, "output": 15.0, "cache_read": 0.30, "cache_create": 3.75},
     _HAIKU_MODEL:               {"input": 0.80, "output": 4.0,  "cache_read": 0.08, "cache_create": 1.0},
+    # OpenAI models (ARQ-04)
+    "gpt-4.1":                  {"input": 2.0,  "output": 8.0,  "cache_read": 0.50, "cache_create": 0.0},
+    "gpt-4o-mini":              {"input": 0.15, "output": 0.60, "cache_read": 0.0,  "cache_create": 0.0},
+    # Ollama local models — zero cost (ARQ-04)
+    "llama3:8b":                {"input": 0.0,  "output": 0.0,  "cache_read": 0.0,  "cache_create": 0.0},
+    "gemma3:1b":                {"input": 0.0,  "output": 0.0,  "cache_read": 0.0,  "cache_create": 0.0},
 }
 
 
