@@ -19488,5 +19488,22 @@ window.checkWarRoomLock=checkWarRoomLock;
 })();
 </script>
 
+<script>
+(function(){
+  function adjustScale(){
+    var w=window.innerWidth;
+    var zoom=1;
+    if(w>=2400)zoom=1.15;
+    else if(w>=1920)zoom=1.08;
+    else if(w>=1600)zoom=1.0;
+    else if(w>=1366)zoom=0.95;
+    else if(w>=1024)zoom=0.88;
+    document.documentElement.style.zoom=zoom;
+  }
+  adjustScale();
+  window.addEventListener('resize',adjustScale);
+})();
+</script>
+
 </body>
 </html>
