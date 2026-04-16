@@ -1458,7 +1458,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;disp
 /* ══════════════════════════════════════════════════════ */
 /* ── F5: SELECTOR LLM — PROTECCIONES DE AUTOR ──────── */
 /* ══════════════════════════════════════════════════════ */
-.provider-badge{position:fixed;top:16px;right:24px;z-index:50;display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 14px;cursor:pointer;transition:all 0.2s;}
+.provider-badge{position:fixed;top:16px;right:24px;z-index:10000;display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 14px;cursor:pointer;transition:all 0.2s;}
 .provider-badge:hover{background:rgba(255,255,255,0.1);border-color:#60a5fa;}
 .provider-badge .dot{width:8px;height:8px;border-radius:50%;background:#34d399;flex-shrink:0;}
 .provider-badge .badge-logo{width:22px;height:22px;flex-shrink:0;}
@@ -1467,7 +1467,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;disp
 .provider-badge .info .name{font-size:13px;font-weight:600;color:#e2e8f0;}
 .provider-badge .info .model{font-size:11px;color:#94a3b8;}
 .provider-badge .chevron{font-size:12px;color:#94a3b8;margin-left:4px;}
-.llm-dropdown{position:absolute;top:calc(100% + 8px);right:0;width:380px;background:rgba(15,20,35,0.97);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.5);padding:8px;z-index:100;display:none;}
+.llm-dropdown{position:absolute;top:calc(100% + 8px);right:0;width:380px;background:rgba(15,20,35,0.97);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.5);padding:8px;z-index:10000;display:none;}
 .llm-dropdown.open{display:block;animation:llmDdIn 0.2s ease;}
 @keyframes llmDdIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
 .llm-dd-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;cursor:pointer;transition:background 0.15s;}
@@ -1495,7 +1495,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;disp
 .free-pulse{position:relative;}
 .free-pulse::after{content:'';position:absolute;inset:-2px;border-radius:6px;background:rgba(52,211,153,0.15);animation:freePulse 2s ease-in-out infinite;z-index:-1;}
 @keyframes freePulse{0%,100%{opacity:0}50%{opacity:1}}
-.llm-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:200;}
+.llm-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:10001;}
 .llm-modal-overlay.open{display:flex;animation:llmFadeIn 0.25s ease;}
 @keyframes llmFadeIn{from{opacity:0}to{opacity:1}}
 .pass-modal{width:420px;background:rgba(12,16,28,0.97);backdrop-filter:blur(30px);border:1px solid rgba(245,158,11,0.25);border-radius:16px;box-shadow:0 30px 80px rgba(0,0,0,0.6),0 0 40px rgba(245,158,11,0.05);overflow:hidden;animation:llmModalIn 0.3s ease;}
@@ -1537,7 +1537,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;disp
 .attempts-bar{display:flex;gap:4px;margin-top:8px;justify-content:center;}
 .attempt-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.15);transition:all 0.3s;}
 .attempt-dot.used{background:#f87171;}
-.llm-toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:rgba(52,211,153,0.15);border:1px solid rgba(52,211,153,0.3);color:#34d399;font-size:13px;font-weight:600;padding:12px 24px;border-radius:10px;backdrop-filter:blur(10px);z-index:300;display:none;animation:llmSlideDown 0.3s ease;}
+.llm-toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:rgba(52,211,153,0.15);border:1px solid rgba(52,211,153,0.3);color:#34d399;font-size:13px;font-weight:600;padding:12px 24px;border-radius:10px;backdrop-filter:blur(10px);z-index:10002;display:none;animation:llmSlideDown 0.3s ease;}
 @keyframes llmSlideDown{from{opacity:0;transform:translate(-50%,-20px)}to{opacity:1;transform:translate(-50%,0)}}
 .ollama-modal{width:460px;background:rgba(12,16,28,0.97);backdrop-filter:blur(30px);border:1px solid rgba(167,139,250,0.25);border-radius:16px;box-shadow:0 30px 80px rgba(0,0,0,0.6),0 0 40px rgba(167,139,250,0.05);overflow:hidden;animation:llmModalIn 0.3s ease;}
 .ollama-header{background:linear-gradient(135deg,rgba(167,139,250,0.08),rgba(96,165,250,0.05));padding:28px 28px 22px;border-bottom:1px solid rgba(167,139,250,0.15);text-align:center;}
