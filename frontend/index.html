@@ -1619,6 +1619,21 @@ footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;disp
 .quick-access-superadmin .sa-title{font-size:13px;font-weight:700;color:#f59e0b;letter-spacing:1.5px;text-transform:uppercase;}
 .quick-access-superadmin .sa-subtitle{font-size:11px;color:#94a3b8;margin-top:2px;}
 .quick-access-superadmin .sa-badge{font-size:9px;font-weight:700;padding:3px 8px;border-radius:4px;background:rgba(245,158,11,0.15);color:#f59e0b;text-transform:uppercase;letter-spacing:0.5px;}
+/* ── F5c: War Room locked cuando Anthropic no es provider activo ── */
+.wr-locked{position:relative;}
+.wr-locked>*{opacity:0.3;filter:grayscale(70%);transition:opacity 0.3s ease,filter 0.3s ease;}
+.wr-locked::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(15,23,42,0.03),rgba(15,23,42,0.08));border-radius:inherit;z-index:10;pointer-events:none;}
+.wr-lock-badge{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;background:rgba(239,68,68,0.12);color:#ef4444;text-transform:uppercase;letter-spacing:0.5px;margin-left:6px;vertical-align:middle;}
+.wr-lock-badge svg{width:10px;height:10px;}
+.wr-locked-overlay{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:20;background:rgba(15,23,42,0.85);backdrop-filter:blur(8px);border:1px solid rgba(148,163,184,0.15);border-radius:16px;padding:32px 40px;text-align:center;max-width:420px;pointer-events:auto;}
+.wr-locked-overlay .wrl-icon{width:48px;height:48px;margin:0 auto 16px;border-radius:12px;background:rgba(239,68,68,0.12);display:flex;align-items:center;justify-content:center;}
+.wr-locked-overlay .wrl-icon svg{width:24px;height:24px;color:#ef4444;}
+.wr-locked-overlay .wrl-title{font-size:16px;font-weight:700;color:#f1f5f9;margin-bottom:8px;}
+.wr-locked-overlay .wrl-text{font-size:13px;color:#94a3b8;line-height:1.5;margin-bottom:16px;}
+.wr-locked-overlay .wrl-author{font-size:11px;color:#64748b;font-style:italic;}
+.wr-locked-overlay .wrl-btn{display:inline-flex;align-items:center;gap:6px;margin-top:16px;padding:8px 16px;border-radius:8px;border:1px solid rgba(245,158,11,0.3);background:rgba(245,158,11,0.08);color:#f59e0b;font-size:12px;font-weight:600;cursor:pointer;pointer-events:auto;transition:all 0.2s;}
+.wr-locked-overlay .wrl-btn:hover{background:rgba(245,158,11,0.15);border-color:rgba(245,158,11,0.5);}
+.wr-unlocked .wr-lock-badge{display:none;}
 /* ═══ END F5 SELECTOR LLM ═══ */
 
 </style>
@@ -2055,6 +2070,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;disp
     <div class="nav-tab warroom" draggable="true" onclick="showPage('warroom',this)" style="position:relative;">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v4a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><path d="M12 18v4"/><path d="M8 22h8"/></svg>
       <span style="color:#a855f7;font-weight:700;">WAR ROOM</span>
+      <span class="wr-lock-badge" id="wrLockBadge" style="display:none;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>API</span>
       <span id="wr-alert-count" style="position:absolute;top:6px;right:4px;background:#f85149;color:#fff;font-size:9px;font-weight:700;border-radius:50%;width:16px;height:16px;display:none;align-items:center;justify-content:center;font-family:var(--mono);"></span>
     </div>
   </div>
@@ -3236,6 +3252,14 @@ footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;disp
 
 <!-- ══════════════════ WAR ROOM COGNITIVO ══════════════════ -->
 <div class="page" id="page-warroom">
+  <!-- F5c: Overlay War Room bloqueada -->
+  <div class="wr-locked-overlay" id="wrLockedOverlay" style="display:none;">
+    <div class="wrl-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+    <div class="wrl-title">War Room &mdash; Acceso Restringido</div>
+    <div class="wrl-text">La War Room utiliza exclusivamente la API de Anthropic (Claude).<br>Para activarla, selecciona <strong>Anthropic</strong> en el selector de proveedor LLM e introduce la contrase&ntilde;a de autor.</div>
+    <div class="wrl-author">Restricci&oacute;n de autor: Jose Antonio Mart&iacute;nez Victoria &mdash; Protecci&oacute;n de costes API</div>
+    <div class="wrl-btn" onclick="document.getElementById('llmBadgeBtn')?.click()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>Cambiar proveedor LLM</div>
+  </div>
   <div class="wr-page">
     <!-- Sidebar Nav -->
     <div class="wr-sidebar">
@@ -19362,6 +19386,7 @@ var dotColors={anthropic:'#d97757',openai:'#10a37f',chatgpt:'#10a37f',ollama:'#a
 document.getElementById('llmBadgeDot').style.background=dotColors[item.dataset.provider]||'#34d399';
 dd.classList.remove('open');
 llmShowToast('✓ '+item.dataset.name+' activado');
+if(typeof window.checkWarRoomLock==='function')window.checkWarRoomLock();
 }
 
 badge.addEventListener('click',function(e){e.stopPropagation();dd.classList.toggle('open');});
@@ -19432,6 +19457,33 @@ loadProviders();
 })();
 </script>
 <!-- ═══ END F5 SELECTOR LLM ═══ -->
+
+<script>
+// F5c: War Room lock/unlock según provider activo
+(function(){
+'use strict';
+function checkWarRoomLock(){
+fetch('/api/llm/providers').then(function(r){return r.json()}).then(function(providers){
+var defaultProv=providers.find(function(p){return p.is_default});
+var isAnthropic=defaultProv&&defaultProv.provider_name==='anthropic';
+var panel=document.getElementById('page-warroom');
+if(panel){
+if(isAnthropic){panel.classList.remove('wr-locked');panel.classList.add('wr-unlocked');}
+else{panel.classList.add('wr-locked');panel.classList.remove('wr-unlocked');}
+}
+var overlay=document.getElementById('wrLockedOverlay');
+if(overlay)overlay.style.display=isAnthropic?'none':'block';
+var badge=document.getElementById('wrLockBadge');
+if(badge)badge.style.display=isAnthropic?'none':'inline-flex';
+var tab=document.querySelector('.nav-tab.warroom');
+if(tab){tab.style.opacity=isAnthropic?'':'0.5';tab.style.filter=isAnthropic?'':'grayscale(50%)';}
+}).catch(function(e){console.warn('F5c: error',e)});
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',checkWarRoomLock);
+else checkWarRoomLock();
+window.checkWarRoomLock=checkWarRoomLock;
+})();
+</script>
 
 </body>
 </html>
