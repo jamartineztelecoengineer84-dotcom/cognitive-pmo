@@ -5041,7 +5041,7 @@ async function doLogin() {
 
 // ── Demo Login (quick access for tribunal) ──
 async function demoLoginSuperadmin() {
-  /* SUPERADMIN usa email='admin', password='admin' */
+  /* SUPERADMIN usa email='admin', password='admin' — misma lógica que demoLogin */
   var card = event.currentTarget;
   card.style.opacity = '0.6';
   try {
@@ -5051,10 +5051,17 @@ async function demoLoginSuperadmin() {
     });
     var data = await res.json();
     if (!res.ok) { alert('Error: ' + (data.detail || 'Login fallido')); card.style.opacity = '1'; return; }
-    AUTH_TOKEN = data.token; AUTH_USER = data.usuario; AUTH_PERMISOS = data.permisos || []; AUTH_ROLE = data.role;
-    localStorage.setItem('pmo_token', data.token); localStorage.setItem('pmo_role', JSON.stringify(data.role));
-    document.getElementById('login-screen').style.display = 'none';
-    if (typeof initDashboard === 'function') initDashboard();
+    AUTH_TOKEN = data.token;
+    AUTH_USER = data.usuario;
+    AUTH_PERMISOS = data.permisos || [];
+    AUTH_ROLE = data.role;
+    localStorage.setItem('pmo_token', AUTH_TOKEN);
+    localStorage.setItem('pmo_user', JSON.stringify(AUTH_USER));
+    localStorage.setItem('pmo_permisos', JSON.stringify(AUTH_PERMISOS));
+    localStorage.setItem('pmo_role', JSON.stringify(AUTH_ROLE));
+    localStorage.setItem('cpm_token', AUTH_TOKEN);
+    if (typeof p97RouteAfterLogin === 'function' && p97RouteAfterLogin()) return;
+    if (typeof showApp === 'function') showApp();
   } catch(e) { alert('Error de conexión'); card.style.opacity = '1'; }
 }
 
@@ -19318,6 +19325,8 @@ var models=config.models||[];
 document.getElementById('llmBadgeName').textContent=defaultProv.display_name;
 document.getElementById('llmBadgeModel').textContent=(models[0]||defaultProv.provider_name);
 if(cfg.logo)document.getElementById('llmBadgeLogo').innerHTML='<svg><use href="#'+cfg.logo+'"/></svg>';
+var dotColors={anthropic:'#d97757',openai:'#10a37f',chatgpt:'#10a37f',ollama:'#a78bfa'};
+document.getElementById('llmBadgeDot').style.background=dotColors[defaultProv.provider_name]||'#34d399';
 }
 dd.querySelectorAll('.llm-dd-item').forEach(function(item){item.addEventListener('click',function(){handleProviderClick(item)});});
 var addBtn=document.getElementById('llmAddBtn');
@@ -19345,10 +19354,12 @@ if(!resp.ok){var err=await resp.json();llmShowToast('⛔ '+(err.error||'Error ac
 }catch(e){console.error('F5: Error activando provider',e);}
 dd.querySelectorAll('.llm-dd-item').forEach(function(i){i.classList.remove('active')});
 item.classList.add('active');
+var cfg=PROVIDER_CONFIG[item.dataset.provider]||{logo:'logo-custom'};
 document.getElementById('llmBadgeName').textContent=item.dataset.name;
 document.getElementById('llmBadgeModel').textContent=item.dataset.model;
-var cfg=PROVIDER_CONFIG[item.dataset.provider];
-if(cfg&&cfg.logo)document.getElementById('llmBadgeLogo').innerHTML='<svg><use href="#'+cfg.logo+'"/></svg>';
+document.getElementById('llmBadgeLogo').innerHTML='<svg><use href="#'+(cfg.logo||'logo-custom')+'"/></svg>';
+var dotColors={anthropic:'#d97757',openai:'#10a37f',chatgpt:'#10a37f',ollama:'#a78bfa'};
+document.getElementById('llmBadgeDot').style.background=dotColors[item.dataset.provider]||'#34d399';
 dd.classList.remove('open');
 llmShowToast('✓ '+item.dataset.name+' activado');
 }
