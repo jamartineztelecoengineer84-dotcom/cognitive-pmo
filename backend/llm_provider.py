@@ -631,13 +631,16 @@ _PROVIDER_REGISTRY = {
 }
 
 
-def get_provider(name: str = "anthropic", **kwargs) -> LLMProvider:
+def get_provider(name: str = "anthropic", config_json: Optional[dict] = None,
+                 **kwargs) -> LLMProvider:
     """
     Factory para obtener una instancia de LLMProvider.
 
     Args:
         name: "anthropic", "openai", "ollama"
-        **kwargs: argumentos específicos del provider (api_key, oauth_token, base_url, etc.)
+        config_json: dict opcional con datos de conexión de la BD
+                     (api_key, oauth_token, base_url, etc.) — usado por F6 OAuth
+        **kwargs: argumentos específicos del provider (tienen prioridad sobre config_json)
 
     Returns:
         Instancia del provider solicitado
@@ -650,7 +653,15 @@ def get_provider(name: str = "anthropic", **kwargs) -> LLMProvider:
         available = ", ".join(_PROVIDER_REGISTRY.keys())
         raise ValueError(f"Provider '{name}' no encontrado. Disponibles: {available}")
 
-    return provider_class(**kwargs)
+    # Merge: config_json es la base, kwargs sobreescriben
+    merged = {}
+    if config_json:
+        for key in ("api_key", "oauth_token", "base_url"):
+            if key in config_json:
+                merged[key] = config_json[key]
+    merged.update(kwargs)
+
+    return provider_class(**merged)
 
 
 def list_providers() -> List[str]:

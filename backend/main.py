@@ -66,7 +66,7 @@ def get_sync_conn():
 def run_init_sql():
     """Run init.sql and rbac_schema.sql using psycopg2 on startup. Executes statement-by-statement to tolerate duplicates."""
     base_dir = os.path.dirname(__file__)
-    sql_files = ["init.sql", "rbac_schema.sql", "cmdb_schema.sql", "cmdb_seed_extra.sql", "cmdb_ips_seed.sql", "cmdb_costes_schema.sql", "agents_migrations.sql"]
+    sql_files = ["init.sql", "rbac_schema.sql", "cmdb_schema.sql", "cmdb_seed_extra.sql", "cmdb_ips_seed.sql", "cmdb_costes_schema.sql", "agents_migrations.sql", "llm_provider_schema.sql"]
     for sql_file in sql_files:
         sql_path = os.path.join(base_dir, sql_file)
         if not os.path.exists(sql_path):
@@ -6106,6 +6106,79 @@ async def pm_chat_send(id_proyecto: str, body: PMChatMessage):
     except Exception as e:
         logger.warning(f"PM chat send error: {e}")
         raise HTTPException(500, str(e))
+
+
+# ── ARQ-04: LLM Provider Config API ───────────────────────────────────────
+
+@app.get("/api/llm/providers")
+async def list_llm_providers():
+    """Lista providers LLM configurados."""
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503, detail="DB no disponible")
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT id, provider_name, display_name, auth_type,
+                   is_active, is_default, config_json,
+                   created_at, updated_at
+            FROM primitiva.llm_provider_config
+            ORDER BY is_default DESC, provider_name
+        """)
+        return [dict(r) for r in rows]
+
+
+@app.post("/api/llm/providers")
+async def upsert_llm_provider(data: dict):
+    """Crear o actualizar un provider LLM."""
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503, detail="DB no disponible")
+    name = data.get("provider_name", "").strip().lower()
+    if not name:
+        raise HTTPException(status_code=400, detail="provider_name requerido")
+    display = data.get("display_name", name.title())
+    auth_type = data.get("auth_type", "api_key")
+    is_active = data.get("is_active", True)
+    config_json = json.dumps(data.get("config_json", {}))
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow("""
+            INSERT INTO primitiva.llm_provider_config
+                (provider_name, display_name, auth_type, is_active, config_json, updated_at)
+            VALUES ($1, $2, $3, $4, $5::jsonb, NOW())
+            ON CONFLICT (provider_name) DO UPDATE SET
+                display_name = EXCLUDED.display_name,
+                auth_type = EXCLUDED.auth_type,
+                is_active = EXCLUDED.is_active,
+                config_json = EXCLUDED.config_json,
+                updated_at = NOW()
+            RETURNING id, provider_name, display_name, auth_type, is_active, is_default
+        """, name, display, auth_type, is_active, config_json)
+        return dict(row)
+
+
+@app.put("/api/llm/providers/{provider_id}/activate")
+async def activate_llm_provider(provider_id: int):
+    """Marcar un provider como default (desactiva los demás)."""
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503, detail="DB no disponible")
+    async with pool.acquire() as conn:
+        exists = await conn.fetchval(
+            "SELECT id FROM primitiva.llm_provider_config WHERE id = $1", provider_id)
+        if not exists:
+            raise HTTPException(status_code=404, detail="Provider no encontrado")
+        await conn.execute("""
+            UPDATE primitiva.llm_provider_config SET is_default = FALSE, updated_at = NOW()
+        """)
+        await conn.execute("""
+            UPDATE primitiva.llm_provider_config
+            SET is_default = TRUE, is_active = TRUE, updated_at = NOW()
+            WHERE id = $1
+        """, provider_id)
+        row = await conn.fetchrow(
+            "SELECT id, provider_name, display_name, is_default FROM primitiva.llm_provider_config WHERE id = $1",
+            provider_id)
+        return dict(row)
 
 
 # ── War Room Cognitivo (Sub-App) ───────────────────────────────────────────
