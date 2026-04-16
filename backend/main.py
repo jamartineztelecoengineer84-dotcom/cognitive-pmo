@@ -2374,7 +2374,6 @@ async def build_advisor_chat(data: dict):
                 role, content, metadata)
             VALUES ($1, 'AG-018', 'Governance Advisor', 'user', $2, $3)
         """, session_id, message, json.dumps(context))
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
     system_prompt = "Eres AG-018 Governance Advisor de Cognitive PMO.\n" \
         "Tu rol es asistir al gobernador durante las pausas de gobernanza del pipeline BUILD.\n\n" \
         "CONTEXTO ACTUAL DEL PROYECTO:\n" + json.dumps(context, indent=2, ensure_ascii=False) + "\n\n" \
@@ -2383,22 +2382,15 @@ async def build_advisor_chat(data: dict):
         "- Sé conciso pero completo (máx 200 palabras)\n" \
         "- Si no sabes algo, dilo claramente"
     try:
-        async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.post(
-                "https://api.anthropic.com/v1/messages",
-                headers={
-                    "x-api-key": api_key,
-                    "anthropic-version": "2023-06-01",
-                    "content-type": "application/json"
-                },
-                json={
-                    "model": "claude-sonnet-4-20250514",
-                    "max_tokens": 1000,
-                    "system": system_prompt,
-                    "messages": [{"role": "user", "content": message}]
-                })
-            result = resp.json()
-            reply = result.get("content", [{}])[0].get("text", "Error al procesar")
+        from llm_provider import get_provider
+        provider = get_provider("anthropic")
+        resp = await provider.create_message(
+            model="claude-sonnet-4-20250514",
+            max_tokens=1000,
+            system=system_prompt,
+            messages=[{"role": "user", "content": message}]
+        )
+        reply = resp.text or "Error al procesar"
     except Exception as e:
         reply = f"Error de conexión con AG-018: {str(e)}"
     async with pool.acquire() as conn:
