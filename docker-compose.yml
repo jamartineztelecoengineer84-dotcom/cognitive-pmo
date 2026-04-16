@@ -1,0 +1,43 @@
+version: '3.9'
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres-pmo-vps
+    environment:
+      POSTGRES_USER: jose_admin
+      POSTGRES_PASSWORD: REDACTED-old-password
+      POSTGRES_DB: cognitive_pmo
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata-pmo:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jose_admin"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    ports:
+      - "8088:8088"
+    env_file: .env
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    image: nginx:alpine
+    ports:
+      - "3030:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+      - ./frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  pgdata-pmo:

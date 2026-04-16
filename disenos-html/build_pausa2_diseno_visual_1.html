@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;font-family:system-ui,-apple-system,sans-serif;color:#e8e9ed;padding:16px}
+.container{max-width:1100px;margin:0 auto}
+
+/* Pipeline bar */
+.pipeline-bar{display:flex;align-items:center;gap:4px;background:#1a1d24;border-radius:12px;padding:10px 14px;margin-bottom:12px;overflow-x:auto}
+.pipe-agent{display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;opacity:0.35;flex-shrink:0}
+.pipe-agent.active{opacity:1;background:rgba(255,255,255,0.06);animation:pulse 2s infinite}
+.pipe-agent.done{opacity:0.7}
+.pipe-icon{width:32px;height:32px;flex-shrink:0}
+.pipe-label{font-size:9px;font-weight:600;line-height:1.2}
+.pipe-sub{font-size:7px;color:#8b8f98}
+.pipe-arrow{color:#333840;font-size:12px;flex-shrink:0}
+.pipe-agent.done .pipe-label{text-decoration:line-through}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.7}}
+
+/* Progress bar */
+.progress-bar{display:flex;align-items:center;gap:16px;background:#1a1d24;border-radius:10px;padding:10px 16px;margin-bottom:12px}
+.prog-time{font-size:28px;font-weight:700;font-family:monospace;letter-spacing:1px}
+.prog-label{font-size:9px;color:#8b8f98}
+
+/* Pause bar */
+.pause-bar{background:rgba(234,179,8,0.08);border:2px dashed rgba(234,179,8,0.4);border-radius:10px;padding:12px 16px;margin-bottom:12px}
+.pause-title{font-size:13px;font-weight:600;color:#eab308;margin-bottom:4px}
+.pause-sub{font-size:10px;color:#8b8f98}
+.pause-actions{display:flex;gap:8px;margin-top:8px}
+.btn{padding:8px 18px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:none}
+.btn-approve{background:#22c55e;color:#fff}
+.btn-reject{background:none;border:1px solid rgba(239,68,68,0.3);color:#ef4444}
+.btn-edit{background:none;border:1px solid #333840;color:#8b8f98}
+
+/* Main layout */
+.main-layout{display:flex;gap:12px}
+.main-left{flex:2;min-width:0}
+.main-right{flex:1;min-width:280px;max-width:320px}
+
+/* Agent result */
+.agent-result{background:#1a1d24;border:1px solid #333840;border-radius:10px;padding:14px;margin-bottom:10px}
+.agent-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.agent-badge{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+.ia-badge{font-size:7px;padding:1px 5px;border-radius:3px;background:rgba(234,179,8,0.15);color:#eab308;font-weight:600}
+
+/* Task cards with subtasks */
+.task-card{background:#22262e;border:1px solid #3a3f4a;border-radius:8px;margin-bottom:8px;overflow:hidden}
+.task-header{padding:10px 12px;display:flex;justify-content:space-between;align-items:flex-start;cursor:pointer}
+.task-header:hover{background:rgba(255,255,255,0.02)}
+.task-title{font-size:12px;font-weight:600;color:#e8e9ed}
+.task-meta{display:flex;gap:4px;margin-top:3px;align-items:center;flex-wrap:wrap}
+.task-tag{font-size:7px;padding:1px 5px;border-radius:3px;font-weight:600}
+.task-hours{font-size:11px;font-weight:700;font-family:monospace;min-width:40px;text-align:right}
+.task-fase{font-size:8px;color:#8b8f98}
+
+/* Subtasks */
+.subtasks{padding:0 12px 10px;border-top:1px solid #2a2e38}
+.subtask-label{font-size:9px;font-weight:600;color:#d946ef;margin:8px 0 6px;display:flex;align-items:center;gap:4px}
+.subtask{background:#181b20;border:1px solid #2a2e38;border-left:3px solid #d946ef;border-radius:6px;padding:8px 10px;margin-bottom:5px;position:relative}
+.subtask-num{position:absolute;top:8px;left:-12px;width:18px;height:18px;border-radius:50%;background:#d946ef;color:#fff;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700}
+.subtask-title{font-size:11px;font-weight:600;color:#e8e9ed;margin-bottom:3px;margin-left:8px}
+.subtask-desc{font-size:9px;color:#8b8f98;line-height:1.4;margin-left:8px}
+.subtask-bottom{display:flex;gap:6px;margin-top:5px;margin-left:8px;align-items:center;flex-wrap:wrap}
+.subtask-tech{font-size:7px;padding:2px 6px;border-radius:3px;background:rgba(217,70,239,0.1);color:#d946ef;font-weight:600;border:1px solid rgba(217,70,239,0.2)}
+.subtask-comp{font-size:7px;padding:2px 6px;border-radius:3px;background:rgba(6,182,212,0.1);color:#06b6d4;font-weight:600}
+.subtask-integra{font-size:7px;padding:2px 6px;border-radius:3px;background:rgba(249,115,22,0.1);color:#f97316;font-weight:600}
+.subtask-hours{font-size:9px;font-family:monospace;color:#8b8f98;margin-left:auto}
+.subtask-criterio{font-size:8px;color:#22c55e;margin-top:3px;margin-left:8px;display:flex;align-items:center;gap:3px}
+.subtask-edit{position:absolute;top:6px;right:8px;font-size:8px;color:#8b8f98;cursor:pointer;padding:2px 6px;border:1px solid #333840;border-radius:3px}
+.subtask-edit:hover{color:#eab308;border-color:#eab308}
+.subtask-add{display:flex;align-items:center;justify-content:center;gap:4px;padding:6px;border:1px dashed #333840;border-radius:6px;font-size:9px;color:#8b8f98;cursor:pointer;margin-top:4px}
+.subtask-add:hover{border-color:#d946ef;color:#d946ef}
+.subtask-delete{position:absolute;top:6px;right:48px;font-size:8px;color:#ef4444;cursor:pointer;padding:2px 6px;border:1px solid rgba(239,68,68,0.2);border-radius:3px;opacity:0.5}
+.subtask-delete:hover{opacity:1}
+
+/* Sidebar */
+.sidebar-card{background:#1a1d24;border:1px solid #333840;border-radius:10px;padding:12px;margin-bottom:10px}
+.sidebar-title{font-size:10px;font-weight:600;color:#8b8f98;text-transform:uppercase;margin-bottom:8px}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.stat-item{background:#22262e;border-radius:6px;padding:8px;text-align:center}
+.stat-value{font-size:18px;font-weight:700;font-family:monospace}
+.stat-label{font-size:7px;color:#8b8f98;text-transform:uppercase;margin-top:2px}
+
+/* Advisor */
+.advisor-panel{background:#0f1724;border:1px solid rgba(16,185,129,0.25);border-radius:10px;overflow:hidden;margin-bottom:10px}
+.advisor-header{padding:8px 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(16,185,129,0.15)}
+.advisor-icon{width:28px;height:28px;border-radius:50%;background:rgba(16,185,129,0.2);color:#10b981;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.advisor-title{font-size:11px;font-weight:600;color:#10b981}
+.advisor-sub{font-size:8px;color:#8b8f98}
+.advisor-context{display:flex;gap:3px;flex-wrap:wrap;padding:6px 12px;border-bottom:1px solid rgba(16,185,129,0.1)}
+.ctx-badge{font-size:7px;padding:1px 5px;border-radius:3px;background:rgba(16,185,129,0.1);color:#10b981;font-weight:600}
+.ctx-badge.new{background:rgba(217,70,239,0.15);color:#d946ef}
+.advisor-messages{padding:8px 12px;max-height:200px;overflow-y:auto}
+.advisor-msg{margin-bottom:8px;font-size:10px;line-height:1.4}
+.advisor-msg.system{color:#10b981;background:rgba(16,185,129,0.06);padding:6px 8px;border-radius:6px}
+.advisor-msg.user span{background:rgba(59,130,246,0.1);padding:4px 8px;border-radius:6px;display:inline-block;text-align:right}
+.advisor-msg.bot span{background:rgba(16,185,129,0.06);padding:4px 8px;border-radius:6px;display:inline-block}
+.advisor-suggestions{padding:4px 12px 8px;display:flex;flex-direction:column;gap:3px}
+.advisor-sug{font-size:8px;color:#10b981;cursor:pointer;padding:3px 6px;border-radius:4px;background:rgba(16,185,129,0.06)}
+.advisor-sug:hover{background:rgba(16,185,129,0.12)}
+.advisor-upload{display:flex;align-items:center;gap:4px;padding:4px 12px;border-top:1px solid rgba(16,185,129,0.1)}
+.advisor-upload-btn{font-size:8px;color:#8b8f98;cursor:pointer;padding:3px 8px;border:1px dashed #333840;border-radius:4px}
+.advisor-upload-btn:hover{border-color:#10b981;color:#10b981}
+.advisor-input-row{display:flex;gap:6px;padding:8px 12px;border-top:1px solid rgba(16,185,129,0.15)}
+.advisor-input{flex:1;background:#1a2332;border:1px solid rgba(16,185,129,0.2);border-radius:6px;padding:6px 10px;color:#e8e9ed;font-size:10px;font-family:inherit}
+.advisor-input::placeholder{color:#4b5563}
+.advisor-send{background:#10b981;border:none;color:#fff;padding:6px 12px;border-radius:6px;font-size:10px;cursor:pointer;font-weight:600}
+
+/* CMDB reference */
+.cmdb-ref{background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.15);border-radius:4px;padding:3px 6px;font-size:7px;color:#22c55e;display:inline-flex;align-items:center;gap:3px}
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- PIPELINE BAR -->
+<div class="pipeline-bar">
+<div style="font-size:9px;color:#8b8f98;margin-right:6px;flex-shrink:0">PMBOK 7 ▸</div>
+
+<!-- AG-005 DONE -->
+<div class="pipe-agent done">
+<svg class="pipe-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+<path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#10b981" stroke-width="5"/>
+<path d="M30 75 H70 L50 30 Z" fill="none" stroke="#10b981" stroke-width="5" stroke-linejoin="round"/>
+<circle cx="50" cy="20" r="5" fill="#10b981"/>
+</svg>
+<div>
+<div class="pipe-label" style="color:#10b981;text-decoration:line-through">AG-005</div>
+<div class="pipe-sub">Estratega ✓</div>
+</div>
+</div>
+<div class="pipe-arrow">▸</div>
+
+<!-- AG-013 DONE -->
+<div class="pipe-agent done">
+<svg class="pipe-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+<path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#d946ef" stroke-width="5"/>
+<rect x="25" y="30" width="15" height="15" rx="2" fill="none" stroke="#d946ef" stroke-width="5"/>
+<path d="M40 37 H50" stroke="#d946ef" stroke-width="5"/>
+<rect x="50" y="25" width="20" height="20" rx="3" fill="none" stroke="#d946ef" stroke-width="5"/>
+<rect x="75" y="45" width="10" height="10" rx="1" fill="none" stroke="#d946ef" stroke-width="3"/>
+<rect x="75" y="60" width="10" height="10" rx="1" fill="none" stroke="#d946ef" stroke-width="3"/>
+</svg>
+<div>
+<div class="pipe-label" style="color:#d946ef;text-decoration:line-through">AG-013</div>
+<div class="pipe-sub">Decomposer ✓</div>
+</div>
+</div>
+<div class="pipe-arrow">▸</div>
+
+<!-- AG-014 PENDING -->
+<div class="pipe-agent">
+<svg class="pipe-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+<path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#eab308" stroke-width="5"/>
+<rect x="30" y="55" width="8" height="20" rx="1" fill="#eab308"/>
+<rect x="42" y="45" width="8" height="30" rx="1" fill="#eab308"/>
+<rect x="54" y="35" width="8" height="40" rx="1" fill="#eab308"/>
+</svg>
+<div><div class="pipe-label" style="color:#eab308">AG-014</div><div class="pipe-sub">Risk</div></div>
+</div>
+<div class="pipe-arrow">▸</div>
+
+<!-- AG-015 -->
+<div class="pipe-agent">
+<svg class="pipe-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+<path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#ec4899" stroke-width="5"/>
+<circle cx="35" cy="50" r="8" fill="none" stroke="#ec4899" stroke-width="5"/>
+<circle cx="65" cy="50" r="8" fill="none" stroke="#ec4899" stroke-width="5"/>
+<path d="M45 50 H55" stroke="#ec4899" stroke-width="5"/>
+</svg>
+<div><div class="pipe-label" style="color:#ec4899">AG-015</div><div class="pipe-sub">Stakeholder</div></div>
+</div>
+<div class="pipe-arrow">▸</div>
+
+<!-- AG-006 -->
+<div class="pipe-agent">
+<svg class="pipe-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+<path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#eab308" stroke-width="5"/>
+<rect x="30" y="30" width="15" height="15" rx="1" fill="#eab308"/><rect x="55" y="30" width="15" height="15" rx="1" fill="#eab308" opacity="0.4"/>
+</svg>
+<div><div class="pipe-label" style="color:#eab308">AG-006</div><div class="pipe-sub">Resource</div></div>
+</div>
+<div class="pipe-arrow">▸</div>
+
+<!-- AG-016 -->
+<div class="pipe-agent">
+<svg class="pipe-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+<path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#10b981" stroke-width="5"/>
+<ellipse cx="50" cy="40" rx="20" ry="10" fill="none" stroke="#10b981" stroke-width="5"/>
+</svg>
+<div><div class="pipe-label" style="color:#10b981">AG-016</div><div class="pipe-sub">Cost</div></div>
+</div>
+<div class="pipe-arrow">▸</div>
+
+<!-- AG-007 -->
+<div class="pipe-agent">
+<svg class="pipe-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+<path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#ec4899" stroke-width="5"/>
+<rect x="30" y="35" width="40" height="8" rx="2" fill="#ec4899"/>
+<rect x="30" y="50" width="25" height="8" rx="2" fill="#ec4899"/>
+</svg>
+<div><div class="pipe-label" style="color:#ec4899">AG-007</div><div class="pipe-sub">Planif.</div></div>
+</div>
+<div class="pipe-arrow">▸</div>
+
+<!-- AG-017 -->
+<div class="pipe-agent">
+<svg class="pipe-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+<path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#8b5cf6" stroke-width="5"/>
+<rect x="35" y="45" width="30" height="25" rx="2" fill="#8b5cf6"/>
+<path d="M40 45 V35 A10 10 0 0 1 60 35 V45" fill="none" stroke="#8b5cf6" stroke-width="5"/>
+</svg>
+<div><div class="pipe-label" style="color:#8b5cf6">AG-017</div><div class="pipe-sub">Quality</div></div>
+</div>
+<div style="margin-left:auto;font-size:10px;color:#8b8f98;flex-shrink:0">READY</div>
+</div>
+
+<!-- PROGRESS BAR -->
+<div class="progress-bar">
+<div>
+<div class="prog-time" style="color:#22c55e">--:--:--</div>
+<div class="prog-label">Tiempo estimado</div>
+</div>
+<div>
+<div class="prog-time" style="color:#d946ef;font-size:24px">25%</div>
+<div class="prog-label">Progreso pipeline</div>
+</div>
+<div style="flex:1">
+<div style="display:flex;justify-content:space-between;font-size:9px;color:#8b8f98">
+<span>AG-005: 8.2s · AG-013: 12.4s</span>
+<span>~0.09 USD acumulado</span>
+</div>
+<div style="height:6px;background:#181b20;border-radius:3px;margin-top:4px;overflow:hidden">
+<div style="height:100%;width:25%;background:linear-gradient(90deg,#10b981,#d946ef);border-radius:3px"></div>
+</div>
+</div>
+</div>
+
+<!-- PAUSE BAR -->
+<div class="pause-bar">
+<div style="display:flex;justify-content:space-between;align-items:center">
+<div>
+<div class="pause-title">⏸ Pipeline en pausa — Decisión de gobernanza (2/4)</div>
+<div class="pause-sub">AG-013 Task Decomposer ha desglosado las 24 tareas en 96 subtareas técnicas. Revise el detalle técnico, añada/elimine subtareas, y apruebe para continuar con el análisis de riesgos y stakeholders.</div>
+</div>
+<div class="pause-actions">
+<button class="btn btn-reject">Rechazar</button>
+<button class="btn btn-edit">Re-generar tarea</button>
+<button class="btn btn-approve">Aprobar subtareas ▸</button>
+</div>
+</div>
+</div>
+
+<!-- MAIN LAYOUT -->
+<div class="main-layout">
+<div class="main-left">
+
+<!-- AG-013 RESULT -->
+<div class="agent-result">
+<div class="agent-header">
+<svg width="24" height="24" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+<path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#d946ef" stroke-width="5"/>
+<rect x="25" y="30" width="15" height="15" rx="2" fill="none" stroke="#d946ef" stroke-width="5"/>
+<path d="M40 37 H50" stroke="#d946ef" stroke-width="5"/>
+<rect x="50" y="25" width="20" height="20" rx="3" fill="none" stroke="#d946ef" stroke-width="5"/>
+</svg>
+<div class="agent-badge" style="color:#d946ef">AG-013 Task Decomposer — Subtareas técnicas</div>
+<span class="ia-badge">Generado por IA + CMDB</span>
+</div>
+
+<!-- TAREA 1.1.1 con subtareas -->
+<div class="task-card" style="border-left:3px solid #3b82f6">
+<div class="task-header">
+<div>
+<div class="task-title">T1.1.1: Inventario de servidores y servicios RHEL 7</div>
+<div class="task-meta">
+<span class="task-tag" style="background:rgba(59,130,246,0.12);color:#3b82f6">Fase 1: Análisis</span>
+<span class="task-tag" style="background:rgba(6,182,212,0.12);color:#06b6d4">Linux</span>
+<span class="task-tag" style="background:rgba(168,85,247,0.12);color:#a855f7">CMDB</span>
+<span class="task-fase">Paquete 1.1 · dep: ninguna</span>
+</div>
+</div>
+<div class="task-hours" style="color:#3b82f6">40h</div>
+</div>
+<div class="subtasks">
+<div class="subtask-label">
+<svg width="12" height="12" viewBox="0 0 100 100"><rect x="10" y="10" width="80" height="80" rx="10" fill="none" stroke="#d946ef" stroke-width="10"/></svg>
+5 subtareas técnicas generadas por AG-013
+</div>
+
+<div class="subtask">
+<div class="subtask-edit">Editar</div>
+<div class="subtask-delete">Eliminar</div>
+<div class="subtask-title">1. Extraer inventario de la CMDB</div>
+<div class="subtask-desc">Consultar cmdb_activos filtrando por SO=RHEL7. Exportar lista de servidores con: hostname, IP, servicios, criticidad, entorno (DEV/PRE/PRO).</div>
+<div class="subtask-bottom">
+<span class="subtask-tech">CMDB API</span>
+<span class="subtask-comp">cmdb_activos</span>
+<span class="subtask-integra">→ cmdb_relaciones</span>
+<span class="subtask-hours">6h</span>
+</div>
+<div class="subtask-criterio">✓ Lista completa de 47 servidores con servicios mapeados</div>
+</div>
+
+<div class="subtask">
+<div class="subtask-edit">Editar</div>
+<div class="subtask-delete">Eliminar</div>
+<div class="subtask-title">2. Auditar versiones de paquetes RPM críticos</div>
+<div class="subtask-desc">Conectar por SSH a cada servidor RHEL 7 y ejecutar "rpm -qa" para obtener lista de paquetes. Comparar con baseline RHEL 9 para detectar incompatibilidades.</div>
+<div class="subtask-bottom">
+<span class="subtask-tech">SSH + Ansible</span>
+<span class="subtask-comp">Servidores RHEL 7</span>
+<span class="subtask-integra">→ Satellite</span>
+<span class="subtask-hours">12h</span>
+</div>
+<div class="subtask-criterio">✓ Matriz de compatibilidad RPM generada para los 47 servidores</div>
+<div style="margin-top:3px;margin-left:8px">
+<span class="cmdb-ref">🖥 CMDB: SRV-LNX-001..047 — RHEL 7.9 — Criticidad: ALTA(20) MEDIA(15) BAJA(12)</span>
+</div>
+</div>
+
+<div class="subtask">
+<div class="subtask-edit">Editar</div>
+<div class="subtask-delete">Eliminar</div>
+<div class="subtask-title">3. Documentar servicios systemd activos</div>
+<div class="subtask-desc">En cada servidor, listar units systemd activos (systemctl list-units). Clasificar servicios propios del banco vs estándar del SO. Mapear dependencias entre servicios.</div>
+<div class="subtask-bottom">
+<span class="subtask-tech">systemd</span>
+<span class="subtask-comp">47 servidores</span>
+<span class="subtask-integra">→ ITSM Catálogo</span>
+<span class="subtask-hours">10h</span>
+</div>
+<div class="subtask-criterio">✓ Catálogo de servicios por servidor con clasificación propia/estándar</div>
+</div>
+
+<div class="subtask">
+<div class="subtask-edit">Editar</div>
+<div class="subtask-delete">Eliminar</div>
+<div class="subtask-title">4. Verificar conectividad de red y puertos</div>
+<div class="subtask-desc">Para cada servidor, ejecutar netstat/ss para listar puertos en escucha. Validar reglas de firewall (iptables/firewalld). Documentar VLANs asignadas desde cmdb_vlans.</div>
+<div class="subtask-bottom">
+<span class="subtask-tech">netstat + firewalld</span>
+<span class="subtask-comp">Red corporativa</span>
+<span class="subtask-integra">→ cmdb_vlans</span>
+<span class="subtask-hours">8h</span>
+</div>
+<div class="subtask-criterio">✓ Diagrama de puertos y VLANs documentado por servidor</div>
+<div style="margin-top:3px;margin-left:8px">
+<span class="cmdb-ref">🌐 CMDB: VLANs 10,20,30,40 — 111 IPs asignadas — Gateway 192.168.x.1</span>
+</div>
+</div>
+
+<div class="subtask">
+<div class="subtask-edit">Editar</div>
+<div class="subtask-delete">Eliminar</div>
+<div class="subtask-title">5. Generar informe de auditoría consolidado</div>
+<div class="subtask-desc">Consolidar toda la información en un informe: servidores, servicios, paquetes, puertos, VLANs, criticidad. Formato: documento Word + dashboard en la app con datos de CMDB.</div>
+<div class="subtask-bottom">
+<span class="subtask-tech">Documentación</span>
+<span class="subtask-comp">Todas las fuentes</span>
+<span class="subtask-hours">4h</span>
+</div>
+<div class="subtask-criterio">✓ Informe aprobado por el sponsor del proyecto</div>
+</div>
+
+<div class="subtask-add">+ Añadir subtarea técnica a esta tarea</div>
+</div>
+</div>
+
+<!-- TAREA 1.1.2 -->
+<div class="task-card" style="border-left:3px solid #3b82f6">
+<div class="task-header">
+<div>
+<div class="task-title">T1.1.2: Mapeo de dependencias entre servicios</div>
+<div class="task-meta">
+<span class="task-tag" style="background:rgba(59,130,246,0.12);color:#3b82f6">Fase 1</span>
+<span class="task-tag" style="background:rgba(6,182,212,0.12);color:#06b6d4">Redes</span>
+<span class="task-fase">Paquete 1.1</span>
+</div>
+</div>
+<div class="task-hours" style="color:#3b82f6">32h</div>
+</div>
+<div class="subtasks">
+<div class="subtask-label">
+<svg width="12" height="12" viewBox="0 0 100 100"><rect x="10" y="10" width="80" height="80" rx="10" fill="none" stroke="#d946ef" stroke-width="10"/></svg>
+4 subtareas técnicas
+</div>
+
+<div class="subtask">
+<div class="subtask-edit">Editar</div>
+<div class="subtask-title">1. Trazar dependencias con cmdb_relaciones</div>
+<div class="subtask-desc">Consultar tabla cmdb_relaciones para obtener el grafo de dependencias: qué servidor depende de cuál. Identificar clusters de servicios acoplados.</div>
+<div class="subtask-bottom">
+<span class="subtask-tech">CMDB API</span>
+<span class="subtask-comp">cmdb_relaciones</span>
+<span class="subtask-integra">→ cmdb_activos</span>
+<span class="subtask-hours">8h</span>
+</div>
+<div class="subtask-criterio">✓ Grafo de dependencias exportado (55 relaciones documentadas)</div>
+<div style="margin-top:3px;margin-left:8px">
+<span class="cmdb-ref">🔗 CMDB: 55 relaciones — Tipos: DEPENDE_DE(32), CONECTA_A(15), ALOJA(8)</span>
+</div>
+</div>
+
+<div class="subtask">
+<div class="subtask-edit">Editar</div>
+<div class="subtask-title">2. Descubrir dependencias no documentadas</div>
+<div class="subtask-desc">Ejecutar tcpdump/nmap en cada servidor para descubrir conexiones activas no registradas en CMDB. Actualizar cmdb_relaciones con hallazgos.</div>
+<div class="subtask-bottom">
+<span class="subtask-tech">nmap + tcpdump</span>
+<span class="subtask-comp">Red interna</span>
+<span class="subtask-hours">12h</span>
+</div>
+</div>
+
+<div class="subtask">
+<div class="subtask-edit">Editar</div>
+<div class="subtask-title">3. Clasificar dependencias por criticidad</div>
+<div class="subtask-desc">Categorizar cada dependencia: crítica (servicio bancario), alta (soporte), media (monitoring), baja (logging). Esto define el orden de migración.</div>
+<div class="subtask-bottom">
+<span class="subtask-tech">Análisis</span>
+<span class="subtask-hours">8h</span>
+</div>
+</div>
+
+<div class="subtask">
+<div class="subtask-edit">Editar</div>
+<div class="subtask-title">4. Generar mapa visual de dependencias</div>
+<div class="subtask-desc">Crear diagrama de dependencias con niveles de criticidad coloreados. Exportar como SVG para incluir en la documentación del proyecto.</div>
+<div class="subtask-bottom">
+<span class="subtask-tech">Mermaid / D3.js</span>
+<span class="subtask-hours">4h</span>
+</div>
+</div>
+
+<div class="subtask-add">+ Añadir subtarea técnica</div>
+</div>
+</div>
+
+<!-- TAREA 1.1.3 collapsed -->
+<div class="task-card" style="border-left:3px solid #3b82f6">
+<div class="task-header">
+<div>
+<div class="task-title">T1.1.3: Análisis de compatibilidad RHEL 7 → RHEL 9 <span style="font-size:8px;color:#8b8f98">▸ 4 subtareas</span></div>
+<div class="task-meta">
+<span class="task-tag" style="background:rgba(59,130,246,0.12);color:#3b82f6">Fase 1</span>
+<span class="task-tag" style="background:rgba(6,182,212,0.12);color:#06b6d4">Linux</span>
+<span class="task-tag" style="background:rgba(249,115,22,0.12);color:#f97316">Backend</span>
+<span class="task-fase">dep: T1.1.1</span>
+</div>
+</div>
+<div class="task-hours" style="color:#3b82f6">48h</div>
+</div>
+</div>
+
+<!-- TAREA 1.2.1 collapsed -->
+<div class="task-card" style="border-left:3px solid #3b82f6">
+<div class="task-header">
+<div>
+<div class="task-title">T1.2.1: Diseñar topología de red RHEL 9 <span style="font-size:8px;color:#8b8f98">▸ 5 subtareas</span></div>
+<div class="task-meta">
+<span class="task-tag" style="background:rgba(59,130,246,0.12);color:#3b82f6">Fase 1</span>
+<span class="task-tag" style="background:rgba(6,182,212,0.12);color:#06b6d4">Redes</span>
+<span class="task-tag" style="background:rgba(239,68,68,0.12);color:#ef4444">Seguridad</span>
+<span class="task-fase">dep: T1.1.3</span>
+</div>
+</div>
+<div class="task-hours" style="color:#3b82f6">56h</div>
+</div>
+</div>
+
+<!-- More collapsed tasks -->
+<div style="text-align:center;padding:8px;font-size:10px;color:#8b8f98;border:1px dashed #333840;border-radius:6px;margin-top:4px">
+... 20 tareas más con subtareas (click para expandir cada una)
+</div>
+
+</div>
+
+</div>
+
+<!-- SIDEBAR -->
+<div class="main-right">
+
+<!-- Stats -->
+<div class="sidebar-card">
+<div class="sidebar-title">Resumen subtareas generadas</div>
+<div class="stat-grid">
+<div class="stat-item">
+<div class="stat-value" style="color:#d946ef">96</div>
+<div class="stat-label">Subtareas total</div>
+</div>
+<div class="stat-item">
+<div class="stat-value" style="color:#e8e9ed">24</div>
+<div class="stat-label">Tareas padre</div>
+</div>
+<div class="stat-item">
+<div class="stat-value" style="color:#22c55e">4.0</div>
+<div class="stat-label">Media sub/tarea</div>
+</div>
+<div class="stat-item">
+<div class="stat-value" style="color:#06b6d4">18</div>
+<div class="stat-label">Refs CMDB</div>
+</div>
+</div>
+<div style="margin-top:8px">
+<div style="font-size:8px;color:#8b8f98;margin-bottom:4px">Tecnologías detectadas (CMDB):</div>
+<div style="display:flex;gap:3px;flex-wrap:wrap">
+<span class="subtask-tech">Ansible</span>
+<span class="subtask-tech">SSH</span>
+<span class="subtask-tech">systemd</span>
+<span class="subtask-tech">firewalld</span>
+<span class="subtask-tech">nmap</span>
+<span class="subtask-tech">Satellite</span>
+<span class="subtask-tech">pgLoader</span>
+<span class="subtask-tech">Mermaid</span>
+<span class="subtask-tech">Leapp</span>
+<span class="subtask-tech">SELinux</span>
+</div>
+</div>
+<div style="margin-top:8px">
+<div style="font-size:8px;color:#8b8f98;margin-bottom:4px">Componentes CMDB referenciados:</div>
+<div style="display:flex;gap:3px;flex-wrap:wrap">
+<span class="cmdb-ref">cmdb_activos (47)</span>
+<span class="cmdb-ref">cmdb_relaciones (55)</span>
+<span class="cmdb-ref">cmdb_vlans (4)</span>
+<span class="cmdb-ref">cmdb_software (12)</span>
+<span class="cmdb-ref">cmdb_ips (89)</span>
+</div>
+</div>
+</div>
+
+<!-- Advisor -->
+<div class="advisor-panel">
+<div class="advisor-header">
+<div class="advisor-icon">?</div>
+<div>
+<div class="advisor-title">AG-018 Governance Advisor</div>
+<div class="advisor-sub">Contexto acumulado: Pausa 2</div>
+</div>
+<div style="margin-left:auto;font-size:7px;padding:2px 6px;border-radius:3px;background:rgba(16,185,129,0.15);color:#10b981">ONLINE</div>
+</div>
+<div class="advisor-context">
+<span class="ctx-badge">Business Case</span>
+<span class="ctx-badge">EDT aprobado ✓</span>
+<span class="ctx-badge new">96 subtareas</span>
+<span class="ctx-badge">CMDB 148 activos</span>
+<span class="ctx-badge">55 relaciones</span>
+<span class="ctx-badge">30 software</span>
+</div>
+
+<div class="advisor-messages">
+<div class="advisor-msg system">
+He analizado las 96 subtareas de AG-013. Detecto 3 puntos de atención: (1) La subtarea "Auditar RPM" requiere acceso SSH a los 47 servidores — necesitas credenciales de servicio. (2) El nmap en producción puede activar alertas de seguridad — coordinar con CISO. (3) pgLoader no está en cmdb_software — verificar si está disponible o hay que instalarlo.
+</div>
+<div class="advisor-msg user"><span>¿pgLoader está en algún servidor?</span></div>
+<div class="advisor-msg bot"><span>He consultado cmdb_software: pgLoader NO aparece en ningún servidor. Las alternativas disponibles son: ora2pg (instalado en SRV-DB-003) y pg_dump (disponible en todos los servidores PostgreSQL). Recomiendo cambiar la subtarea a "ora2pg" o añadir una subtarea previa de instalación de pgLoader.</span></div>
+</div>
+
+<div class="advisor-suggestions">
+<div class="advisor-sug">💡 "¿Hay subtareas redundantes entre tareas?"</div>
+<div class="advisor-sug">💡 "¿Las horas por subtarea son realistas?"</div>
+<div class="advisor-sug">💡 "¿Qué servidores son más críticos para migrar primero?"</div>
+<div class="advisor-sug">💡 "Tengo el manual de migración RHEL, analízalo"</div>
+</div>
+
+<div class="advisor-upload">
+<div class="advisor-upload-btn">📎 Subir documento</div>
+<div style="font-size:7px;color:#8b8f98;margin-left:4px">normativa, manual migración, etc.</div>
+</div>
+
+<div class="advisor-input-row">
+<input class="advisor-input" type="text" placeholder="Pregunta al advisor sobre las subtareas...">
+<button class="advisor-send">Enviar</button>
+</div>
+</div>
+
+<!-- Comparison -->
+<div class="sidebar-card">
+<div class="sidebar-title">Cobertura CMDB</div>
+<div style="font-size:9px;color:#8b8f98;line-height:1.5">
+<div style="display:flex;justify-content:space-between;margin-bottom:3px">
+<span>Activos referenciados</span>
+<span style="color:#22c55e;font-weight:600">47/148 (32%)</span>
+</div>
+<div style="height:4px;background:#181b20;border-radius:2px;margin-bottom:6px;overflow:hidden">
+<div style="height:100%;width:32%;background:#22c55e;border-radius:2px"></div>
+</div>
+<div style="display:flex;justify-content:space-between;margin-bottom:3px">
+<span>Relaciones mapeadas</span>
+<span style="color:#06b6d4;font-weight:600">55/55 (100%)</span>
+</div>
+<div style="height:4px;background:#181b20;border-radius:2px;margin-bottom:6px;overflow:hidden">
+<div style="height:100%;width:100%;background:#06b6d4;border-radius:2px"></div>
+</div>
+<div style="display:flex;justify-content:space-between;margin-bottom:3px">
+<span>Software verificado</span>
+<span style="color:#eab308;font-weight:600">12/30 (40%)</span>
+</div>
+<div style="height:4px;background:#181b20;border-radius:2px;overflow:hidden">
+<div style="height:100%;width:40%;background:#eab308;border-radius:2px"></div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+</body>
+</html>

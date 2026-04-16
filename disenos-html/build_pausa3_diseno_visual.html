@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;font-family:system-ui,-apple-system,sans-serif;color:#e8e9ed;padding:16px}
+.container{max-width:1100px;margin:0 auto}
+
+/* Pipeline bar */
+.pipeline-bar{display:flex;align-items:center;gap:4px;background:#1a1d24;border-radius:12px;padding:10px 14px;margin-bottom:12px;overflow-x:auto}
+.pipe-agent{display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;opacity:0.35;flex-shrink:0}
+.pipe-agent.done{opacity:0.7}
+.pipe-icon{width:32px;height:32px;flex-shrink:0}
+.pipe-label{font-size:9px;font-weight:600;line-height:1.2}
+.pipe-sub{font-size:7px;color:#8b8f98}
+.pipe-arrow{color:#333840;font-size:12px;flex-shrink:0}
+
+/* Progress */
+.progress-bar{display:flex;align-items:center;gap:16px;background:#1a1d24;border-radius:10px;padding:10px 16px;margin-bottom:12px}
+.prog-time{font-size:28px;font-weight:700;font-family:monospace;letter-spacing:1px}
+.prog-label{font-size:9px;color:#8b8f98}
+
+/* Pause */
+.pause-bar{background:rgba(234,179,8,0.08);border:2px dashed rgba(234,179,8,0.4);border-radius:10px;padding:12px 16px;margin-bottom:12px}
+.pause-title{font-size:13px;font-weight:600;color:#eab308;margin-bottom:4px}
+.pause-sub{font-size:10px;color:#8b8f98}
+.pause-actions{display:flex;gap:8px;margin-top:8px}
+.btn{padding:8px 18px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:none}
+.btn-approve{background:#22c55e;color:#fff}
+.btn-reject{background:none;border:1px solid rgba(239,68,68,0.3);color:#ef4444}
+.btn-edit{background:none;border:1px solid #333840;color:#8b8f98}
+
+/* Layout */
+.main-layout{display:flex;gap:12px}
+.main-left{flex:2;min-width:0}
+.main-right{flex:1;min-width:280px;max-width:320px}
+
+/* Tabs */
+.tabs{display:flex;gap:2px;margin-bottom:10px}
+.tab{padding:8px 16px;border-radius:8px 8px 0 0;font-size:11px;font-weight:600;cursor:pointer;background:#1a1d24;color:#8b8f98;border:1px solid #333840;border-bottom:none}
+.tab.active{background:#22262e;color:#e8e9ed;border-color:#3a3f4a}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* Section */
+.section{background:#1a1d24;border:1px solid #333840;border-radius:0 10px 10px 10px;padding:14px;margin-bottom:10px}
+.section-header{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.ia-badge{font-size:7px;padding:1px 5px;border-radius:3px;background:rgba(234,179,8,0.15);color:#eab308;font-weight:600}
+
+/* Risk matrix 5x5 */
+.risk-matrix{display:grid;grid-template-columns:40px repeat(5,1fr);grid-template-rows:repeat(6,auto);gap:2px;margin-bottom:12px}
+.rm-header{font-size:7px;color:#8b8f98;text-align:center;padding:4px;font-weight:600}
+.rm-ylabel{font-size:7px;color:#8b8f98;text-align:right;padding:4px 6px 4px 0;display:flex;align-items:center;justify-content:flex-end}
+.rm-cell{border-radius:4px;padding:3px;min-height:28px;font-size:7px;text-align:center;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1px;cursor:pointer;transition:transform 0.15s}
+.rm-cell:hover{transform:scale(1.08)}
+.rm-cell.green{background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3)}
+.rm-cell.yellow{background:rgba(234,179,8,0.15);border:1px solid rgba(234,179,8,0.3)}
+.rm-cell.orange{background:rgba(249,115,22,0.15);border:1px solid rgba(249,115,22,0.3)}
+.rm-cell.red{background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3)}
+.rm-cell.darkred{background:rgba(185,28,28,0.25);border:1px solid rgba(185,28,28,0.4)}
+.rm-risk-dot{width:12px;height:12px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:6px;font-weight:700;color:#fff}
+
+/* Risk cards */
+.risk-card{background:#22262e;border:1px solid #3a3f4a;border-radius:8px;padding:10px 12px;margin-bottom:6px;border-left:4px solid}
+.risk-title{font-size:11px;font-weight:600;color:#e8e9ed;margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.risk-score-badge{font-size:9px;font-weight:700;font-family:monospace;padding:2px 6px;border-radius:4px}
+.risk-cat{font-size:8px;padding:1px 5px;border-radius:3px;font-weight:600}
+.risk-desc{font-size:9px;color:#8b8f98;line-height:1.4;margin-bottom:6px}
+.risk-plans{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.risk-plan{background:#181b20;border-radius:4px;padding:6px 8px}
+.risk-plan-label{font-size:7px;color:#8b8f98;text-transform:uppercase;margin-bottom:2px}
+.risk-plan-text{font-size:9px;color:#e8e9ed;line-height:1.3}
+.risk-responsible{font-size:8px;color:#8b8f98;margin-top:4px;display:flex;align-items:center;gap:4px}
+.risk-trigger{font-size:8px;color:#eab308;margin-top:3px;font-style:italic}
+.risk-edit{font-size:8px;color:#8b8f98;cursor:pointer;padding:2px 6px;border:1px solid #333840;border-radius:3px;margin-left:auto}
+.risk-edit:hover{color:#eab308;border-color:#eab308}
+
+/* Stakeholder map */
+.sh-grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px;margin-bottom:12px;height:300px}
+.sh-quadrant{border-radius:8px;padding:8px;overflow-y:auto}
+.sh-quadrant-title{font-size:8px;font-weight:600;text-transform:uppercase;margin-bottom:6px;letter-spacing:0.5px}
+.sh-card{background:rgba(0,0,0,0.2);border-radius:6px;padding:5px 8px;margin-bottom:3px;display:flex;align-items:center;gap:6px;cursor:pointer;transition:background 0.15s}
+.sh-card:hover{background:rgba(0,0,0,0.35)}
+.sh-avatar{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;flex-shrink:0}
+.sh-name{font-size:9px;font-weight:600;color:#e8e9ed}
+.sh-role{font-size:7px;color:#8b8f98}
+.sh-raci{font-size:7px;padding:1px 4px;border-radius:2px;font-weight:700;margin-left:auto}
+
+/* Stakeholder detail cards */
+.sh-detail{background:#22262e;border:1px solid #3a3f4a;border-radius:8px;padding:10px 12px;margin-bottom:6px}
+.sh-detail-header{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.sh-detail-info{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.sh-detail-field{background:#181b20;border-radius:4px;padding:4px 8px}
+.sh-detail-label{font-size:7px;color:#8b8f98;text-transform:uppercase}
+.sh-detail-value{font-size:10px;color:#e8e9ed;font-weight:600}
+
+/* RACI table */
+.raci-table{width:100%;border-collapse:collapse;font-size:8px;margin-top:8px}
+.raci-table th{background:#22262e;padding:4px 6px;text-align:left;color:#8b8f98;font-weight:600;border:1px solid #333840}
+.raci-table td{padding:4px 6px;border:1px solid #333840;text-align:center}
+.raci-r{color:#ef4444;font-weight:700}
+.raci-a{color:#3b82f6;font-weight:700}
+.raci-c{color:#eab308;font-weight:700}
+.raci-i{color:#8b8f98;font-weight:700}
+
+/* Comms plan */
+.comm-card{display:flex;align-items:center;gap:8px;background:#22262e;border-radius:6px;padding:6px 10px;margin-bottom:4px}
+.comm-freq{font-size:8px;padding:2px 6px;border-radius:3px;font-weight:600;min-width:55px;text-align:center}
+.comm-event{font-size:9px;color:#e8e9ed;flex:1}
+.comm-channel{font-size:8px;color:#8b8f98}
+.comm-audience{font-size:7px;color:#8b8f98}
+
+/* Sidebar */
+.sidebar-card{background:#1a1d24;border:1px solid #333840;border-radius:10px;padding:12px;margin-bottom:10px}
+.sidebar-title{font-size:10px;font-weight:600;color:#8b8f98;text-transform:uppercase;margin-bottom:8px}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.stat-item{background:#22262e;border-radius:6px;padding:8px;text-align:center}
+.stat-value{font-size:18px;font-weight:700;font-family:monospace}
+.stat-label{font-size:7px;color:#8b8f98;text-transform:uppercase;margin-top:2px}
+
+/* Advisor */
+.advisor-panel{background:#0f1724;border:1px solid rgba(16,185,129,0.25);border-radius:10px;overflow:hidden;margin-bottom:10px}
+.advisor-header{padding:8px 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(16,185,129,0.15)}
+.advisor-icon{width:28px;height:28px;border-radius:50%;background:rgba(16,185,129,0.2);color:#10b981;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.advisor-title{font-size:11px;font-weight:600;color:#10b981}
+.advisor-sub{font-size:8px;color:#8b8f98}
+.advisor-context{display:flex;gap:3px;flex-wrap:wrap;padding:6px 12px;border-bottom:1px solid rgba(16,185,129,0.1)}
+.ctx-badge{font-size:7px;padding:1px 5px;border-radius:3px;background:rgba(16,185,129,0.1);color:#10b981;font-weight:600}
+.ctx-badge.new{background:rgba(234,179,8,0.15);color:#eab308}
+.ctx-badge.new2{background:rgba(236,72,153,0.15);color:#ec4899}
+.advisor-messages{padding:8px 12px;max-height:180px;overflow-y:auto}
+.advisor-msg{margin-bottom:8px;font-size:10px;line-height:1.4}
+.advisor-msg.system{color:#10b981;background:rgba(16,185,129,0.06);padding:6px 8px;border-radius:6px}
+.advisor-msg.user span{background:rgba(59,130,246,0.1);padding:4px 8px;border-radius:6px;display:inline-block}
+.advisor-msg.bot span{background:rgba(16,185,129,0.06);padding:4px 8px;border-radius:6px;display:inline-block}
+.advisor-suggestions{padding:4px 12px 8px;display:flex;flex-direction:column;gap:3px}
+.advisor-sug{font-size:8px;color:#10b981;cursor:pointer;padding:3px 6px;border-radius:4px;background:rgba(16,185,129,0.06)}
+.advisor-sug:hover{background:rgba(16,185,129,0.12)}
+.advisor-input-row{display:flex;gap:6px;padding:8px 12px;border-top:1px solid rgba(16,185,129,0.15)}
+.advisor-input{flex:1;background:#1a2332;border:1px solid rgba(16,185,129,0.2);border-radius:6px;padding:6px 10px;color:#e8e9ed;font-size:10px;font-family:inherit}
+.advisor-input::placeholder{color:#4b5563}
+.advisor-send{background:#10b981;border:none;color:#fff;padding:6px 12px;border-radius:6px;font-size:10px;cursor:pointer;font-weight:600}
+.advisor-upload{display:flex;align-items:center;gap:4px;padding:4px 12px;border-top:1px solid rgba(16,185,129,0.1)}
+.advisor-upload-btn{font-size:8px;color:#8b8f98;cursor:pointer;padding:3px 8px;border:1px dashed #333840;border-radius:4px}
+.advisor-upload-btn:hover{border-color:#10b981;color:#10b981}
+
+.form-input{width:100%;background:#22262e;border:1px solid #333840;border-radius:6px;padding:6px 10px;color:#e8e9ed;font-size:11px;font-family:inherit;resize:vertical}
+.risk-add{display:flex;align-items:center;justify-content:center;gap:4px;padding:8px;border:1px dashed #333840;border-radius:6px;font-size:10px;color:#8b8f98;cursor:pointer;margin-top:6px}
+.risk-add:hover{border-color:#eab308;color:#eab308}
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- PIPELINE BAR -->
+<div class="pipeline-bar">
+<div style="font-size:9px;color:#8b8f98;margin-right:6px;flex-shrink:0">PMBOK 7 ▸</div>
+<div class="pipe-agent done"><svg class="pipe-icon" viewBox="0 0 100 100"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#10b981" stroke-width="5"/><path d="M30 75 H70 L50 30 Z" fill="none" stroke="#10b981" stroke-width="5" stroke-linejoin="round"/><circle cx="50" cy="20" r="5" fill="#10b981"/></svg><div><div class="pipe-label" style="color:#10b981;text-decoration:line-through">AG-005</div><div class="pipe-sub">Estratega ✓</div></div></div>
+<div class="pipe-arrow">▸</div>
+<div class="pipe-agent done"><svg class="pipe-icon" viewBox="0 0 100 100"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#d946ef" stroke-width="5"/><rect x="25" y="30" width="15" height="15" rx="2" fill="none" stroke="#d946ef" stroke-width="5"/><path d="M40 37 H50" stroke="#d946ef" stroke-width="5"/><rect x="50" y="25" width="20" height="20" rx="3" fill="none" stroke="#d946ef" stroke-width="5"/></svg><div><div class="pipe-label" style="color:#d946ef;text-decoration:line-through">AG-013</div><div class="pipe-sub">Decomp ✓</div></div></div>
+<div class="pipe-arrow">▸</div>
+<div class="pipe-agent done"><svg class="pipe-icon" viewBox="0 0 100 100"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#eab308" stroke-width="5"/><rect x="30" y="55" width="8" height="20" rx="1" fill="#eab308"/><rect x="42" y="45" width="8" height="30" rx="1" fill="#eab308"/><rect x="54" y="35" width="8" height="40" rx="1" fill="#eab308"/></svg><div><div class="pipe-label" style="color:#eab308;text-decoration:line-through">AG-014</div><div class="pipe-sub">Risk ✓</div></div></div>
+<div class="pipe-arrow">▸</div>
+<div class="pipe-agent done"><svg class="pipe-icon" viewBox="0 0 100 100"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#ec4899" stroke-width="5"/><circle cx="35" cy="50" r="8" fill="none" stroke="#ec4899" stroke-width="5"/><circle cx="65" cy="50" r="8" fill="none" stroke="#ec4899" stroke-width="5"/><path d="M45 50 H55" stroke="#ec4899" stroke-width="5"/></svg><div><div class="pipe-label" style="color:#ec4899;text-decoration:line-through">AG-015</div><div class="pipe-sub">Stakeh ✓</div></div></div>
+<div class="pipe-arrow">▸</div>
+<div class="pipe-agent"><svg class="pipe-icon" viewBox="0 0 100 100"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#eab308" stroke-width="5"/><rect x="30" y="30" width="15" height="15" rx="1" fill="#eab308"/></svg><div><div class="pipe-label" style="color:#eab308">AG-006</div><div class="pipe-sub">Resource</div></div></div>
+<div class="pipe-arrow">▸</div>
+<div class="pipe-agent"><svg class="pipe-icon" viewBox="0 0 100 100"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#10b981" stroke-width="5"/><ellipse cx="50" cy="40" rx="20" ry="10" fill="none" stroke="#10b981" stroke-width="5"/></svg><div><div class="pipe-label" style="color:#10b981">AG-016</div><div class="pipe-sub">Cost</div></div></div>
+<div class="pipe-arrow">▸</div>
+<div class="pipe-agent"><svg class="pipe-icon" viewBox="0 0 100 100"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#ec4899" stroke-width="5"/><rect x="30" y="35" width="40" height="8" rx="2" fill="#ec4899"/><rect x="30" y="50" width="25" height="8" rx="2" fill="#ec4899"/></svg><div><div class="pipe-label" style="color:#ec4899">AG-007</div><div class="pipe-sub">Planif.</div></div></div>
+<div class="pipe-arrow">▸</div>
+<div class="pipe-agent"><svg class="pipe-icon" viewBox="0 0 100 100"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#8b5cf6" stroke-width="5"/><rect x="35" y="45" width="30" height="25" rx="2" fill="#8b5cf6"/><path d="M40 45 V35 A10 10 0 0 1 60 35 V45" fill="none" stroke="#8b5cf6" stroke-width="5"/></svg><div><div class="pipe-label" style="color:#8b5cf6">AG-017</div><div class="pipe-sub">Quality</div></div></div>
+<div style="margin-left:auto;font-size:10px;color:#8b8f98;flex-shrink:0">READY</div>
+</div>
+
+<!-- PROGRESS -->
+<div class="progress-bar">
+<div><div class="prog-time" style="color:#22c55e">--:--:--</div><div class="prog-label">Tiempo estimado</div></div>
+<div><div class="prog-time" style="color:#eab308;font-size:24px">50%</div><div class="prog-label">Progreso pipeline</div></div>
+<div style="flex:1">
+<div style="display:flex;justify-content:space-between;font-size:9px;color:#8b8f98"><span>AG-005: 8.2s · AG-013: 12.4s · AG-014: 6.8s · AG-015: 5.1s</span><span>~0.16 USD acumulado</span></div>
+<div style="height:6px;background:#181b20;border-radius:3px;margin-top:4px;overflow:hidden"><div style="height:100%;width:50%;background:linear-gradient(90deg,#10b981,#d946ef,#eab308,#ec4899);border-radius:3px"></div></div>
+</div>
+</div>
+
+<!-- PAUSE -->
+<div class="pause-bar">
+<div style="display:flex;justify-content:space-between;align-items:center">
+<div>
+<div class="pause-title">⏸ Pipeline en pausa — Decisión de gobernanza (3/4)</div>
+<div class="pause-sub">AG-014 ha identificado 10 riesgos y AG-015 ha mapeado 12 stakeholders del directorio corporativo. Revise la matriz de riesgos, el mapa de interesados, y el plan de comunicaciones.</div>
+</div>
+<div class="pause-actions">
+<button class="btn btn-reject">Rechazar</button>
+<button class="btn btn-edit">Editar campos</button>
+<button class="btn btn-approve">Aprobar riesgos + stakeholders ▸</button>
+</div>
+</div>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="main-tabs">
+<div class="tab active" onclick="showTab('risks')">Riesgos (AG-014)</div>
+<div class="tab" onclick="showTab('stakeholders')">Stakeholders (AG-015)</div>
+<div class="tab" onclick="showTab('comms')">Plan comunicaciones</div>
+<div class="tab" onclick="showTab('raci')">Matriz RACI</div>
+</div>
+
+<!-- MAIN LAYOUT -->
+<div class="main-layout">
+<div class="main-left">
+
+<!-- TAB: RISKS -->
+<div class="tab-content active" id="tab-risks">
+<div class="section">
+<div class="section-header">
+<svg width="24" height="24" viewBox="0 0 100 100"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#eab308" stroke-width="5"/><rect x="30" y="55" width="8" height="20" rx="1" fill="#eab308"/><rect x="42" y="45" width="8" height="30" rx="1" fill="#eab308"/><rect x="54" y="35" width="8" height="40" rx="1" fill="#eab308"/></svg>
+<div style="font-size:11px;font-weight:600;color:#eab308">AG-014 Risk Analyzer — Matriz de riesgos PMBOK</div>
+<span class="ia-badge">Generado por IA + Postmortems</span>
+</div>
+
+<!-- RISK MATRIX 5x5 -->
+<div class="risk-matrix">
+<div></div>
+<div class="rm-header">Muy bajo</div><div class="rm-header">Bajo</div><div class="rm-header">Medio</div><div class="rm-header">Alto</div><div class="rm-header">Muy alto</div>
+
+<div class="rm-ylabel">Muy alta</div>
+<div class="rm-cell yellow">5</div><div class="rm-cell orange">10</div><div class="rm-cell red">15</div><div class="rm-cell darkred">20</div><div class="rm-cell darkred">25</div>
+
+<div class="rm-ylabel">Alta</div>
+<div class="rm-cell green">4</div><div class="rm-cell yellow">8</div><div class="rm-cell orange">12<br><div class="rm-risk-dot" style="background:#f97316">R3</div></div><div class="rm-cell red">16<br><div class="rm-risk-dot" style="background:#ef4444">R1</div></div><div class="rm-cell darkred">20<br><div class="rm-risk-dot" style="background:#b91c1c">R2</div></div>
+
+<div class="rm-ylabel">Media</div>
+<div class="rm-cell green">3</div><div class="rm-cell yellow">6<br><div class="rm-risk-dot" style="background:#eab308">R7</div></div><div class="rm-cell yellow">9<br><div class="rm-risk-dot" style="background:#eab308">R4</div><div class="rm-risk-dot" style="background:#eab308">R5</div></div><div class="rm-cell orange">12</div><div class="rm-cell red">15<br><div class="rm-risk-dot" style="background:#ef4444">R6</div></div>
+
+<div class="rm-ylabel">Baja</div>
+<div class="rm-cell green">2</div><div class="rm-cell green">4<br><div class="rm-risk-dot" style="background:#22c55e">R9</div></div><div class="rm-cell yellow">6<br><div class="rm-risk-dot" style="background:#eab308">R8</div></div><div class="rm-cell yellow">8</div><div class="rm-cell orange">10<br><div class="rm-risk-dot" style="background:#f97316">R10</div></div>
+
+<div class="rm-ylabel">Muy baja</div>
+<div class="rm-cell green">1</div><div class="rm-cell green">2</div><div class="rm-cell green">3</div><div class="rm-cell yellow">4</div><div class="rm-cell yellow">5</div>
+</div>
+
+<!-- RISK CARDS -->
+<div class="risk-card" style="border-left-color:#ef4444">
+<div class="risk-title">
+<span class="risk-score-badge" style="background:rgba(239,68,68,0.15);color:#ef4444">R1 · 16</span>
+Incompatibilidad de aplicaciones bancarias con RHEL 9
+<span class="risk-cat" style="background:rgba(239,68,68,0.12);color:#ef4444">Técnico</span>
+<span class="risk-edit">Editar</span>
+</div>
+<div class="risk-desc">Las aplicaciones Core Banking (Host Bankia) pueden no funcionar en RHEL 9 por cambios en librerías glibc y openssl. Detectado en postmortem PRJ0022 (migración similar con 3 aplicaciones incompatibles).</div>
+<div class="risk-plans">
+<div class="risk-plan"><div class="risk-plan-label">Plan mitigación</div><div class="risk-plan-text">Ejecutar pruebas de compatibilidad en entorno sandbox aislado ANTES de tocar DEV. Mantener RHEL 7 como fallback durante 90 días.</div></div>
+<div class="risk-plan"><div class="risk-plan-label">Plan contingencia</div><div class="risk-plan-text">Rollback automático con snapshot previo. Escalar a proveedor de aplicación para parche de compatibilidad.</div></div>
+</div>
+<div class="risk-responsible">👤 Responsable: Jefe Linux + Proveedor Core Banking</div>
+<div class="risk-trigger">⚡ Trigger: Fallo en más de 2 aplicaciones en smoke test sandbox</div>
+</div>
+
+<div class="risk-card" style="border-left-color:#b91c1c">
+<div class="risk-title">
+<span class="risk-score-badge" style="background:rgba(185,28,28,0.15);color:#ef4444">R2 · 20</span>
+Caída de servicio bancario en migración PRO
+<span class="risk-cat" style="background:rgba(239,68,68,0.12);color:#ef4444">Técnico</span>
+<span class="risk-edit">Editar</span>
+</div>
+<div class="risk-desc">Un error durante la migración de un servidor PRO crítico puede dejar fuera de servicio una aplicación bancaria (ATMs, Bizum, Core Banking) durante horas.</div>
+<div class="risk-plans">
+<div class="risk-plan"><div class="risk-plan-label">Plan mitigación</div><div class="risk-plan-text">Migrar solo en ventanas de mantenimiento (sábados 22:00-06:00). Máximo 2 servidores PRO por ventana. HA activo durante migración.</div></div>
+<div class="risk-plan"><div class="risk-plan-label">Plan contingencia</div><div class="risk-plan-text">Rollback en menos de 30 minutos con snapshot. War Room activado durante ventana. Comunicación a Operaciones Bancarias.</div></div>
+</div>
+<div class="risk-responsible">👤 Responsable: Director IT + CISO + Carmen Ruiz (Operaciones Bancarias)</div>
+<div class="risk-trigger">⚡ Trigger: Cualquier servicio P1 inaccesible más de 5 minutos durante migración</div>
+</div>
+
+<div class="risk-card" style="border-left-color:#f97316">
+<div class="risk-title">
+<span class="risk-score-badge" style="background:rgba(249,115,22,0.15);color:#f97316">R3 · 12</span>
+Falta de personal Linux cualificado
+<span class="risk-cat" style="background:rgba(168,85,247,0.12);color:#a855f7">Recursos</span>
+<span class="risk-edit">Editar</span>
+</div>
+<div class="risk-desc">El equipo Linux tiene 8 técnicos pero 3 están asignados al proyecto PRJ0022 (batch ARES). Riesgo de no tener suficientes recursos para cumplir el timeline de 32 semanas.</div>
+<div class="risk-plans">
+<div class="risk-plan"><div class="risk-plan-label">Plan mitigación</div><div class="risk-plan-text">Priorizar con gobernanza. Solicitar 2 recursos externos temporales vía contrato marco con proveedor.</div></div>
+<div class="risk-plan"><div class="risk-plan-label">Plan contingencia</div><div class="risk-plan-text">Retrasar oleada 2 en 4 semanas y reasignar recursos de PRJ0022 si termina antes.</div></div>
+</div>
+<div class="risk-responsible">👤 Responsable: AG-006 Resource Manager + Director IT</div>
+</div>
+
+<div class="risk-card" style="border-left-color:#eab308">
+<div class="risk-title">
+<span class="risk-score-badge" style="background:rgba(234,179,8,0.15);color:#eab308">R4 · 9</span>
+Cambios regulatorios durante el proyecto
+<span class="risk-cat" style="background:rgba(236,72,153,0.12);color:#ec4899">Regulatorio</span>
+<span class="risk-edit">Editar</span>
+</div>
+<div class="risk-desc">Banco de España o BCE podrían emitir nuevas directrices de ciberseguridad que requieran configuraciones adicionales en RHEL 9 no previstas en el alcance.</div>
+<div class="risk-plans">
+<div class="risk-plan"><div class="risk-plan-label">Plan mitigación</div><div class="risk-plan-text">Revisión mensual de circulares BdE/BCE con Compliance. Incluir buffer de 2 semanas en fase 3.</div></div>
+<div class="risk-plan"><div class="risk-plan-label">Plan contingencia</div><div class="risk-plan-text">Change Request formal para ampliar alcance si hay nueva regulación.</div></div>
+</div>
+<div class="risk-responsible">👤 Responsable: Nuria Pascual (Reporting Regulatorio) + CISO</div>
+</div>
+
+<div style="font-size:9px;color:#8b8f98;text-align:center;padding:6px;border:1px dashed #333840;border-radius:6px">... 6 riesgos más (R5-R10) — click para expandir</div>
+
+<div class="risk-add">+ Añadir riesgo manualmente</div>
+
+<div style="margin-top:10px;background:#22262e;border-radius:8px;padding:10px 12px">
+<div style="font-size:10px;font-weight:600;color:#e8e9ed;margin-bottom:6px">Resumen de contingencia</div>
+<div style="display:flex;justify-content:space-between;font-size:10px;color:#8b8f98;margin-bottom:4px"><span>Risk score global</span><span style="color:#f97316;font-weight:700;font-family:monospace">62/100 — MEDIO-ALTO</span></div>
+<div style="display:flex;justify-content:space-between;font-size:10px;color:#8b8f98;margin-bottom:4px"><span>Contingencia recomendada</span><span style="color:#eab308;font-weight:700">15% del BAC</span></div>
+<div style="display:flex;justify-content:space-between;font-size:10px;color:#8b8f98"><span>Reserva de gestión</span><span style="color:#8b8f98;font-weight:700">5% del BAC</span></div>
+</div>
+</div>
+</div>
+
+<!-- TAB: STAKEHOLDERS -->
+<div class="tab-content" id="tab-stakeholders">
+<div class="section">
+<div class="section-header">
+<svg width="24" height="24" viewBox="0 0 100 100"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#ec4899" stroke-width="5"/><circle cx="35" cy="50" r="8" fill="none" stroke="#ec4899" stroke-width="5"/><circle cx="65" cy="50" r="8" fill="none" stroke="#ec4899" stroke-width="5"/><path d="M45 50 H55" stroke="#ec4899" stroke-width="5"/></svg>
+<div style="font-size:11px;font-weight:600;color:#ec4899">AG-015 Stakeholder Map — Mapa poder/interés</div>
+<span class="ia-badge">Generado por IA + Directorio corporativo</span>
+</div>
+
+<!-- POWER/INTEREST GRID -->
+<div class="sh-grid">
+<div class="sh-quadrant" style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);border-radius:8px 0 0 0">
+<div class="sh-quadrant-title" style="color:#ef4444">Alto poder + Alto interés — Gestionar de cerca</div>
+<div class="sh-card"><div class="sh-avatar" style="background:rgba(239,68,68,0.2);color:#ef4444">EM</div><div><div class="sh-name">Elena Marquez (CISO)</div><div class="sh-role">Sponsor — Ciberseguridad</div></div><div class="sh-raci raci-a" style="background:rgba(59,130,246,0.1)">A</div></div>
+<div class="sh-card"><div class="sh-avatar" style="background:rgba(239,68,68,0.2);color:#ef4444">CR</div><div><div class="sh-name">Carmen Ruiz</div><div class="sh-role">Dir. Operaciones Bancarias</div></div><div class="sh-raci raci-c" style="background:rgba(234,179,8,0.1)">C</div></div>
+<div class="sh-card"><div class="sh-avatar" style="background:rgba(239,68,68,0.2);color:#ef4444">MF</div><div><div class="sh-name">Marta Fuentes</div><div class="sh-role">Dir. Seguridad Operativa</div></div><div class="sh-raci raci-r" style="background:rgba(239,68,68,0.1)">R</div></div>
+</div>
+<div class="sh-quadrant" style="background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.2);border-radius:0 8px 0 0">
+<div class="sh-quadrant-title" style="color:#3b82f6">Alto poder + Bajo interés — Mantener satisfecho</div>
+<div class="sh-card"><div class="sh-avatar" style="background:rgba(59,130,246,0.2);color:#3b82f6">FL</div><div><div class="sh-name">Francisco López</div><div class="sh-role">Dir. Compliance</div></div><div class="sh-raci raci-i" style="background:rgba(139,143,152,0.1)">I</div></div>
+<div class="sh-card"><div class="sh-avatar" style="background:rgba(59,130,246,0.2);color:#3b82f6">NP</div><div><div class="sh-name">Nuria Pascual</div><div class="sh-role">Resp. Reporting Regulatorio</div></div><div class="sh-raci raci-c" style="background:rgba(234,179,8,0.1)">C</div></div>
+</div>
+<div class="sh-quadrant" style="background:rgba(234,179,8,0.06);border:1px solid rgba(234,179,8,0.2);border-radius:0 0 0 8px">
+<div class="sh-quadrant-title" style="color:#eab308">Bajo poder + Alto interés — Mantener informado</div>
+<div class="sh-card"><div class="sh-avatar" style="background:rgba(234,179,8,0.2);color:#eab308">DP</div><div><div class="sh-name">Daniel Prieto</div><div class="sh-role">PM Seguridad</div></div><div class="sh-raci raci-r" style="background:rgba(239,68,68,0.1)">R</div></div>
+<div class="sh-card"><div class="sh-avatar" style="background:rgba(234,179,8,0.2);color:#eab308">IM</div><div><div class="sh-name">Isabel Moreno</div><div class="sh-role">Dir. Banca Digital</div></div><div class="sh-raci raci-i" style="background:rgba(139,143,152,0.1)">I</div></div>
+<div class="sh-card"><div class="sh-avatar" style="background:rgba(234,179,8,0.2);color:#eab308">JM</div><div><div class="sh-name">Javier Martín</div><div class="sh-role">Dir. Medios de Pago</div></div><div class="sh-raci raci-i" style="background:rgba(139,143,152,0.1)">I</div></div>
+</div>
+<div class="sh-quadrant" style="background:rgba(139,143,152,0.06);border:1px solid rgba(139,143,152,0.2);border-radius:0 0 8px 0">
+<div class="sh-quadrant-title" style="color:#8b8f98">Bajo poder + Bajo interés — Monitorizar</div>
+<div class="sh-card"><div class="sh-avatar" style="background:rgba(139,143,152,0.2);color:#8b8f98">RI</div><div><div class="sh-name">Raúl Ibáñez</div><div class="sh-role">Dir. Servicios Generales</div></div><div class="sh-raci raci-i" style="background:rgba(139,143,152,0.1)">I</div></div>
+<div class="sh-card"><div class="sh-avatar" style="background:rgba(139,143,152,0.2);color:#8b8f98">MG</div><div><div class="sh-name">Marina Gallego</div><div class="sh-role">Dir. Comunicación Interna</div></div><div class="sh-raci raci-i" style="background:rgba(139,143,152,0.1)">I</div></div>
+</div>
+</div>
+
+<div style="font-size:9px;color:#8b8f98;text-align:center">12 stakeholders mapeados del directorio corporativo. Click en cada uno para ver detalle y editar.</div>
+</div>
+</div>
+
+<!-- TAB: COMMS -->
+<div class="tab-content" id="tab-comms">
+<div class="section">
+<div class="section-header"><div style="font-size:11px;font-weight:600;color:#ec4899">Plan de comunicaciones</div><span class="ia-badge">Generado por IA</span></div>
+
+<div class="comm-card">
+<div class="comm-freq" style="background:rgba(239,68,68,0.12);color:#ef4444">Semanal</div>
+<div><div class="comm-event">Comité de seguimiento proyecto</div><div class="comm-audience">Sponsor + PM + Jefes Equipo</div></div>
+<div class="comm-channel">Reunión 30min</div>
+</div>
+<div class="comm-card">
+<div class="comm-freq" style="background:rgba(234,179,8,0.12);color:#eab308">Quincenal</div>
+<div><div class="comm-event">Informe de avance a dirección</div><div class="comm-audience">CISO + Dir. Operaciones + Compliance</div></div>
+<div class="comm-channel">Email + Dashboard</div>
+</div>
+<div class="comm-card">
+<div class="comm-freq" style="background:rgba(59,130,246,0.12);color:#3b82f6">Por oleada</div>
+<div><div class="comm-event">Comunicado pre-migración</div><div class="comm-audience">Todos los afectados + Banca Digital + Medios Pago</div></div>
+<div class="comm-channel">Email corporativo</div>
+</div>
+<div class="comm-card">
+<div class="comm-freq" style="background:rgba(34,197,94,0.12);color:#22c55e">Al hito</div>
+<div><div class="comm-event">Notificación de hito completado</div><div class="comm-audience">Stakeholders cuadrante Alto Poder</div></div>
+<div class="comm-channel">Reunión + Acta</div>
+</div>
+<div class="comm-card">
+<div class="comm-freq" style="background:rgba(239,68,68,0.12);color:#ef4444">Inmediato</div>
+<div><div class="comm-event">Escalación por incidencia P1 en migración</div><div class="comm-audience">War Room + CISO + Operaciones</div></div>
+<div class="comm-channel">War Room app</div>
+</div>
+</div>
+</div>
+
+<!-- TAB: RACI -->
+<div class="tab-content" id="tab-raci">
+<div class="section">
+<div class="section-header"><div style="font-size:11px;font-weight:600;color:#ec4899">Matriz RACI por entregable</div><span class="ia-badge">Generado por IA</span></div>
+<table class="raci-table">
+<tr><th style="text-align:left">Entregable</th><th>Elena M.<br><span style="font-weight:400;font-size:7px">Sponsor</span></th><th>Marta F.<br><span style="font-weight:400;font-size:7px">Seg.Op</span></th><th>Daniel P.<br><span style="font-weight:400;font-size:7px">PM Seg</span></th><th>Carmen R.<br><span style="font-weight:400;font-size:7px">Op.Banc</span></th><th>Nuria P.<br><span style="font-weight:400;font-size:7px">Report.</span></th><th>Isabel M.<br><span style="font-weight:400;font-size:7px">B.Digit</span></th></tr>
+<tr><td style="text-align:left">Informe auditoría RHEL 7</td><td class="raci-a">A</td><td class="raci-r">R</td><td class="raci-r">R</td><td class="raci-i">I</td><td class="raci-i">I</td><td></td></tr>
+<tr><td style="text-align:left">Diseño arquitectura RHEL 9</td><td class="raci-a">A</td><td class="raci-c">C</td><td class="raci-r">R</td><td class="raci-i">I</td><td></td><td></td></tr>
+<tr><td style="text-align:left">Migración oleada 1 (DEV/QA)</td><td class="raci-i">I</td><td class="raci-c">C</td><td class="raci-r">R</td><td></td><td></td><td></td></tr>
+<tr><td style="text-align:left">Migración oleada 2 (PRO)</td><td class="raci-a">A</td><td class="raci-r">R</td><td class="raci-r">R</td><td class="raci-c">C</td><td class="raci-c">C</td><td class="raci-c">C</td></tr>
+<tr><td style="text-align:left">Certificación de seguridad</td><td class="raci-a">A</td><td class="raci-r">R</td><td class="raci-c">C</td><td></td><td class="raci-c">C</td><td></td></tr>
+<tr><td style="text-align:left">Decommission RHEL 7</td><td class="raci-i">I</td><td class="raci-a">A</td><td class="raci-r">R</td><td class="raci-i">I</td><td></td><td></td></tr>
+</table>
+<div style="margin-top:6px;font-size:8px;color:#8b8f98"><span class="raci-r">R</span>=Responsable · <span class="raci-a">A</span>=Aprobador · <span class="raci-c">C</span>=Consultado · <span class="raci-i">I</span>=Informado</div>
+</div>
+</div>
+
+</div>
+
+<!-- SIDEBAR -->
+<div class="main-right">
+
+<!-- Stats risks -->
+<div class="sidebar-card">
+<div class="sidebar-title">Resumen de riesgos</div>
+<div class="stat-grid">
+<div class="stat-item"><div class="stat-value" style="color:#ef4444">10</div><div class="stat-label">Riesgos total</div></div>
+<div class="stat-item"><div class="stat-value" style="color:#ef4444">2</div><div class="stat-label">Críticos (>15)</div></div>
+<div class="stat-item"><div class="stat-value" style="color:#f97316">3</div><div class="stat-label">Altos (10-15)</div></div>
+<div class="stat-item"><div class="stat-value" style="color:#eab308">5</div><div class="stat-label">Medios (<10)</div></div>
+</div>
+<div style="margin-top:8px;display:flex;justify-content:space-between;align-items:center">
+<span style="font-size:9px;color:#8b8f98">Risk score global</span>
+<span style="font-size:16px;font-weight:700;font-family:monospace;color:#f97316">62/100</span>
+</div>
+<div style="height:6px;background:#181b20;border-radius:3px;margin-top:4px;overflow:hidden"><div style="height:100%;width:62%;background:linear-gradient(90deg,#22c55e,#eab308,#f97316);border-radius:3px"></div></div>
+<div style="margin-top:6px;font-size:8px;color:#8b8f98">
+Por categoría: <span style="color:#ef4444">Técnico (4)</span> · <span style="color:#a855f7">Recursos (2)</span> · <span style="color:#3b82f6">Alcance (1)</span> · <span style="color:#ec4899">Regulatorio (2)</span> · <span style="color:#8b8f98">Externo (1)</span>
+</div>
+<div style="margin-top:6px;background:#181b20;border-radius:4px;padding:6px 8px;font-size:9px">
+<span style="color:#eab308;font-weight:600">Contingencia recomendada: 15%</span>
+<span style="color:#8b8f98"> sobre BAC 203.400€ = </span>
+<span style="color:#eab308;font-weight:600;font-family:monospace">30.510€</span>
+</div>
+</div>
+
+<!-- Stats stakeholders -->
+<div class="sidebar-card">
+<div class="sidebar-title">Stakeholders mapeados</div>
+<div class="stat-grid">
+<div class="stat-item"><div class="stat-value" style="color:#ec4899">12</div><div class="stat-label">Total</div></div>
+<div class="stat-item"><div class="stat-value" style="color:#ef4444">3</div><div class="stat-label">Gestionar cerca</div></div>
+<div class="stat-item"><div class="stat-value" style="color:#3b82f6">2</div><div class="stat-label">Satisfechos</div></div>
+<div class="stat-item"><div class="stat-value" style="color:#eab308">3</div><div class="stat-label">Informados</div></div>
+</div>
+<div style="margin-top:6px;font-size:8px;color:#8b8f98">Fuente: directorio_corporativo (509 contactos)</div>
+</div>
+
+<!-- Advisor -->
+<div class="advisor-panel">
+<div class="advisor-header">
+<div class="advisor-icon">?</div>
+<div><div class="advisor-title">AG-018 Governance Advisor</div><div class="advisor-sub">Contexto acumulado: Pausa 3</div></div>
+<div style="margin-left:auto;font-size:7px;padding:2px 6px;border-radius:3px;background:rgba(16,185,129,0.15);color:#10b981">ONLINE</div>
+</div>
+<div class="advisor-context">
+<span class="ctx-badge">Business Case</span>
+<span class="ctx-badge">EDT ✓</span>
+<span class="ctx-badge">96 subtareas ✓</span>
+<span class="ctx-badge new">10 riesgos</span>
+<span class="ctx-badge new2">12 stakeholders</span>
+<span class="ctx-badge">CMDB</span>
+<span class="ctx-badge">Postmortems</span>
+</div>
+<div class="advisor-messages">
+<div class="advisor-msg system">
+He cruzado los riesgos con los stakeholders. Observación importante: el riesgo R2 (caída servicio PRO) afecta directamente a Carmen Ruiz (Operaciones Bancarias) e Isabel Moreno (Banca Digital), pero ninguna está como Responsable del riesgo — solo como Consultada/Informada. Recomiendo elevar a Carmen a "Consultada" en R2 y añadir protocolo de comunicación inmediata.
+</div>
+<div class="advisor-msg user"><span>¿El 15% de contingencia es suficiente para un proyecto con score 62?</span></div>
+<div class="advisor-msg bot"><span>Para un score de riesgo 62/100 (medio-alto), el estándar PMBOK recomienda entre 12-20% de contingencia. El 15% está en rango, pero dado que 2 riesgos son críticos (>15) y afectan a servicios bancarios P1, yo recomendaría subir a 18% (≈36.600€). El PRJ0022 similar usó 12% y tuvo que solicitar un change request por 45.000€ adicionales.</span></div>
+</div>
+<div class="advisor-suggestions">
+<div class="advisor-sug">💡 "¿Hay riesgos que se repitan en otros proyectos activos?"</div>
+<div class="advisor-sug">💡 "¿Falta algún stakeholder clave del área de negocio?"</div>
+<div class="advisor-sug">💡 "¿La CISO debería ser Responsible o solo Accountable?"</div>
+<div class="advisor-sug">💡 "Dame un resumen ejecutivo de riesgos para el comité"</div>
+</div>
+<div class="advisor-upload"><div class="advisor-upload-btn">📎 Subir contrato proveedor, normativa BdE...</div></div>
+<div class="advisor-input-row">
+<input class="advisor-input" type="text" placeholder="Pregunta sobre riesgos o stakeholders...">
+<button class="advisor-send">Enviar</button>
+</div>
+</div>
+
+<!-- Postmortem reference -->
+<div class="sidebar-card">
+<div class="sidebar-title">Lecciones aprendidas (Postmortems)</div>
+<div style="background:#22262e;border-radius:6px;padding:8px 10px;margin-bottom:4px;border-left:3px solid #ef4444">
+<div style="font-size:9px;font-weight:600;color:#e8e9ed">PRJ0022 — Batch ARES</div>
+<div style="font-size:8px;color:#8b8f98;line-height:1.3;margin-top:2px">Migración similar. 3 apps incompatibles descubiertas en PRO. Rollback de 4 horas. Contingencia insuficiente (12% → necesitó 18%).</div>
+<div style="font-size:7px;color:#ef4444;margin-top:3px;font-weight:600">Aplicado a: R1, R2, R3</div>
+</div>
+<div style="background:#22262e;border-radius:6px;padding:8px 10px;border-left:3px solid #eab308">
+<div style="font-size:9px;font-weight:600;color:#e8e9ed">PRJ0011 — Migrar Linux RH7 (fase 1)</div>
+<div style="font-size:8px;color:#8b8f98;line-height:1.3;margin-top:2px">Fase piloto completada. SELinux enforcing causó bloqueos en 5 servicios. Solución: policy custom previo a migración.</div>
+<div style="font-size:7px;color:#eab308;margin-top:3px;font-weight:600">Aplicado a: R5</div>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+
+<script>
+function showTab(name) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;font-family:system-ui,-apple-system,sans-serif;color:#e8e9ed;padding:16px}
+.container{max-width:1100px;margin:0 auto}
+
+/* Pipeline bar */
+.pipeline-bar{display:flex;align-items:center;gap:4px;background:#1a1d24;border-radius:12px;padding:10px 14px;margin-bottom:12px;overflow-x:auto}
+.pipe-agent{display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;opacity:0.35;flex-shrink:0}
+.pipe-agent.active{opacity:1;background:rgba(255,255,255,0.05)}
+.pipe-agent.done{opacity:0.7}
+.pipe-icon{width:32px;height:32px;flex-shrink:0}
+.pipe-label{font-size:9px;font-weight:600;line-height:1.2}
+.pipe-sub{font-size:7px;color:#8b8f98}
+.pipe-arrow{color:#333840;font-size:12px;flex-shrink:0}
+.pipe-agent.done .pipe-label{text-decoration:line-through}
+
+/* SLA / Progress bar */
+.progress-bar{display:flex;align-items:center;gap:16px;background:#1a1d24;border-radius:10px;padding:10px 16px;margin-bottom:12px}
+.prog-time{font-size:28px;font-weight:700;font-family:monospace;color:#22c55e;letter-spacing:1px}
+.prog-label{font-size:9px;color:#8b8f98}
+
+/* Main layout */
+.main-layout{display:flex;gap:12px}
+.main-left{flex:2;min-width:0}
+.main-right{flex:1;min-width:280px;max-width:320px}
+
+/* AG-005 Result section */
+.agent-result{background:#1a1d24;border:1px solid #333840;border-radius:10px;padding:14px;margin-bottom:10px}
+.agent-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.agent-badge{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+
+/* EDT Cards */
+.edt-fase{background:#22262e;border-radius:8px;margin-bottom:8px;overflow:hidden}
+.edt-fase-header{padding:8px 12px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+.edt-fase-title{font-size:12px;font-weight:600}
+.edt-fase-meta{font-size:9px;color:#8b8f98}
+.edt-paquetes{padding:0 12px 10px}
+.edt-paquete{background:#181b20;border:1px solid #2a2e38;border-left:3px solid #8b8f98;border-radius:6px;padding:8px 10px;margin-bottom:4px}
+.edt-paquete-title{font-size:11px;font-weight:600;color:#e8e9ed;margin-bottom:4px}
+.edt-tarea{display:flex;align-items:center;gap:6px;padding:3px 0;font-size:9px;color:#8b8f98}
+.edt-tarea-name{flex:1}
+.edt-skill-tag{font-size:7px;padding:1px 5px;border-radius:3px;font-weight:600}
+.edt-hours{font-size:9px;font-family:monospace;color:#8b8f98;min-width:35px;text-align:right}
+.edt-dep{font-size:7px;color:#6b7280;font-style:italic}
+
+/* Editable fields section */
+.form-section{background:#1a1d24;border:1px solid #333840;border-radius:10px;padding:14px;margin-bottom:10px}
+.form-section-title{font-size:11px;font-weight:600;color:#8b8f98;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.ia-badge{font-size:7px;padding:1px 5px;border-radius:3px;background:rgba(234,179,8,0.15);color:#eab308;font-weight:600}
+.form-field{margin-bottom:8px}
+.form-label{font-size:9px;color:#8b8f98;margin-bottom:3px}
+.form-input{width:100%;background:#22262e;border:1px solid #333840;border-radius:6px;padding:6px 10px;color:#e8e9ed;font-size:11px;font-family:inherit;resize:vertical}
+.form-input:focus{outline:none;border-color:#3b82f6}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.hito-card{display:flex;align-items:center;gap:6px;background:#22262e;border-radius:4px;padding:4px 8px;margin-bottom:3px;font-size:9px}
+.hito-num{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;flex-shrink:0}
+
+/* Pause bar */
+.pause-bar{background:rgba(234,179,8,0.08);border:2px dashed rgba(234,179,8,0.4);border-radius:10px;padding:12px 16px;margin-bottom:10px}
+.pause-title{font-size:13px;font-weight:600;color:#eab308;margin-bottom:4px}
+.pause-sub{font-size:10px;color:#8b8f98}
+.pause-actions{display:flex;gap:8px;margin-top:8px}
+.btn{padding:8px 18px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:none}
+.btn-approve{background:#22c55e;color:#fff}
+.btn-approve:disabled{background:#333840;color:#8b8f98;cursor:not-allowed}
+.btn-reject{background:none;border:1px solid rgba(239,68,68,0.3);color:#ef4444}
+.btn-edit{background:none;border:1px solid #333840;color:#8b8f98}
+
+/* Advisor chat */
+.advisor-panel{background:#0f1724;border:1px solid rgba(16,185,129,0.25);border-radius:10px;overflow:hidden}
+.advisor-header{padding:8px 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(16,185,129,0.15)}
+.advisor-icon{width:28px;height:28px;border-radius:50%;background:rgba(16,185,129,0.2);color:#10b981;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.advisor-title{font-size:11px;font-weight:600;color:#10b981}
+.advisor-sub{font-size:8px;color:#8b8f98}
+.advisor-context{display:flex;gap:3px;flex-wrap:wrap;padding:6px 12px;border-bottom:1px solid rgba(16,185,129,0.1)}
+.ctx-badge{font-size:7px;padding:1px 5px;border-radius:3px;background:rgba(16,185,129,0.1);color:#10b981;font-weight:600}
+.advisor-messages{padding:8px 12px;max-height:200px;overflow-y:auto}
+.advisor-msg{margin-bottom:8px;font-size:10px;line-height:1.4}
+.advisor-msg.system{color:#10b981;background:rgba(16,185,129,0.06);padding:6px 8px;border-radius:6px}
+.advisor-msg.user{color:#e8e9ed;text-align:right}
+.advisor-msg.user span{background:rgba(59,130,246,0.1);padding:4px 8px;border-radius:6px;display:inline-block}
+.advisor-msg.bot span{background:rgba(16,185,129,0.06);padding:4px 8px;border-radius:6px;display:inline-block}
+.advisor-input-row{display:flex;gap:6px;padding:8px 12px;border-top:1px solid rgba(16,185,129,0.15)}
+.advisor-input{flex:1;background:#1a2332;border:1px solid rgba(16,185,129,0.2);border-radius:6px;padding:6px 10px;color:#e8e9ed;font-size:10px;font-family:inherit}
+.advisor-input::placeholder{color:#4b5563}
+.advisor-send{background:#10b981;border:none;color:#fff;padding:6px 12px;border-radius:6px;font-size:10px;cursor:pointer;font-weight:600}
+.advisor-suggestions{padding:4px 12px 8px;display:flex;flex-direction:column;gap:3px}
+.advisor-sug{font-size:8px;color:#10b981;cursor:pointer;padding:3px 6px;border-radius:4px;background:rgba(16,185,129,0.06)}
+.advisor-sug:hover{background:rgba(16,185,129,0.12)}
+.advisor-upload{display:flex;align-items:center;gap:4px;padding:4px 12px;border-top:1px solid rgba(16,185,129,0.1)}
+.advisor-upload-btn{font-size:8px;color:#8b8f98;cursor:pointer;padding:3px 8px;border:1px dashed #333840;border-radius:4px}
+.advisor-upload-btn:hover{border-color:#10b981;color:#10b981}
+
+/* Sidebar stats */
+.sidebar-card{background:#1a1d24;border:1px solid #333840;border-radius:10px;padding:12px;margin-bottom:10px}
+.sidebar-title{font-size:10px;font-weight:600;color:#8b8f98;text-transform:uppercase;margin-bottom:8px}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.stat-item{background:#22262e;border-radius:6px;padding:8px;text-align:center}
+.stat-value{font-size:18px;font-weight:700;font-family:monospace}
+.stat-label{font-size:7px;color:#8b8f98;text-transform:uppercase;margin-top:2px}
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- PIPELINE BAR -->
+<div class="pipeline-bar">
+<div style="font-size:9px;color:#8b8f98;margin-right:6px;flex-shrink:0">PMBOK 7 ▸</div>
+
+<!-- AG-005 DONE -->
+<div class="pipe-agent done">
+<svg class="pipe-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+<path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#10b981" stroke-width="5"/>
+<path d="M30 75 H70 L50 30 Z" fill="none" stroke="#10b981" stroke-width="5" stroke-linejoin="round"/>
+<circle cx="50" cy="20" r="5" fill="#10b981"/>
+<path d="M40 55 H60 M45 45 H55" stroke="#10b981" stroke-width="3"/>
+</svg>
+<div>
+<div class="pipe-label" style="color:#10b981">AG-005</div>
+<div class="pipe-sub">Estratega ✓</div>
+</div>
+</div>
+<div class="pipe-arrow">▸</div>
+
+<!-- AG-013 PENDING -->
+<div class="pipe-agent">
+<svg class="pipe-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+<path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#d946ef" stroke-width="5"/>
+<rect x="25" y="30" width="15" height="15" rx="2" fill="none" stroke="#d946ef" stroke-width="5"/>
+<path d="M40 37 H50" stroke="#d946ef" stroke-width="5"/>
+<rect x="50" y="25" width="20" height="20" rx="3" fill="none" stroke="#d946ef" stroke-width="5"/>
+</svg>
+<div>
+<div class="pipe-label" style="color:#d946ef">AG-013</div>
+<div class="pipe-sub">Decomposer</div>
+</div>
+</div>
+<div class="pipe-arrow">▸</div>
+
+<!-- AG-014 -->
+<div class="pipe-agent">
+<svg class="pipe-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+<path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#eab308" stroke-width="5"/>
+<rect x="30" y="55" width="8" height="20" rx="1" fill="#eab308"/>
+<rect x="42" y="45" width="8" height="30" rx="1" fill="#eab308"/>
+<rect x="54" y="35" width="8" height="40" rx="1" fill="#eab308"/>
+</svg>
+<div>
+<div class="pipe-label" style="color:#eab308">AG-014</div>
+<div class="pipe-sub">Risk</div>
+</div>
+</div>
+<div class="pipe-arrow">▸</div>
+
+<!-- AG-015 -->
+<div class="pipe-agent">
+<svg class="pipe-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+<path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#ec4899" stroke-width="5"/>
+<circle cx="35" cy="50" r="8" fill="none" stroke="#ec4899" stroke-width="5"/>
+<circle cx="65" cy="50" r="8" fill="none" stroke="#ec4899" stroke-width="5"/>
+<path d="M45 50 H55" stroke="#ec4899" stroke-width="5"/>
+</svg>
+<div>
+<div class="pipe-label" style="color:#ec4899">AG-015</div>
+<div class="pipe-sub">Stakeholder</div>
+</div>
+</div>
+<div class="pipe-arrow">▸</div>
+
+<!-- AG-006 -->
+<div class="pipe-agent">
+<svg class="pipe-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+<path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#eab308" stroke-width="5"/>
+<rect x="30" y="30" width="15" height="15" rx="1" fill="#eab308"/>
+<rect x="30" y="50" width="15" height="15" rx="1" fill="#eab308" opacity="0.4"/>
+<rect x="55" y="30" width="15" height="15" rx="1" fill="#eab308" opacity="0.4"/>
+<rect x="55" y="50" width="15" height="15" rx="1" fill="#eab308" opacity="0.4"/>
+</svg>
+<div>
+<div class="pipe-label" style="color:#eab308">AG-006</div>
+<div class="pipe-sub">Resource</div>
+</div>
+</div>
+<div class="pipe-arrow">▸</div>
+
+<!-- AG-016 -->
+<div class="pipe-agent">
+<svg class="pipe-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+<path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#10b981" stroke-width="5"/>
+<ellipse cx="50" cy="35" rx="20" ry="10" fill="none" stroke="#10b981" stroke-width="5"/>
+<path d="M30 35 V65 A20 10 0 0 0 70 65 V35" fill="none" stroke="#10b981" stroke-width="5"/>
+</svg>
+<div>
+<div class="pipe-label" style="color:#10b981">AG-016</div>
+<div class="pipe-sub">Cost</div>
+</div>
+</div>
+<div class="pipe-arrow">▸</div>
+
+<!-- AG-007 -->
+<div class="pipe-agent">
+<svg class="pipe-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+<path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#ec4899" stroke-width="5"/>
+<rect x="30" y="35" width="40" height="8" rx="2" fill="#ec4899"/>
+<rect x="30" y="50" width="25" height="8" rx="2" fill="#ec4899"/>
+<rect x="30" y="65" width="55" height="8" rx="2" fill="#ec4899"/>
+</svg>
+<div>
+<div class="pipe-label" style="color:#ec4899">AG-007</div>
+<div class="pipe-sub">Planificador</div>
+</div>
+</div>
+<div class="pipe-arrow">▸</div>
+
+<!-- AG-017 -->
+<div class="pipe-agent">
+<svg class="pipe-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+<path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#8b5cf6" stroke-width="5"/>
+<rect x="35" y="45" width="30" height="25" rx="2" fill="#8b5cf6"/>
+<path d="M40 45 V35 A10 10 0 0 1 60 35 V45" fill="none" stroke="#8b5cf6" stroke-width="5"/>
+</svg>
+<div>
+<div class="pipe-label" style="color:#8b5cf6">AG-017</div>
+<div class="pipe-sub">Quality</div>
+</div>
+</div>
+
+<div style="margin-left:auto;font-size:10px;color:#8b8f98;flex-shrink:0">READY</div>
+</div>
+
+<!-- PROGRESS BAR -->
+<div class="progress-bar">
+<div>
+<div class="prog-time">--:--:--</div>
+<div class="prog-label">Tiempo estimado</div>
+</div>
+<div>
+<div class="prog-time" style="color:#f97316;font-size:24px">12%</div>
+<div class="prog-label">Progreso pipeline</div>
+</div>
+<div style="flex:1">
+<div style="display:flex;justify-content:space-between;font-size:9px;color:#8b8f98">
+<span>Inicio: 23/03/2026, 01:30</span>
+<span>AG-005 completado en 8.2s — ~0.04 USD</span>
+</div>
+<div style="height:6px;background:#181b20;border-radius:3px;margin-top:4px;overflow:hidden">
+<div style="height:100%;width:12%;background:#10b981;border-radius:3px"></div>
+</div>
+</div>
+</div>
+
+<!-- PAUSE BAR -->
+<div class="pause-bar">
+<div style="display:flex;justify-content:space-between;align-items:center">
+<div>
+<div class="pause-title">⏸ Pipeline en pausa — Decisión de gobernanza (1/4)</div>
+<div class="pause-sub">AG-005 Estratega ha generado el EDT/WBS, objetivos, hitos y alcance. Revise los datos, edite lo que necesite, y apruebe para continuar con AG-013 Task Decomposer.</div>
+</div>
+<div class="pause-actions">
+<button class="btn btn-reject">Rechazar EDT</button>
+<button class="btn btn-edit">Editar campos</button>
+<button class="btn btn-approve">Aprobar y continuar ▸</button>
+</div>
+</div>
+</div>
+
+<!-- MAIN LAYOUT -->
+<div class="main-layout">
+<div class="main-left">
+
+<!-- AG-005 RESULT: EDT VISUAL -->
+<div class="agent-result">
+<div class="agent-header">
+<svg width="24" height="24" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+<path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#10b981" stroke-width="5"/>
+<path d="M30 75 H70 L50 30 Z" fill="none" stroke="#10b981" stroke-width="5" stroke-linejoin="round"/>
+<circle cx="50" cy="20" r="5" fill="#10b981"/>
+</svg>
+<div class="agent-badge" style="color:#10b981">AG-005 Estratega — EDT/WBS generado</div>
+<span class="ia-badge">Generado por IA</span>
+<span style="margin-left:auto;font-size:9px;color:#8b8f98">3 fases · 8 paquetes · 24 tareas · 1.840h estimadas</span>
+</div>
+
+<!-- FASE 1 -->
+<div class="edt-fase">
+<div class="edt-fase-header" style="background:rgba(59,130,246,0.08);border-left:3px solid #3b82f6">
+<div>
+<div class="edt-fase-title" style="color:#3b82f6">Fase 1: Análisis y Diseño</div>
+<div style="font-size:8px;color:#8b8f98">Semanas 1-8 · 480h · 3 paquetes</div>
+</div>
+<div style="font-size:9px;color:#3b82f6">▾</div>
+</div>
+<div class="edt-paquetes">
+
+<div class="edt-paquete" style="border-left-color:#3b82f6">
+<div class="edt-paquete-title">1.1 Auditoría de infraestructura actual</div>
+<div class="edt-tarea">
+<span style="color:#3b82f6">●</span>
+<span class="edt-tarea-name">Inventario de servidores y servicios RHEL 7</span>
+<span class="edt-skill-tag" style="background:rgba(6,182,212,0.12);color:#06b6d4">Linux</span>
+<span class="edt-skill-tag" style="background:rgba(168,85,247,0.12);color:#a855f7">CMDB</span>
+<span class="edt-hours">40h</span>
+</div>
+<div class="edt-tarea">
+<span style="color:#3b82f6">●</span>
+<span class="edt-tarea-name">Mapeo de dependencias entre servicios</span>
+<span class="edt-skill-tag" style="background:rgba(6,182,212,0.12);color:#06b6d4">Redes</span>
+<span class="edt-hours">32h</span>
+</div>
+<div class="edt-tarea">
+<span style="color:#3b82f6">●</span>
+<span class="edt-tarea-name">Análisis de compatibilidad RHEL 7 → RHEL 9</span>
+<span class="edt-skill-tag" style="background:rgba(6,182,212,0.12);color:#06b6d4">Linux</span>
+<span class="edt-skill-tag" style="background:rgba(249,115,22,0.12);color:#f97316">Backend</span>
+<span class="edt-hours">48h</span>
+<span class="edt-dep">dep: T1.1.1</span>
+</div>
+</div>
+
+<div class="edt-paquete" style="border-left-color:#3b82f6">
+<div class="edt-paquete-title">1.2 Diseño de arquitectura target</div>
+<div class="edt-tarea">
+<span style="color:#3b82f6">●</span>
+<span class="edt-tarea-name">Diseñar topología de red RHEL 9</span>
+<span class="edt-skill-tag" style="background:rgba(6,182,212,0.12);color:#06b6d4">Redes</span>
+<span class="edt-skill-tag" style="background:rgba(239,68,68,0.12);color:#ef4444">Seguridad</span>
+<span class="edt-hours">56h</span>
+<span class="edt-dep">dep: T1.1.3</span>
+</div>
+<div class="edt-tarea">
+<span style="color:#3b82f6">●</span>
+<span class="edt-tarea-name">Plan de migración por oleadas</span>
+<span class="edt-skill-tag" style="background:rgba(34,197,94,0.12);color:#22c55e">DevOps</span>
+<span class="edt-hours">40h</span>
+</div>
+</div>
+
+<div class="edt-paquete" style="border-left-color:#3b82f6">
+<div class="edt-paquete-title">1.3 Aprobación de diseño</div>
+<div class="edt-tarea">
+<span style="color:#3b82f6">●</span>
+<span class="edt-tarea-name">Documentación técnica y presentación a comité</span>
+<span class="edt-skill-tag" style="background:rgba(139,143,152,0.12);color:#8b8f98">Gestión</span>
+<span class="edt-hours">24h</span>
+</div>
+<div style="display:flex;align-items:center;gap:4px;margin-top:4px">
+<div style="width:14px;height:14px;background:#eab308;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:7px;color:#000;font-weight:700">H</div>
+<span style="font-size:8px;color:#eab308;font-weight:600">HITO: Diseño aprobado por comité — Semana 8</span>
+</div>
+</div>
+
+</div>
+</div>
+
+<!-- FASE 2 -->
+<div class="edt-fase">
+<div class="edt-fase-header" style="background:rgba(168,85,247,0.08);border-left:3px solid #a855f7">
+<div>
+<div class="edt-fase-title" style="color:#a855f7">Fase 2: Migración por oleadas</div>
+<div style="font-size:8px;color:#8b8f98">Semanas 9-26 · 960h · 3 paquetes</div>
+</div>
+<div style="font-size:9px;color:#a855f7">▾</div>
+</div>
+<div class="edt-paquetes">
+
+<div class="edt-paquete" style="border-left-color:#a855f7">
+<div class="edt-paquete-title">2.1 Oleada 1: Servidores no críticos (DEV/QA)</div>
+<div class="edt-tarea">
+<span style="color:#a855f7">●</span>
+<span class="edt-tarea-name">Migración servidores desarrollo (12 servidores)</span>
+<span class="edt-skill-tag" style="background:rgba(6,182,212,0.12);color:#06b6d4">Linux</span>
+<span class="edt-skill-tag" style="background:rgba(34,197,94,0.12);color:#22c55e">DevOps</span>
+<span class="edt-hours">120h</span>
+</div>
+<div class="edt-tarea">
+<span style="color:#a855f7">●</span>
+<span class="edt-tarea-name">Validación y smoke tests</span>
+<span class="edt-skill-tag" style="background:rgba(236,72,153,0.12);color:#ec4899">QA</span>
+<span class="edt-hours">40h</span>
+</div>
+</div>
+
+<div class="edt-paquete" style="border-left-color:#a855f7">
+<div class="edt-paquete-title">2.2 Oleada 2: Servidores producción (PRE + PRO)</div>
+<div class="edt-tarea">
+<span style="color:#a855f7">●</span>
+<span class="edt-tarea-name">Migración PRE-producción con rollback plan</span>
+<span class="edt-skill-tag" style="background:rgba(6,182,212,0.12);color:#06b6d4">Linux</span>
+<span class="edt-skill-tag" style="background:rgba(239,68,68,0.12);color:#ef4444">Seguridad</span>
+<span class="edt-hours">200h</span>
+</div>
+<div class="edt-tarea">
+<span style="color:#a855f7">●</span>
+<span class="edt-tarea-name">Migración producción (ventana mantenimiento)</span>
+<span class="edt-skill-tag" style="background:rgba(6,182,212,0.12);color:#06b6d4">Linux</span>
+<span class="edt-skill-tag" style="background:rgba(249,115,22,0.12);color:#f97316">BBDD</span>
+<span class="edt-hours">280h</span>
+</div>
+</div>
+
+</div>
+</div>
+
+<!-- FASE 3 -->
+<div class="edt-fase">
+<div class="edt-fase-header" style="background:rgba(34,197,94,0.08);border-left:3px solid #22c55e">
+<div>
+<div class="edt-fase-title" style="color:#22c55e">Fase 3: Validación y cierre</div>
+<div style="font-size:8px;color:#8b8f98">Semanas 27-32 · 400h · 2 paquetes</div>
+</div>
+<div style="font-size:9px;color:#22c55e">▾</div>
+</div>
+<div class="edt-paquetes">
+<div class="edt-paquete" style="border-left-color:#22c55e">
+<div class="edt-paquete-title">3.1 Testing integral y certificación</div>
+<div class="edt-tarea">
+<span style="color:#22c55e">●</span>
+<span class="edt-tarea-name">Pruebas de regresión completas</span>
+<span class="edt-skill-tag" style="background:rgba(236,72,153,0.12);color:#ec4899">QA</span>
+<span class="edt-hours">120h</span>
+</div>
+<div class="edt-tarea">
+<span style="color:#22c55e">●</span>
+<span class="edt-tarea-name">Auditoría de seguridad post-migración</span>
+<span class="edt-skill-tag" style="background:rgba(239,68,68,0.12);color:#ef4444">Seguridad</span>
+<span class="edt-hours">80h</span>
+</div>
+</div>
+<div class="edt-paquete" style="border-left-color:#22c55e">
+<div class="edt-paquete-title">3.2 Decommission RHEL 7 y cierre</div>
+<div class="edt-tarea">
+<span style="color:#22c55e">●</span>
+<span class="edt-tarea-name">Desmantelamiento servidores RHEL 7</span>
+<span class="edt-skill-tag" style="background:rgba(6,182,212,0.12);color:#06b6d4">Linux</span>
+<span class="edt-hours">60h</span>
+</div>
+<div style="display:flex;align-items:center;gap:4px;margin-top:4px">
+<div style="width:14px;height:14px;background:#22c55e;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:7px;color:#000;font-weight:700">H</div>
+<span style="font-size:8px;color:#22c55e;font-weight:600">HITO: Proyecto completado — Semana 32</span>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+
+<!-- EDITABLE FORM: Pestaña 2 - Acta Constitución -->
+<div class="form-section">
+<div class="form-section-title">
+Pestaña 2: Acta de constitución <span class="ia-badge">Pre-rellenado por IA</span>
+</div>
+<div class="form-field">
+<div class="form-label">Descripción alto nivel</div>
+<textarea class="form-input" rows="2">Migración de la infraestructura de servidores Linux de Red Hat Enterprise Linux 7 (EOL) a RHEL 9, afectando a 47 servidores en 3 entornos (DEV, PRE, PRO) con mínimo impacto en servicios bancarios críticos.</textarea>
+</div>
+<div class="form-field">
+<div class="form-label">Objetivos SMART</div>
+<textarea class="form-input" rows="3">1. Migrar 100% de servidores RHEL 7 a RHEL 9 antes de semana 32
+2. Mantener uptime > 99.9% durante migración de producción
+3. Reducir vulnerabilidades críticas a 0 (RHEL 7 sin parches)
+4. Certificar compatibilidad de 23 aplicaciones bancarias en RHEL 9</textarea>
+</div>
+<div class="form-row">
+<div class="form-field">
+<div class="form-label">Sponsor</div>
+<input class="form-input" type="text" value="Elena Marquez Aguirre — CISO">
+</div>
+<div class="form-field">
+<div class="form-label">Criterios de éxito</div>
+<input class="form-input" type="text" value="0 incidencias P1 post-migración, SLA mantenidos">
+</div>
+</div>
+<div class="form-field">
+<div class="form-label">Hitos principales</div>
+<div class="hito-card"><div class="hito-num" style="background:rgba(59,130,246,0.2);color:#3b82f6">H1</div> Diseño aprobado por comité — Semana 8</div>
+<div class="hito-card"><div class="hito-num" style="background:rgba(168,85,247,0.2);color:#a855f7">H2</div> Oleada 1 completada (DEV/QA) — Semana 14</div>
+<div class="hito-card"><div class="hito-num" style="background:rgba(234,179,8,0.2);color:#eab308">H3</div> Oleada 2 completada (PRO) — Semana 26</div>
+<div class="hito-card"><div class="hito-num" style="background:rgba(34,197,94,0.2);color:#22c55e">H4</div> Proyecto completado y RHEL 7 decomisionado — Semana 32</div>
+</div>
+</div>
+
+<!-- EDITABLE FORM: Pestaña 3 - Alcance -->
+<div class="form-section">
+<div class="form-section-title">
+Pestaña 3: Alcance <span class="ia-badge">Pre-rellenado por IA</span>
+</div>
+<div class="form-field">
+<div class="form-label">Alcance del producto</div>
+<textarea class="form-input" rows="2">Migración in-place y/o side-by-side de 47 servidores RHEL 7 a RHEL 9 en entornos DEV (12), PRE (15) y PRO (20). Incluye actualización de paquetes, reconfiguración de servicios, y certificación de aplicaciones.</textarea>
+</div>
+<div class="form-row">
+<div class="form-field">
+<div class="form-label">Exclusiones</div>
+<textarea class="form-input" rows="2">— Migración de aplicaciones (solo SO)
+— Servidores Windows
+— Hardware físico (solo virtual)</textarea>
+</div>
+<div class="form-field">
+<div class="form-label">Restricciones</div>
+<textarea class="form-input" rows="2">— Ventana mantenimiento PRO: solo fines de semana
+— No más de 5 servidores PRO simultáneos
+— Rollback obligatorio si falla en 2h</textarea>
+</div>
+</div>
+<div class="form-field">
+<div class="form-label">Asunciones</div>
+<textarea class="form-input" rows="1">Licencias RHEL 9 ya adquiridas. Equipo Linux disponible 80%. No hay cambios de hardware previstos.</textarea>
+</div>
+</div>
+
+</div>
+
+<!-- SIDEBAR DERECHO -->
+<div class="main-right">
+
+<!-- RESUMEN EDT -->
+<div class="sidebar-card">
+<div class="sidebar-title">Resumen EDT generado</div>
+<div class="stat-grid">
+<div class="stat-item">
+<div class="stat-value" style="color:#3b82f6">3</div>
+<div class="stat-label">Fases</div>
+</div>
+<div class="stat-item">
+<div class="stat-value" style="color:#a855f7">8</div>
+<div class="stat-label">Paquetes</div>
+</div>
+<div class="stat-item">
+<div class="stat-value" style="color:#e8e9ed">24</div>
+<div class="stat-label">Tareas</div>
+</div>
+<div class="stat-item">
+<div class="stat-value" style="color:#f97316">1.840h</div>
+<div class="stat-label">Horas est.</div>
+</div>
+</div>
+<div style="margin-top:8px">
+<div style="font-size:8px;color:#8b8f98;margin-bottom:4px">Skills requeridos:</div>
+<div style="display:flex;gap:3px;flex-wrap:wrap">
+<span class="edt-skill-tag" style="background:rgba(6,182,212,0.12);color:#06b6d4">Linux (680h)</span>
+<span class="edt-skill-tag" style="background:rgba(34,197,94,0.12);color:#22c55e">DevOps (240h)</span>
+<span class="edt-skill-tag" style="background:rgba(236,72,153,0.12);color:#ec4899">QA (280h)</span>
+<span class="edt-skill-tag" style="background:rgba(239,68,68,0.12);color:#ef4444">Seguridad (200h)</span>
+<span class="edt-skill-tag" style="background:rgba(6,182,212,0.12);color:#06b6d4">Redes (160h)</span>
+<span class="edt-skill-tag" style="background:rgba(249,115,22,0.12);color:#f97316">Backend (120h)</span>
+<span class="edt-skill-tag" style="background:rgba(249,115,22,0.12);color:#f97316">BBDD (100h)</span>
+<span class="edt-skill-tag" style="background:rgba(139,143,152,0.12);color:#8b8f98">Gestión (60h)</span>
+</div>
+</div>
+</div>
+
+<!-- ADVISOR CHAT -->
+<div class="advisor-panel">
+<div class="advisor-header">
+<div class="advisor-icon">?</div>
+<div>
+<div class="advisor-title">AG-018 Governance Advisor</div>
+<div class="advisor-sub">Pregúntame antes de aprobar</div>
+</div>
+<div style="margin-left:auto;font-size:7px;padding:2px 6px;border-radius:3px;background:rgba(16,185,129,0.15);color:#10b981">ONLINE</div>
+</div>
+<div class="advisor-context">
+<span class="ctx-badge">Business Case</span>
+<span class="ctx-badge">EDT/WBS</span>
+<span class="ctx-badge">CMDB</span>
+<span class="ctx-badge">Skills 100</span>
+<span class="ctx-badge">Cartera 46 proy</span>
+</div>
+
+<div class="advisor-messages">
+<div class="advisor-msg system">
+Hola. Soy tu asistente de gobernanza. He analizado el EDT que AG-005 ha generado para "Migrar Linux Red Hat 7". Puedo ayudarte a validar el alcance, revisar dependencias, o resolver dudas antes de aprobar.
+</div>
+<div class="advisor-msg user"><span>¿Las 1.840 horas son realistas para migrar 47 servidores?</span></div>
+<div class="advisor-msg bot"><span>Según proyectos similares en la cartera (PRJ0022 "Ampliar capacidad batch" fue 1.600h para 30 servidores), 1.840h para 47 servidores es razonable — aprox. 39h/servidor incluyendo testing. El factor de riesgo está en los servidores PRO con aplicaciones bancarias críticas, que pueden requerir más horas de validación.</span></div>
+</div>
+
+<div class="advisor-suggestions">
+<div class="advisor-sug" onclick="this.style.opacity='0.5'">💡 "¿Hay conflictos con otros proyectos activos?"</div>
+<div class="advisor-sug" onclick="this.style.opacity='0.5'">💡 "¿Qué dice la CMDB sobre los servidores RHEL 7?"</div>
+<div class="advisor-sug" onclick="this.style.opacity='0.5'">💡 "¿Faltan skills críticos en el EDT?"</div>
+<div class="advisor-sug" onclick="this.style.opacity='0.5'">💡 "¿Cuántas ventanas de mantenimiento necesitamos?"</div>
+</div>
+
+<div class="advisor-upload">
+<div class="advisor-upload-btn">📎 Subir documento (normativa, contrato, informe...)</div>
+</div>
+
+<div class="advisor-input-row">
+<input class="advisor-input" type="text" placeholder="Escribe tu pregunta al advisor...">
+<button class="advisor-send">Enviar</button>
+</div>
+</div>
+
+<!-- TIMELINE -->
+<div class="sidebar-card">
+<div class="sidebar-title">Timeline estimado</div>
+<div style="display:flex;flex-direction:column;gap:4px">
+<div style="display:flex;align-items:center;gap:6px">
+<div style="width:8px;height:8px;border-radius:50%;background:#3b82f6"></div>
+<div style="flex:1;height:4px;background:#3b82f6;border-radius:2px"></div>
+<span style="font-size:8px;color:#8b8f98">S1-8</span>
+</div>
+<div style="font-size:8px;color:#3b82f6;padding-left:14px">Fase 1: Análisis (480h)</div>
+<div style="display:flex;align-items:center;gap:6px">
+<div style="width:8px;height:8px;border-radius:50%;background:#a855f7"></div>
+<div style="flex:1;height:4px;background:#a855f7;border-radius:2px"></div>
+<span style="font-size:8px;color:#8b8f98">S9-26</span>
+</div>
+<div style="font-size:8px;color:#a855f7;padding-left:14px">Fase 2: Migración (960h)</div>
+<div style="display:flex;align-items:center;gap:6px">
+<div style="width:8px;height:8px;border-radius:50%;background:#22c55e"></div>
+<div style="flex:1;height:4px;background:#22c55e;border-radius:2px"></div>
+<span style="font-size:8px;color:#8b8f98">S27-32</span>
+</div>
+<div style="font-size:8px;color:#22c55e;padding-left:14px">Fase 3: Validación (400h)</div>
+</div>
+</div>
+
+<!-- COST PREVIEW -->
+<div class="sidebar-card">
+<div class="sidebar-title">Estimación preliminar costes</div>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+<span style="font-size:10px;color:#8b8f98">Horas internas (1.840h × 85€/h)</span>
+<span style="font-size:11px;font-weight:600;color:#e8e9ed;font-family:monospace">156.400€</span>
+</div>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+<span style="font-size:10px;color:#8b8f98">Licencias RHEL 9</span>
+<span style="font-size:11px;font-weight:600;color:#e8e9ed;font-family:monospace">47.000€</span>
+</div>
+<div style="display:flex;justify-content:space-between;align-items:center;padding-top:4px;border-top:1px solid #333840">
+<span style="font-size:10px;font-weight:600;color:#e8e9ed">BAC estimado</span>
+<span style="font-size:13px;font-weight:700;color:#22c55e;font-family:monospace">203.400€</span>
+</div>
+<div style="font-size:8px;color:#8b8f98;margin-top:4px;font-style:italic">* Estimación preliminar. AG-016 Cost Analyzer calculará el presupuesto definitivo con el equipo real asignado.</div>
+</div>
+
+</div>
+</div>
+
+</div>
+</body>
+</html>

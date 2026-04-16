@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;font-family:system-ui,-apple-system,sans-serif;color:#e8e9ed;padding:16px}
+.container{max-width:1100px;margin:0 auto}
+
+.pipeline-bar{display:flex;align-items:center;gap:4px;background:#1a1d24;border-radius:12px;padding:10px 14px;margin-bottom:12px;overflow-x:auto}
+.pipe-agent{display:flex;align-items:center;gap:5px;padding:4px 6px;border-radius:6px;opacity:0.6;flex-shrink:0}
+.pipe-agent.done{opacity:0.7}
+.pipe-agent.final{opacity:1;background:rgba(34,197,94,0.06)}
+.pipe-icon{width:28px;height:28px;flex-shrink:0}
+.pipe-label{font-size:8px;font-weight:600}
+.pipe-sub{font-size:7px;color:#8b8f98}
+.pipe-arrow{color:#333840;font-size:10px;flex-shrink:0}
+.progress-bar{display:flex;align-items:center;gap:16px;background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.2);border-radius:10px;padding:10px 16px;margin-bottom:12px}
+.prog-time{font-size:28px;font-weight:700;font-family:monospace;letter-spacing:1px}
+.prog-label{font-size:9px;color:#8b8f98}
+
+.tabs{display:flex;gap:2px;margin-bottom:0}
+.tab{padding:8px 14px;border-radius:8px 8px 0 0;font-size:10px;font-weight:600;cursor:pointer;background:#1a1d24;color:#8b8f98;border:1px solid #333840;border-bottom:none}
+.tab.active{background:#22262e;color:#e8e9ed;border-color:#3a3f4a}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+.main-layout{display:flex;gap:12px}
+.main-left{flex:2;min-width:0}
+.main-right{flex:1;min-width:280px;max-width:320px}
+.section{background:#1a1d24;border:1px solid #333840;border-radius:0 10px 10px 10px;padding:14px;margin-bottom:10px}
+.section-header{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.ia-badge{font-size:7px;padding:1px 5px;border-radius:3px;background:rgba(234,179,8,0.15);color:#eab308;font-weight:600}
+.editable-badge{font-size:7px;padding:1px 5px;border-radius:3px;background:rgba(59,130,246,0.15);color:#3b82f6;font-weight:600}
+
+/* Sprint timeline */
+.sprint-timeline{display:flex;gap:3px;margin-bottom:14px;overflow-x:auto;padding-bottom:4px}
+.sprint-block{border-radius:6px;padding:6px 8px;min-width:80px;cursor:pointer;transition:all 0.15s;border:1px solid transparent;text-align:center}
+.sprint-block:hover{border-color:rgba(255,255,255,0.1)}
+.sprint-block.active{border-color:#3b82f6;background:rgba(59,130,246,0.06)}
+.sprint-block.future{opacity:0.4}
+.sprint-num{font-size:10px;font-weight:700;font-family:monospace}
+.sprint-dates{font-size:7px;color:#8b8f98;margin-top:1px}
+.sprint-pts{font-size:8px;font-weight:600;margin-top:2px}
+.sprint-goal{font-size:7px;color:#8b8f98;margin-top:1px;font-style:italic;line-height:1.2}
+
+/* Filters bar */
+.filters{display:flex;gap:6px;margin-bottom:10px;align-items:center;flex-wrap:wrap}
+.filter-btn{font-size:8px;padding:3px 8px;border-radius:4px;border:1px solid #333840;background:none;color:#8b8f98;cursor:pointer}
+.filter-btn:hover{border-color:#3b82f6;color:#3b82f6}
+.filter-btn.active{background:rgba(59,130,246,0.1);border-color:#3b82f6;color:#3b82f6}
+.filter-search{background:#22262e;border:1px solid #333840;border-radius:4px;padding:3px 8px;color:#e8e9ed;font-size:9px;width:140px;margin-left:auto}
+.filter-search::placeholder{color:#4b5563}
+
+/* Sprint section header */
+.sprint-section{margin-bottom:12px}
+.sprint-section-header{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;margin-bottom:4px;cursor:pointer}
+.sprint-section-header:hover{opacity:0.9}
+.sprint-section-title{font-size:11px;font-weight:600}
+.sprint-section-meta{font-size:9px;color:#8b8f98;margin-left:auto;display:flex;gap:12px}
+.sprint-section-bar{height:4px;border-radius:2px;overflow:hidden;flex:1;max-width:120px;background:#333840}
+.sprint-section-fill{height:100%;border-radius:2px}
+
+/* List table */
+.list-header{display:grid;grid-template-columns:30px 40px 1fr 70px 60px 55px 45px 60px 55px;gap:0;padding:4px 8px;font-size:7px;font-weight:600;color:#8b8f98;text-transform:uppercase;border-bottom:1px solid #333840;position:sticky;top:0;background:#1a1d24;z-index:1}
+.list-row{display:grid;grid-template-columns:30px 40px 1fr 70px 60px 55px 45px 60px 55px;gap:0;padding:5px 8px;border-bottom:1px solid #22262e;font-size:9px;align-items:center;cursor:pointer;transition:background 0.1s}
+.list-row:hover{background:rgba(59,130,246,0.04)}
+.list-row.in-progress{background:rgba(59,130,246,0.02)}
+.list-row.in-review{background:rgba(234,179,8,0.02)}
+.list-row.done{opacity:0.5}
+.list-row.done .list-title{text-decoration:line-through}
+
+.list-checkbox{width:14px;height:14px;border:1px solid #333840;border-radius:3px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.list-checkbox.checked{background:#22c55e;border-color:#22c55e}
+.list-checkbox.checked::after{content:"✓";font-size:9px;color:#fff}
+
+.list-type{font-size:7px;padding:2px 5px;border-radius:3px;font-weight:700;text-align:center}
+.list-type.task{background:rgba(59,130,246,0.12);color:#3b82f6}
+.list-type.story{background:rgba(34,197,94,0.12);color:#22c55e}
+.list-type.bug{background:rgba(239,68,68,0.12);color:#ef4444}
+.list-type.spike{background:rgba(168,85,247,0.12);color:#a855f7}
+
+.list-id{font-size:8px;font-family:monospace;font-weight:600}
+.list-title{font-size:9px;color:#e8e9ed;line-height:1.3}
+.list-title-sub{font-size:7px;color:#8b8f98;margin-top:1px}
+
+.list-silo{font-size:7px;padding:1px 5px;border-radius:3px;font-weight:600;text-align:center}
+.list-status{font-size:7px;padding:2px 6px;border-radius:3px;font-weight:600;text-align:center}
+.list-status.todo{background:rgba(139,143,152,0.12);color:#8b8f98}
+.list-status.progress{background:rgba(59,130,246,0.12);color:#3b82f6}
+.list-status.review{background:rgba(234,179,8,0.12);color:#eab308}
+.list-status.done{background:rgba(34,197,94,0.12);color:#22c55e}
+
+.list-pts{font-size:10px;font-weight:700;font-family:monospace;text-align:center}
+.list-avatar{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;margin:0 auto}
+.list-subtasks{font-size:8px;color:#8b8f98;display:flex;align-items:center;gap:3px}
+.list-sub-bar{width:30px;height:3px;background:#333840;border-radius:2px;overflow:hidden}
+.list-sub-fill{height:100%;border-radius:2px}
+.list-priority{width:4px;height:20px;border-radius:2px;margin:0 auto}
+
+/* Backlog section */
+.backlog-divider{display:flex;align-items:center;gap:8px;margin:14px 0 8px;padding:0 8px}
+.backlog-divider-line{flex:1;height:1px;background:#333840}
+.backlog-divider-text{font-size:9px;font-weight:600;color:#8b8f98;text-transform:uppercase}
+
+/* Ceremonies */
+.ceremony{display:flex;align-items:center;gap:8px;background:#22262e;border-radius:6px;padding:6px 10px;margin-bottom:4px}
+.ceremony-icon{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0}
+.ceremony-name{font-size:10px;font-weight:600;color:#e8e9ed}
+.ceremony-info{font-size:8px;color:#8b8f98}
+.ceremony-when{font-size:8px;color:#8b8f98;margin-left:auto;text-align:right}
+
+/* Sidebar */
+.sidebar-card{background:#1a1d24;border:1px solid #333840;border-radius:10px;padding:12px;margin-bottom:10px}
+.sidebar-title{font-size:10px;font-weight:600;color:#8b8f98;text-transform:uppercase;margin-bottom:8px}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.stat-item{background:#22262e;border-radius:6px;padding:8px;text-align:center}
+.stat-value{font-size:18px;font-weight:700;font-family:monospace}
+.stat-label{font-size:7px;color:#8b8f98;text-transform:uppercase;margin-top:2px}
+
+.burndown{background:#181b20;border-radius:8px;padding:10px;position:relative;height:130px;margin-bottom:8px}
+.velocity-bars{display:flex;align-items:flex-end;gap:3px;height:60px;margin-bottom:4px}
+.vel-bar{border-radius:3px 3px 0 0;min-width:24px;text-align:center;position:relative}
+.vel-bar-label{position:absolute;bottom:-14px;font-size:7px;color:#8b8f98;width:100%;text-align:center}
+.vel-bar-value{position:absolute;top:-12px;font-size:7px;font-weight:600;width:100%;text-align:center}
+
+.advisor-panel{background:#0f1724;border:1px solid rgba(16,185,129,0.25);border-radius:10px;overflow:hidden;margin-bottom:10px}
+.advisor-header{padding:8px 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(16,185,129,0.15)}
+.advisor-icon{width:28px;height:28px;border-radius:50%;background:rgba(16,185,129,0.2);color:#10b981;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.advisor-title{font-size:11px;font-weight:600;color:#10b981}
+.advisor-sub{font-size:8px;color:#8b8f98}
+.advisor-messages{padding:8px 12px;max-height:140px;overflow-y:auto}
+.advisor-msg{margin-bottom:6px;font-size:10px;line-height:1.4}
+.advisor-msg.system{color:#10b981;background:rgba(16,185,129,0.06);padding:6px 8px;border-radius:6px}
+.advisor-suggestions{padding:4px 12px 8px;display:flex;flex-direction:column;gap:3px}
+.advisor-sug{font-size:8px;color:#10b981;cursor:pointer;padding:3px 6px;border-radius:4px;background:rgba(16,185,129,0.06)}
+.advisor-sug:hover{background:rgba(16,185,129,0.12)}
+.advisor-input-row{display:flex;gap:6px;padding:8px 12px;border-top:1px solid rgba(16,185,129,0.15)}
+.advisor-input{flex:1;background:#1a2332;border:1px solid rgba(16,185,129,0.2);border-radius:6px;padding:6px 10px;color:#e8e9ed;font-size:10px;font-family:inherit}
+.advisor-send{background:#10b981;border:none;color:#fff;padding:6px 12px;border-radius:6px;font-size:10px;cursor:pointer;font-weight:600}
+
+.launch-section{background:rgba(34,197,94,0.06);border:2px solid rgba(34,197,94,0.3);border-radius:12px;padding:16px;margin-top:12px;text-align:center}
+.launch-title{font-size:16px;font-weight:700;color:#22c55e;margin-bottom:4px}
+.launch-sub{font-size:10px;color:#8b8f98;margin-bottom:12px}
+.launch-summary{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:14px}
+.launch-item{background:#22262e;border-radius:6px;padding:6px;text-align:center}
+.launch-item-value{font-size:14px;font-weight:700;font-family:monospace}
+.launch-item-label{font-size:7px;color:#8b8f98;text-transform:uppercase}
+.launch-btn{background:#22c55e;color:#fff;border:none;padding:14px 48px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 20px rgba(34,197,94,0.3)}
+.launch-btn:hover{background:#16a34a;transform:translateY(-1px)}
+.launch-warning{font-size:8px;color:#8b8f98;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- PIPELINE ALL DONE -->
+<div class="pipeline-bar">
+<div style="font-size:9px;color:#22c55e;margin-right:6px;flex-shrink:0;font-weight:600">✓ COMPLETADO</div>
+<div class="pipe-agent done"><svg class="pipe-icon" viewBox="0 0 100 100"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#10b981" stroke-width="5"/><circle cx="50" cy="20" r="5" fill="#10b981"/></svg><div><div class="pipe-label" style="color:#10b981">005✓</div></div></div><div class="pipe-arrow">▸</div>
+<div class="pipe-agent done"><svg class="pipe-icon" viewBox="0 0 100 100"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#d946ef" stroke-width="5"/><rect x="30" y="30" width="15" height="15" rx="2" fill="none" stroke="#d946ef" stroke-width="5"/></svg><div><div class="pipe-label" style="color:#d946ef">013✓</div></div></div><div class="pipe-arrow">▸</div>
+<div class="pipe-agent done"><svg class="pipe-icon" viewBox="0 0 100 100"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#eab308" stroke-width="5"/><rect x="35" y="50" width="8" height="20" rx="1" fill="#eab308"/></svg><div><div class="pipe-label" style="color:#eab308">014✓</div></div></div><div class="pipe-arrow">▸</div>
+<div class="pipe-agent done"><svg class="pipe-icon" viewBox="0 0 100 100"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#ec4899" stroke-width="5"/><circle cx="40" cy="50" r="8" fill="none" stroke="#ec4899" stroke-width="5"/></svg><div><div class="pipe-label" style="color:#ec4899">015✓</div></div></div><div class="pipe-arrow">▸</div>
+<div class="pipe-agent done"><svg class="pipe-icon" viewBox="0 0 100 100"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#eab308" stroke-width="5"/><rect x="30" y="30" width="15" height="15" rx="1" fill="#eab308"/></svg><div><div class="pipe-label" style="color:#eab308">006✓</div></div></div><div class="pipe-arrow">▸</div>
+<div class="pipe-agent final"><svg class="pipe-icon" viewBox="0 0 100 100"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#10b981" stroke-width="5"/><ellipse cx="50" cy="40" rx="20" ry="10" fill="none" stroke="#10b981" stroke-width="5"/></svg><div><div class="pipe-label" style="color:#10b981">016✓</div><div class="pipe-sub">Cost</div></div></div><div class="pipe-arrow">▸</div>
+<div class="pipe-agent final"><svg class="pipe-icon" viewBox="0 0 100 100"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#ec4899" stroke-width="5"/><rect x="30" y="35" width="40" height="8" rx="2" fill="#ec4899"/></svg><div><div class="pipe-label" style="color:#ec4899">007✓</div><div class="pipe-sub">Sprint</div></div></div><div class="pipe-arrow">▸</div>
+<div class="pipe-agent final"><svg class="pipe-icon" viewBox="0 0 100 100"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#8b5cf6" stroke-width="5"/><rect x="35" y="45" width="30" height="25" rx="2" fill="#8b5cf6"/></svg><div><div class="pipe-label" style="color:#8b5cf6">017✓</div><div class="pipe-sub">QA</div></div></div>
+<div style="margin-left:auto;font-size:10px;color:#22c55e;font-weight:700">100%</div>
+</div>
+
+<div class="progress-bar">
+<div><div class="prog-time" style="color:#22c55e">00:00:00</div><div class="prog-label">Completado</div></div>
+<div><div class="prog-time" style="color:#22c55e;font-size:24px">100%</div><div class="prog-label">9 agentes</div></div>
+<div style="flex:1"><div style="display:flex;justify-content:space-between;font-size:9px;color:#8b8f98"><span>52.3s · 4 pausas</span><span style="color:#22c55e;font-weight:600">~0.33 USD</span></div><div style="height:6px;background:#181b20;border-radius:3px;margin-top:4px;overflow:hidden"><div style="height:100%;width:100%;background:#22c55e;border-radius:3px"></div></div></div>
+</div>
+
+<div class="tabs">
+<div class="tab" onclick="showTab('budget')">Presupuesto</div>
+<div class="tab" onclick="showTab('gantt')">Gantt + CPM</div>
+<div class="tab active" onclick="showTab('scrum')">Scrum / Sprints</div>
+<div class="tab" onclick="showTab('quality')">Quality Gates</div>
+</div>
+
+<div class="main-layout">
+<div class="main-left">
+
+<div class="tab-content active" id="tab-scrum">
+<div class="section">
+<div class="section-header">
+<svg width="24" height="24" viewBox="0 0 100 100"><path d="M50 5 L92 28 V72 L50 95 L8 72 V28 L50 5 Z" fill="none" stroke="#ec4899" stroke-width="5"/><rect x="30" y="35" width="40" height="8" rx="2" fill="#ec4899"/><rect x="30" y="50" width="25" height="8" rx="2" fill="#ec4899"/><rect x="30" y="65" width="55" height="8" rx="2" fill="#ec4899"/></svg>
+<div style="font-size:11px;font-weight:600;color:#ec4899">AG-007 — Scrum Framework · 16 sprints × 2 semanas</div>
+<span class="ia-badge">Planificado por IA</span>
+<span class="editable-badge">Modificable</span>
+</div>
+
+<!-- Sprint timeline -->
+<div class="sprint-timeline">
+<div class="sprint-block active" style="background:rgba(59,130,246,0.08)"><div class="sprint-num" style="color:#3b82f6">S1</div><div class="sprint-dates">Sem 1-2</div><div class="sprint-pts" style="color:#3b82f6">34 pts</div><div class="sprint-goal">Auditoría CMDB</div></div>
+<div class="sprint-block" style="background:rgba(59,130,246,0.04)"><div class="sprint-num" style="color:#3b82f6">S2</div><div class="sprint-dates">Sem 3-4</div><div class="sprint-pts" style="color:#3b82f6">38 pts</div><div class="sprint-goal">Mapeo deps</div></div>
+<div class="sprint-block" style="background:rgba(59,130,246,0.04)"><div class="sprint-num" style="color:#3b82f6">S3</div><div class="sprint-dates">Sem 5-6</div><div class="sprint-pts" style="color:#3b82f6">42 pts</div><div class="sprint-goal">Compatibilidad</div></div>
+<div class="sprint-block" style="background:rgba(59,130,246,0.04)"><div class="sprint-num" style="color:#3b82f6">S4</div><div class="sprint-dates">Sem 7-8</div><div class="sprint-pts" style="color:#3b82f6">28 pts</div><div class="sprint-goal">Diseño target</div></div>
+<div class="sprint-block" style="background:rgba(168,85,247,0.04)"><div class="sprint-num" style="color:#a855f7">S5</div><div class="sprint-dates">Sem 9-10</div><div class="sprint-pts" style="color:#a855f7">45 pts</div><div class="sprint-goal">Oleada DEV</div></div>
+<div class="sprint-block future" style="background:rgba(168,85,247,0.03)"><div class="sprint-num" style="color:#a855f7">S6-8</div><div class="sprint-dates">11-16</div><div class="sprint-pts" style="color:#a855f7">~40/sp</div></div>
+<div class="sprint-block future" style="background:rgba(239,68,68,0.03)"><div class="sprint-num" style="color:#ef4444">S9-13</div><div class="sprint-dates">17-26</div><div class="sprint-pts" style="color:#ef4444">~45/sp</div></div>
+<div class="sprint-block future" style="background:rgba(34,197,94,0.03)"><div class="sprint-num" style="color:#22c55e">S14-16</div><div class="sprint-dates">27-32</div><div class="sprint-pts" style="color:#22c55e">~30/sp</div></div>
+</div>
+
+<!-- Filters -->
+<div class="filters">
+<span style="font-size:8px;color:#8b8f98;margin-right:4px">Filtrar:</span>
+<button class="filter-btn active">Todos</button>
+<button class="filter-btn">Task</button>
+<button class="filter-btn">Story</button>
+<button class="filter-btn">Bug</button>
+<button class="filter-btn">Spike</button>
+<span style="font-size:8px;color:#333840;margin:0 4px">|</span>
+<button class="filter-btn">Solo mi sprint</button>
+<button class="filter-btn">Bloqueados</button>
+<input class="filter-search" type="text" placeholder="Buscar RHEL-xxx...">
+</div>
+
+<!-- List header -->
+<div class="list-header">
+<div></div>
+<div>Tipo</div>
+<div>Título</div>
+<div>Silo</div>
+<div>Estado</div>
+<div>Asignado</div>
+<div>Pts</div>
+<div>Subtareas</div>
+<div>Prioridad</div>
+</div>
+
+<!-- SPRINT 1 -->
+<div class="sprint-section">
+<div class="sprint-section-header" style="background:rgba(59,130,246,0.06)">
+<div style="width:8px;height:8px;border-radius:50%;background:#3b82f6;flex-shrink:0"></div>
+<div class="sprint-section-title" style="color:#3b82f6">Sprint 1 — Auditoría infraestructura CMDB</div>
+<div class="sprint-section-meta">
+<span>5 items</span>
+<span>34 pts</span>
+<div class="sprint-section-bar"><div class="sprint-section-fill" style="width:35%;background:#3b82f6"></div></div>
+<span style="color:#3b82f6;font-weight:600">35%</span>
+</div>
+</div>
+
+<div class="list-row in-progress">
+<div><div class="list-checkbox"></div></div>
+<div><span class="list-type task">TASK</span></div>
+<div><div class="list-id" style="color:#3b82f6">RHEL-001</div><div class="list-title">Extraer inventario completo servidores RHEL 7 de CMDB</div><div class="list-title-sub">Consultar cmdb_activos · Exportar 47 servidores con servicios</div></div>
+<div><span class="list-silo" style="background:rgba(6,182,212,0.12);color:#06b6d4">Linux</span></div>
+<div><span class="list-status progress">En progreso</span></div>
+<div><div class="list-avatar" style="background:rgba(6,182,212,0.2);color:#06b6d4">RS</div></div>
+<div class="list-pts" style="color:#3b82f6">8</div>
+<div><div class="list-subtasks">3/5 <div class="list-sub-bar"><div class="list-sub-fill" style="width:60%;background:#eab308"></div></div></div></div>
+<div><div class="list-priority" style="background:#ef4444" title="Crítica"></div></div>
+</div>
+
+<div class="list-row in-progress">
+<div><div class="list-checkbox"></div></div>
+<div><span class="list-type task">TASK</span></div>
+<div><div class="list-id" style="color:#3b82f6">RHEL-002</div><div class="list-title">Auditar versiones RPM en todos los servidores vía Ansible</div><div class="list-title-sub">SSH + Ansible playbook · Comparar con baseline RHEL 9</div></div>
+<div><span class="list-silo" style="background:rgba(6,182,212,0.12);color:#06b6d4">Linux</span></div>
+<div><span class="list-status progress">En progreso</span></div>
+<div><div class="list-avatar" style="background:rgba(6,182,212,0.2);color:#06b6d4">MN</div></div>
+<div class="list-pts" style="color:#3b82f6">13</div>
+<div><div class="list-subtasks">1/4 <div class="list-sub-bar"><div class="list-sub-fill" style="width:25%;background:#ef4444"></div></div></div></div>
+<div><div class="list-priority" style="background:#ef4444"></div></div>
+</div>
+
+<div class="list-row in-review">
+<div><div class="list-checkbox"></div></div>
+<div><span class="list-type task">TASK</span></div>
+<div><div class="list-id" style="color:#3b82f6">RHEL-003</div><div class="list-title">Documentar servicios systemd activos por servidor</div><div class="list-title-sub">Clasificar propios del banco vs estándar SO</div></div>
+<div><span class="list-silo" style="background:rgba(6,182,212,0.12);color:#06b6d4">Linux</span></div>
+<div><span class="list-status review">En revisión</span></div>
+<div><div class="list-avatar" style="background:rgba(6,182,212,0.2);color:#06b6d4">JG</div></div>
+<div class="list-pts" style="color:#3b82f6">5</div>
+<div><div class="list-subtasks">3/3 <div class="list-sub-bar"><div class="list-sub-fill" style="width:100%;background:#22c55e"></div></div></div></div>
+<div><div class="list-priority" style="background:#eab308"></div></div>
+</div>
+
+<div class="list-row">
+<div><div class="list-checkbox"></div></div>
+<div><span class="list-type task">TASK</span></div>
+<div><div class="list-id" style="color:#3b82f6">RHEL-004</div><div class="list-title">Verificar conectividad de red y puertos</div><div class="list-title-sub">netstat/ss + firewalld · Documentar VLANs de cmdb_vlans</div></div>
+<div><span class="list-silo" style="background:rgba(6,182,212,0.12);color:#06b6d4">Redes</span></div>
+<div><span class="list-status todo">Por hacer</span></div>
+<div><div class="list-avatar" style="background:rgba(6,182,212,0.2);color:#06b6d4">IP</div></div>
+<div class="list-pts" style="color:#3b82f6">5</div>
+<div><div class="list-subtasks">0/4 <div class="list-sub-bar"><div class="list-sub-fill" style="width:0%;background:#ef4444"></div></div></div></div>
+<div><div class="list-priority" style="background:#eab308"></div></div>
+</div>
+
+<div class="list-row">
+<div><div class="list-checkbox"></div></div>
+<div><span class="list-type story">STORY</span></div>
+<div><div class="list-id" style="color:#22c55e">RHEL-005</div><div class="list-title">Generar informe consolidado de auditoría</div><div class="list-title-sub">Documento Word + dashboard con datos CMDB · Aprobación sponsor</div></div>
+<div><span class="list-silo" style="background:rgba(139,143,152,0.12);color:#8b8f98">Gestión</span></div>
+<div><span class="list-status todo">Por hacer</span></div>
+<div><div class="list-avatar" style="background:rgba(236,72,153,0.2);color:#ec4899">DP</div></div>
+<div class="list-pts" style="color:#3b82f6">3</div>
+<div><div class="list-subtasks">0/3 <div class="list-sub-bar"><div class="list-sub-fill" style="width:0%"></div></div></div></div>
+<div><div class="list-priority" style="background:#8b8f98"></div></div>
+</div>
+</div>
+
+<!-- SPRINT 2 -->
+<div class="sprint-section">
+<div class="sprint-section-header" style="background:rgba(59,130,246,0.04)">
+<div style="width:8px;height:8px;border-radius:50%;background:#3b82f6;opacity:0.5;flex-shrink:0"></div>
+<div class="sprint-section-title" style="color:#3b82f6;opacity:0.7">Sprint 2 — Mapeo dependencias entre servicios</div>
+<div class="sprint-section-meta">
+<span>4 items</span>
+<span>38 pts</span>
+<div class="sprint-section-bar"><div class="sprint-section-fill" style="width:0%"></div></div>
+<span>0%</span>
+</div>
+</div>
+
+<div class="list-row">
+<div><div class="list-checkbox"></div></div>
+<div><span class="list-type task">TASK</span></div>
+<div><div class="list-id" style="color:#3b82f6">RHEL-006</div><div class="list-title">Trazar dependencias con cmdb_relaciones (55 relaciones)</div></div>
+<div><span class="list-silo" style="background:rgba(6,182,212,0.12);color:#06b6d4">Redes</span></div>
+<div><span class="list-status todo">Por hacer</span></div>
+<div><div class="list-avatar" style="background:rgba(6,182,212,0.2);color:#06b6d4">IP</div></div>
+<div class="list-pts">8</div>
+<div><div class="list-subtasks">0/4</div></div>
+<div><div class="list-priority" style="background:#ef4444"></div></div>
+</div>
+
+<div class="list-row">
+<div><div class="list-checkbox"></div></div>
+<div><span class="list-type spike">SPIKE</span></div>
+<div><div class="list-id" style="color:#a855f7">RHEL-007</div><div class="list-title">Descubrir dependencias no documentadas con nmap/tcpdump</div></div>
+<div><span class="list-silo" style="background:rgba(6,182,212,0.12);color:#06b6d4">Redes</span></div>
+<div><span class="list-status todo">Por hacer</span></div>
+<div><div class="list-avatar" style="background:rgba(6,182,212,0.2);color:#06b6d4">IP</div></div>
+<div class="list-pts">13</div>
+<div><div class="list-subtasks">0/3</div></div>
+<div><div class="list-priority" style="background:#ef4444"></div></div>
+</div>
+
+<div class="list-row">
+<div><div class="list-checkbox"></div></div>
+<div><span class="list-type task">TASK</span></div>
+<div><div class="list-id" style="color:#3b82f6">RHEL-008</div><div class="list-title">Clasificar dependencias por criticidad (P1/P2/P3)</div></div>
+<div><span class="list-silo" style="background:rgba(6,182,212,0.12);color:#06b6d4">Linux</span></div>
+<div><span class="list-status todo">Por hacer</span></div>
+<div><div class="list-avatar" style="background:rgba(6,182,212,0.2);color:#06b6d4">RS</div></div>
+<div class="list-pts">8</div>
+<div><div class="list-subtasks">0/3</div></div>
+<div><div class="list-priority" style="background:#eab308"></div></div>
+</div>
+
+<div class="list-row">
+<div><div class="list-checkbox"></div></div>
+<div><span class="list-type story">STORY</span></div>
+<div><div class="list-id" style="color:#22c55e">RHEL-009</div><div class="list-title">Generar mapa visual de dependencias (SVG/Mermaid)</div></div>
+<div><span class="list-silo" style="background:rgba(139,143,152,0.12);color:#8b8f98">Gestión</span></div>
+<div><span class="list-status todo">Por hacer</span></div>
+<div><div class="list-avatar" style="background:rgba(236,72,153,0.2);color:#ec4899">DP</div></div>
+<div class="list-pts">9</div>
+<div><div class="list-subtasks">0/4</div></div>
+<div><div class="list-priority" style="background:#8b8f98"></div></div>
+</div>
+</div>
+
+<!-- BACKLOG DIVIDER -->
+<div class="backlog-divider">
+<div class="backlog-divider-line"></div>
+<div class="backlog-divider-text">Product Backlog — 88 items restantes · 508 pts</div>
+<div class="backlog-divider-line"></div>
+</div>
+
+<div class="list-row" style="opacity:0.6">
+<div><div class="list-checkbox"></div></div>
+<div><span class="list-type spike">SPIKE</span></div>
+<div><div class="list-id" style="color:#a855f7">RHEL-010</div><div class="list-title">Analizar compatibilidad RHEL 7→9 para Core Banking</div></div>
+<div><span class="list-silo" style="background:rgba(6,182,212,0.12);color:#06b6d4">Linux</span></div>
+<div><span style="font-size:7px;color:#3b82f6">Sprint 3</span></div>
+<div><div class="list-avatar" style="background:rgba(6,182,212,0.2);color:#06b6d4">RS</div></div>
+<div class="list-pts">13</div>
+<div></div>
+<div><div class="list-priority" style="background:#ef4444"></div></div>
+</div>
+<div class="list-row" style="opacity:0.6">
+<div><div class="list-checkbox"></div></div>
+<div><span class="list-type story">STORY</span></div>
+<div><div class="list-id" style="color:#22c55e">RHEL-011</div><div class="list-title">Diseñar topología de red target RHEL 9</div></div>
+<div><span class="list-silo" style="background:rgba(6,182,212,0.12);color:#06b6d4">Redes</span></div>
+<div><span style="font-size:7px;color:#3b82f6">Sprint 4</span></div>
+<div><div class="list-avatar" style="background:rgba(6,182,212,0.2);color:#06b6d4">IP</div></div>
+<div class="list-pts">8</div>
+<div></div>
+<div><div class="list-priority" style="background:#eab308"></div></div>
+</div>
+<div class="list-row" style="opacity:0.6">
+<div><div class="list-checkbox"></div></div>
+<div><span class="list-type task">TASK</span></div>
+<div><div class="list-id" style="color:#3b82f6">RHEL-012</div><div class="list-title">Migrar primeros 6 servidores DEV (oleada 1A)</div></div>
+<div><span class="list-silo" style="background:rgba(6,182,212,0.12);color:#06b6d4">Linux</span></div>
+<div><span style="font-size:7px;color:#a855f7">Sprint 5</span></div>
+<div><div class="list-avatar" style="background:rgba(6,182,212,0.2);color:#06b6d4">MN</div></div>
+<div class="list-pts">21</div>
+<div></div>
+<div><div class="list-priority" style="background:#ef4444"></div></div>
+</div>
+<div style="font-size:8px;color:#8b8f98;text-align:center;padding:6px;border:1px dashed #333840;border-radius:4px;margin-top:4px">... 85 items más en el backlog</div>
+
+<!-- Ceremonies -->
+<div style="margin-top:14px">
+<div style="font-size:10px;font-weight:600;color:#8b8f98;text-transform:uppercase;margin-bottom:6px">Ceremonias Scrum</div>
+<div class="ceremony"><div class="ceremony-icon" style="background:rgba(59,130,246,0.15);color:#3b82f6">SP</div><div><div class="ceremony-name">Sprint Planning</div><div class="ceremony-info">Selección stories + compromiso equipo</div></div><div class="ceremony-when">Lunes S1<br><span style="color:#3b82f6">2h</span></div></div>
+<div class="ceremony"><div class="ceremony-icon" style="background:rgba(168,85,247,0.15);color:#a855f7">DS</div><div><div class="ceremony-name">Daily Standup</div><div class="ceremony-info">Qué hice · Qué haré · Bloqueos</div></div><div class="ceremony-when">Diario 9:15<br><span style="color:#a855f7">15min</span></div></div>
+<div class="ceremony"><div class="ceremony-icon" style="background:rgba(34,197,94,0.15);color:#22c55e">SR</div><div><div class="ceremony-name">Sprint Review</div><div class="ceremony-info">Demo stakeholders + feedback</div></div><div class="ceremony-when">Viernes S2<br><span style="color:#22c55e">1h</span></div></div>
+<div class="ceremony"><div class="ceremony-icon" style="background:rgba(234,179,8,0.15);color:#eab308">RT</div><div><div class="ceremony-name">Retrospectiva</div><div class="ceremony-info">Qué mejorar + action items</div></div><div class="ceremony-when">Viernes S2<br><span style="color:#eab308">1h</span></div></div>
+<div class="ceremony"><div class="ceremony-icon" style="background:rgba(236,72,153,0.15);color:#ec4899">BG</div><div><div class="ceremony-name">Backlog Grooming</div><div class="ceremony-info">Refinar stories + estimar puntos</div></div><div class="ceremony-when">Miércoles<br><span style="color:#ec4899">1h</span></div></div>
+</div>
+
+</div>
+</div>
+
+<div class="tab-content" id="tab-budget"><div class="section"><div style="font-size:11px;color:#8b8f98;text-align:center;padding:30px">[Presupuesto editable — igual que diseño anterior]</div></div></div>
+<div class="tab-content" id="tab-gantt"><div class="section"><div style="font-size:11px;color:#8b8f98;text-align:center;padding:30px">[Gantt + Ruta crítica]</div></div></div>
+<div class="tab-content" id="tab-quality"><div class="section"><div style="font-size:11px;color:#8b8f98;text-align:center;padding:30px">[Quality Gates G0-G5]</div></div></div>
+
+</div>
+
+<!-- SIDEBAR -->
+<div class="main-right">
+
+<div class="sidebar-card">
+<div class="sidebar-title">Sprint 1 — Métricas</div>
+<div class="stat-grid">
+<div class="stat-item"><div class="stat-value" style="color:#3b82f6">34</div><div class="stat-label">Story Points</div></div>
+<div class="stat-item"><div class="stat-value" style="color:#e8e9ed">5</div><div class="stat-label">Stories</div></div>
+<div class="stat-item"><div class="stat-value" style="color:#eab308">19</div><div class="stat-label">Subtareas</div></div>
+<div class="stat-item"><div class="stat-value" style="color:#22c55e">4</div><div class="stat-label">Equipo</div></div>
+</div>
+</div>
+
+<div class="sidebar-card">
+<div class="sidebar-title">Burndown Sprint 1</div>
+<div class="burndown">
+<svg viewBox="0 0 200 100" preserveAspectRatio="none">
+<line x1="10" y1="90" x2="190" y2="90" stroke="#333840" stroke-width="0.5"/>
+<line x1="10" y1="10" x2="10" y2="90" stroke="#333840" stroke-width="0.5"/>
+<line x1="10" y1="10" x2="190" y2="90" stroke="#8b8f98" stroke-width="0.5" stroke-dasharray="4 4"/>
+<polyline points="10,10 30,15 50,22 70,30 90,40" fill="none" stroke="#3b82f6" stroke-width="1.5"/>
+<circle cx="90" cy="40" r="2" fill="#3b82f6"/>
+<text x="15" y="8" fill="#8b8f98" font-size="5">34 pts</text>
+<text x="180" y="88" fill="#8b8f98" font-size="5">0</text>
+<text x="90" y="36" fill="#3b82f6" font-size="5">22 pts</text>
+</svg>
+</div>
+<div style="display:flex;gap:10px;font-size:8px;color:#8b8f98"><span>--- Ideal</span><span style="color:#3b82f6">— Actual</span><span style="color:#3b82f6;margin-left:auto">Día 4/10</span></div>
+</div>
+
+<div class="sidebar-card">
+<div class="sidebar-title">Velocidad planificada</div>
+<div class="velocity-bars">
+<div class="vel-bar" style="height:60%;background:rgba(59,130,246,0.4);width:100%"><div class="vel-bar-value" style="color:#3b82f6">34</div><div class="vel-bar-label">S1</div></div>
+<div class="vel-bar" style="height:68%;background:rgba(59,130,246,0.3);width:100%"><div class="vel-bar-value" style="color:#3b82f6">38</div><div class="vel-bar-label">S2</div></div>
+<div class="vel-bar" style="height:75%;background:rgba(59,130,246,0.3);width:100%"><div class="vel-bar-value" style="color:#3b82f6">42</div><div class="vel-bar-label">S3</div></div>
+<div class="vel-bar" style="height:50%;background:rgba(59,130,246,0.2);width:100%"><div class="vel-bar-value" style="color:#3b82f6">28</div><div class="vel-bar-label">S4</div></div>
+<div class="vel-bar" style="height:80%;background:rgba(168,85,247,0.3);width:100%"><div class="vel-bar-value" style="color:#a855f7">45</div><div class="vel-bar-label">S5</div></div>
+<div class="vel-bar" style="height:70%;background:rgba(139,143,152,0.2);width:100%"><div class="vel-bar-value" style="color:#8b8f98">~40</div><div class="vel-bar-label">S6+</div></div>
+</div>
+<div style="font-size:8px;color:#8b8f98;margin-top:16px">Media: 38 pts/sprint · Total: 580 pts · 16 sprints</div>
+</div>
+
+<div class="advisor-panel">
+<div class="advisor-header">
+<div class="advisor-icon">?</div>
+<div><div class="advisor-title">AG-018 Scrum Advisor</div><div class="advisor-sub">Asistente Scrum Master</div></div>
+</div>
+<div class="advisor-messages">
+<div class="advisor-msg system">Sprint 1 con 34 pts — conservador para el primer sprint. RHEL-002 (Auditar RPM, 13 pts) es el item más grande: si se bloquea, compromete el 38% del sprint. Recomiendo dividirlo en 2 tasks más pequeños si el equipo no tiene experiencia con Ansible en este entorno.</div>
+</div>
+<div class="advisor-suggestions">
+<div class="advisor-sug">💡 "¿Debería dividir RHEL-002?"</div>
+<div class="advisor-sug">💡 "¿El sprint goal es alcanzable?"</div>
+<div class="advisor-sug">💡 "¿Cómo gestionar dependencias entre S1 y S2?"</div>
+<div class="advisor-sug">💡 "Genera el plan del Daily Standup"</div>
+</div>
+<div class="advisor-input-row">
+<input class="advisor-input" type="text" placeholder="Pregunta al Scrum Advisor...">
+<button class="advisor-send">Enviar</button>
+</div>
+</div>
+
+<div class="sidebar-card" style="border-color:rgba(34,197,94,0.3)">
+<div class="sidebar-title" style="color:#22c55e">Proyecto</div>
+<div style="font-size:9px;color:#8b8f98;line-height:1.6">
+<div style="display:flex;justify-content:space-between"><span>PM</span><span style="color:#06b6d4;font-weight:600">Daniel Prieto</span></div>
+<div style="display:flex;justify-content:space-between"><span>Framework</span><span style="color:#ec4899;font-weight:600">Scrum · 2 sem/sprint</span></div>
+<div style="display:flex;justify-content:space-between"><span>Sprints</span><span style="color:#e8e9ed;font-weight:600">16</span></div>
+<div style="display:flex;justify-content:space-between"><span>Story Points</span><span style="color:#e8e9ed;font-weight:600">580</span></div>
+<div style="display:flex;justify-content:space-between"><span>Velocidad</span><span style="color:#3b82f6;font-weight:600">~38/sprint</span></div>
+<div style="display:flex;justify-content:space-between;border-top:1px solid #333840;padding-top:4px;margin-top:4px"><span style="font-weight:600">BAC</span><span style="color:#22c55e;font-weight:700;font-size:13px">233.910€</span></div>
+</div>
+</div>
+</div>
+
+</div>
+
+<!-- LAUNCH -->
+<div class="launch-section">
+<div class="launch-title">Proyecto listo para lanzamiento</div>
+<div class="launch-sub">9 agentes IA · 4 pausas gobernanza · Scrum 16 sprints · 580 story points</div>
+<div class="launch-summary">
+<div class="launch-item"><div class="launch-item-value" style="color:#22c55e">233.910€</div><div class="launch-item-label">BAC</div></div>
+<div class="launch-item"><div class="launch-item-value" style="color:#ec4899">16 sprints</div><div class="launch-item-label">32 semanas</div></div>
+<div class="launch-item"><div class="launch-item-value" style="color:#06b6d4">13</div><div class="launch-item-label">Equipo</div></div>
+<div class="launch-item"><div class="launch-item-value" style="color:#a855f7">580</div><div class="launch-item-label">Story pts</div></div>
+<div class="launch-item"><div class="launch-item-value" style="color:#eab308">10</div><div class="launch-item-label">Riesgos</div></div>
+<div class="launch-item"><div class="launch-item-value" style="color:#3b82f6">28.4%</div><div class="launch-item-label">ROI</div></div>
+</div>
+<button class="launch-btn" onclick="launchProject()">Lanzar proyecto</button>
+<div class="launch-warning">Al lanzar: BUILD LIVE activo · PM + Scrum Master notificados · Sprint 1 iniciado · Daily 9:15 · Gate G2 activado</div>
+</div>
+
+</div>
+<script>
+function showTab(name){document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.getElementById('tab-'+name).classList.add('active');event.target.classList.add('active');}
+function launchProject(){var b=document.querySelector('.launch-btn');b.textContent='Lanzando...';b.style.background='#f97316';setTimeout(function(){b.textContent='✓ Proyecto lanzado — Sprint 1 activo';b.style.background='#22c55e';b.style.pointerEvents='none';document.querySelector('.launch-section').style.borderColor='rgba(34,197,94,0.6)';document.querySelector('.launch-section').style.background='rgba(34,197,94,0.1)';document.querySelector('.launch-warning').textContent='✓ BUILD LIVE · PM Daniel Prieto notificado · Sprint 1 activo · Daily 9:15 programado · Gate G2';document.querySelector('.launch-warning').style.color='#22c55e';document.querySelector('.launch-warning').style.fontWeight='600';},2000);}
+</script>
+</body>
+</html>

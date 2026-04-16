@@ -1,0 +1,2214 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Cognitive PMO · PM Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── Theme ── */
+[data-theme="dark"]{
+  --bg:#0d1117;--bg2:#161b22;--bg-card:#1c2128;--bg-el:#21262d;--bg-l2:#22262e;--bg-l3:#2a2e37;
+  --border:#30363d;--tx:#e6edf3;--tx2:#8b949e;--tx3:#6e7681;
+  --acc-bl:#58a6ff;--acc-gn:#3fb950;--acc-rd:#f85149;--acc-or:#d29922;--acc-pu:#bc8cff;--acc-cy:#39d2c0;
+  --shd:rgba(0,0,0,0.3);--shd-lg:rgba(0,0,0,0.4);
+}
+[data-theme="light"]{
+  --bg:#f6f8fa;--bg2:#ffffff;--bg-card:#ffffff;--bg-el:#f0f2f5;--bg-l2:#eaedf0;--bg-l3:#d8dce0;
+  --border:#d0d7de;--tx:#1f2328;--tx2:#656d76;--tx3:#8b949e;
+  --acc-bl:#0969da;--acc-gn:#1a7f37;--acc-rd:#cf222e;--acc-or:#bf8700;--acc-pu:#8250df;--acc-cy:#0e8a7e;
+  --shd:rgba(0,0,0,0.08);--shd-lg:rgba(0,0,0,0.12);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh}
+
+/* ── Header ── */
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 22px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.hdr-l{display:flex;align-items:center;gap:12px}
+.hdr-logo{width:32px;height:32px;background:linear-gradient(135deg,var(--acc-bl),var(--acc-pu));border-radius:8px;display:flex;align-items:center;justify-content:center}
+.hdr-logo svg{width:20px;height:20px;color:#fff}
+.hdr-t{font-size:15px;font-weight:700;letter-spacing:-0.3px}
+.hdr-s{font-size:11px;color:var(--tx2)}
+.hdr-r{display:flex;align-items:center;gap:10px;font-size:12px}
+.hdr-id{font-family:'JetBrains Mono',monospace;font-size:11px;background:var(--bg-el);padding:3px 8px;border-radius:6px;color:var(--acc-bl)}
+.hdr-role{font-size:10px;background:rgba(163,95,255,.15);color:var(--acc-pu);padding:2px 8px;border-radius:4px;font-weight:700;text-transform:uppercase}
+.thm{width:36px;height:20px;background:var(--bg-el);border-radius:10px;cursor:pointer;position:relative;border:1px solid var(--border)}
+.thm-dot{width:14px;height:14px;background:var(--acc-bl);border-radius:50%;position:absolute;top:2px;left:2px;transition:.2s}
+[data-theme="light"] .thm-dot{left:18px}
+.btn-logout{background:none;border:1px solid var(--border);color:var(--tx2);padding:5px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600}
+.btn-logout:hover{color:var(--acc-rd);border-color:var(--acc-rd)}
+
+/* ── Tabs ── */
+.tabs{display:flex;background:var(--bg2);border-bottom:1px solid var(--border);padding:0 22px;overflow-x:auto}
+.tb{padding:11px 18px;font-size:13px;font-weight:600;color:var(--tx2);background:none;border:none;cursor:pointer;position:relative;transition:.2s;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.tb:hover{color:var(--tx)}
+.tb.a{color:var(--tx)}
+.tb.a::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:2px;border-radius:2px 2px 0 0}
+.tb[data-tab="0"].a::after{background:var(--acc-bl)}
+.tb[data-tab="1"].a::after{background:var(--acc-gn)}
+.tb[data-tab="2"].a::after{background:var(--acc-cy)}
+.tb[data-tab="3"].a::after{background:var(--acc-pu)}
+.tb[data-tab="4"].a::after{background:var(--acc-or)}
+.tb svg{width:16px;height:16px}
+.cnt{padding:18px 22px;max-width:1440px;margin:0 auto}
+.tp{display:none}.tp.a{display:block;animation:fadeIn .25s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Project selector ── */
+.prj-sel{margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.prj-sel select{background:var(--bg-el);color:var(--tx);border:1px solid var(--border);padding:7px 12px;border-radius:8px;font-size:13px;font-family:inherit;min-width:300px}
+.filter-chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:4px 12px;border-radius:16px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--bg-el);color:var(--tx2);transition:.15s}
+.chip:hover,.chip.a{background:var(--acc-bl);color:#fff;border-color:var(--acc-bl)}
+.chip.a-gn{background:var(--acc-gn);border-color:var(--acc-gn);color:#fff}
+.chip.a-rd{background:var(--acc-rd);border-color:var(--acc-rd);color:#fff}
+.chip.a-or{background:var(--acc-or);border-color:var(--acc-or);color:#fff}
+.chip.a-pu{background:var(--acc-pu);border-color:var(--acc-pu);color:#fff}
+.view-toggle{display:flex;gap:2px;background:var(--bg-el);border-radius:8px;padding:2px}
+.view-btn{padding:5px 12px;border:none;background:none;color:var(--tx2);font-size:11px;font-weight:600;cursor:pointer;border-radius:6px}
+.view-btn.a{background:var(--acc-bl);color:#fff}
+
+/* ── Project Cards Grid ── */
+.prj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+.prj-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;transition:.2s;position:relative;overflow:hidden}
+.prj-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px var(--shd);border-color:var(--acc-bl)}
+.prj-card-hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.prj-name{font-size:13px;font-weight:700;line-height:1.3;max-width:220px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.prj-prio{font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px;text-transform:uppercase}
+.prio-alta,.prio-crítica{background:rgba(248,81,73,.15);color:var(--acc-rd)}
+.prio-media{background:rgba(210,153,34,.15);color:var(--acc-or)}
+.prio-baja{background:rgba(63,185,80,.15);color:var(--acc-gn)}
+.prj-estado{font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600;display:inline-block;margin-bottom:8px}
+.est-ejecucion{background:rgba(88,166,255,.12);color:var(--acc-bl)}
+.est-revision{background:rgba(210,153,34,.12);color:var(--acc-or)}
+.est-analisis{background:rgba(188,140,255,.12);color:var(--acc-pu)}
+.est-pendiente{background:rgba(139,148,158,.12);color:var(--tx2)}
+.est-standby{background:rgba(139,148,158,.08);color:var(--tx3)}
+.est-cierre{background:rgba(57,210,192,.12);color:var(--acc-cy)}
+.est-cerrado{background:rgba(63,185,80,.12);color:var(--acc-gn)}
+.est-pausado{background:rgba(248,81,73,.12);color:var(--acc-rd)}
+.est-aprobado{background:rgba(63,185,80,.12);color:var(--acc-gn)}
+
+/* Progress bar */
+.pbar{height:6px;background:var(--bg-el);border-radius:3px;margin:8px 0;overflow:hidden}
+.pbar-fill{height:100%;border-radius:3px;transition:width .4s ease}
+
+/* EVM badges */
+.evm-row{display:flex;gap:8px;margin:8px 0}
+.evm-badge{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px}
+.evm-gn{background:rgba(63,185,80,.12);color:var(--acc-gn)}
+.evm-or{background:rgba(210,153,34,.12);color:var(--acc-or)}
+.evm-rd{background:rgba(248,81,73,.12);color:var(--acc-rd)}
+
+/* Team avatars */
+.team-avs{display:flex;margin-top:8px}
+.team-av{width:28px;height:28px;border-radius:50%;background:var(--bg-el);border:2px solid var(--bg-card);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--tx2);margin-left:-6px}
+.team-av:first-child{margin-left:0}
+.team-av.extra{background:var(--acc-bl);color:#fff;font-size:8px}
+
+/* Hito row */
+.hito-row{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:10px;color:var(--tx2)}
+.hito-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+
+/* ── Kanban view ── */
+.kanban-view{display:none}
+.kanban-view.a{display:flex;gap:12px;overflow-x:auto;padding-bottom:12px}
+.kanban-col{min-width:280px;max-width:320px;flex-shrink:0}
+.kanban-col-hdr{font-size:12px;font-weight:700;padding:8px 12px;border-radius:8px 8px 0 0;border:1px solid var(--border);border-bottom:none;background:var(--bg2);display:flex;align-items:center;gap:6px}
+.kanban-col-cnt{background:var(--bg-el);border:1px solid var(--border);border-radius:0 0 8px 8px;padding:8px;min-height:120px;display:flex;flex-direction:column;gap:8px}
+.kanban-col-cnt .prj-card{margin:0}
+
+/* ── Modal ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;width:90vw;max-width:720px;max-height:85vh;overflow-y:auto;padding:24px;box-shadow:0 20px 60px var(--shd-lg)}
+.modal-close{position:absolute;top:12px;right:16px;background:none;border:none;color:var(--tx2);font-size:20px;cursor:pointer}
+.modal-close:hover{color:var(--acc-rd)}
+.modal h2{font-size:16px;font-weight:700;margin-bottom:16px}
+.modal-section{margin-bottom:16px}
+.modal-section h3{font-size:12px;font-weight:700;color:var(--tx2);text-transform:uppercase;margin-bottom:8px;letter-spacing:.5px}
+.modal-kv{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.modal-kv-item{background:var(--bg-el);padding:8px 12px;border-radius:8px}
+.modal-kv-label{font-size:9px;color:var(--tx3);text-transform:uppercase}
+.modal-kv-val{font-size:14px;font-weight:700;font-family:'JetBrains Mono',monospace}
+
+/* ── Team table ── */
+#team-table tbody tr{border-bottom:1px solid var(--border);cursor:pointer;transition:.1s}
+#team-table tbody tr:hover{background:rgba(88,166,255,.04)}
+.load-bar{height:8px;background:var(--bg-el);border-radius:4px;overflow:hidden;width:100%}
+.load-fill{height:100%;border-radius:4px;transition:width .4s}
+.alert-chip{font-size:9px;font-weight:800;padding:2px 8px;border-radius:4px;text-transform:uppercase}
+.alert-sobrecarga{background:rgba(248,81,73,.12);color:var(--acc-rd)}
+.alert-conflicto{background:rgba(210,153,34,.12);color:var(--acc-or)}
+.alert-ajustado{background:rgba(210,153,34,.08);color:var(--acc-or)}
+.kpi-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;position:relative;overflow:hidden}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.kpi-card.kpi-bl::before{background:var(--acc-bl)}
+.kpi-card.kpi-rd::before{background:var(--acc-rd)}
+.kpi-card.kpi-or::before{background:var(--acc-or)}
+.kpi-card.kpi-gn::before{background:var(--acc-gn)}
+.kpi-val{font-size:28px;font-weight:800;font-family:'JetBrains Mono',monospace}
+.kpi-label{font-size:10px;color:var(--tx2);text-transform:uppercase;margin-top:2px}
+
+/* ── PMBOK sections ── */
+.pmbok-section{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;margin-bottom:14px;overflow:hidden}
+.pmbok-hdr{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.pmbok-hdr svg{width:18px;height:18px;color:var(--acc-bl);flex-shrink:0}
+.pmbok-hdr h3{font-size:13px;font-weight:700;margin:0}
+.pmbok-body{padding:14px 16px}
+.evm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.evm-cell{background:var(--bg-el);padding:10px;border-radius:8px;text-align:center}
+.evm-cell-label{font-size:9px;color:var(--tx3);text-transform:uppercase;margin-bottom:2px}
+.evm-cell-val{font-size:18px;font-weight:800;font-family:'JetBrains Mono',monospace}
+.risk-matrix{display:grid;grid-template-columns:30px repeat(5,1fr);grid-template-rows:repeat(5,32px) 20px;gap:2px;width:220px;flex-shrink:0}
+.risk-cell{display:flex;align-items:center;justify-content:center;border-radius:4px;font-size:8px;font-weight:700;position:relative}
+.risk-cell.low{background:rgba(63,185,80,.08)}
+.risk-cell.med{background:rgba(210,153,34,.08)}
+.risk-cell.hi{background:rgba(248,81,73,.08)}
+.risk-dot{width:10px;height:10px;border-radius:50%;position:absolute}
+.timeline-bar{display:flex;align-items:center;gap:0;position:relative;padding:16px 0}
+.tl-node{display:flex;flex-direction:column;align-items:center;flex:1;position:relative;z-index:1}
+.tl-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--border)}
+.tl-dot.done{background:var(--acc-gn);border-color:var(--acc-gn)}
+.tl-dot.current{background:var(--acc-bl);border-color:var(--acc-bl);box-shadow:0 0 8px rgba(88,166,255,.4)}
+.tl-dot.pending{background:var(--bg-el)}
+.tl-line{position:absolute;top:50%;left:0;right:0;height:2px;background:var(--border);z-index:0}
+.sth-matrix{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:8px;width:100%}
+.sth-quad{background:var(--bg-el);border-radius:8px;padding:10px;min-height:80px}
+.sth-quad-title{font-size:9px;font-weight:700;color:var(--tx3);text-transform:uppercase;margin-bottom:6px}
+.sth-dot{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 6px;border-radius:4px;margin:2px;background:var(--bg-card)}
+.spark-bar{display:inline-block;width:12px;border-radius:2px 2px 0 0;background:var(--acc-bl);vertical-align:bottom}
+
+/* ── Chat ── */
+.chat-room{padding:10px 12px;border-bottom:1px solid var(--border);cursor:pointer;transition:.1s;display:flex;gap:10px;align-items:flex-start}
+.chat-room:hover{background:rgba(88,166,255,.04)}
+.chat-room.active{background:rgba(88,166,255,.08);border-left:3px solid var(--acc-bl)}
+.chat-room-info{flex:1;min-width:0}
+.chat-room-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-room-last{font-size:10px;color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.chat-room-meta{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.chat-room-time{font-size:9px;color:var(--tx3)}
+.chat-unread{min-width:16px;height:16px;border-radius:8px;background:var(--acc-rd);color:#fff;font-size:8px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 4px}
+.chat-bubble{max-width:75%;padding:8px 12px;border-radius:12px;font-size:12px;line-height:1.4;position:relative}
+.chat-bubble.mine{background:var(--acc-bl);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.chat-bubble.other{background:var(--bg-el);color:var(--tx);align-self:flex-start;border-bottom-left-radius:4px}
+.chat-bubble-author{font-size:9px;font-weight:700;margin-bottom:2px}
+.chat-bubble-time{font-size:8px;opacity:.6;margin-top:2px;text-align:right}
+.chat-role-badge{font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase}
+.role-pm{background:rgba(88,166,255,.15);color:var(--acc-bl)}
+.role-tecnico{background:rgba(63,185,80,.15);color:var(--acc-gn)}
+.role-gobernador{background:rgba(210,153,34,.15);color:var(--acc-or)}
+.role-agente{background:rgba(188,140,255,.15);color:var(--acc-pu)}
+
+/* ── Ficha Chat (salas compartidas) ── */
+.ficha-chat-wrap{display:flex;height:calc(100vh - 200px);gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.ficha-chat-sidebar{width:35%;min-width:260px;background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto}
+.ficha-chat-main{flex:1;display:flex;flex-direction:column;background:var(--bg)}
+.ficha-sala-card{padding:10px 12px;border-bottom:1px solid var(--border);cursor:pointer;transition:.1s}
+.ficha-sala-card:hover{background:rgba(88,166,255,.04)}
+.ficha-sala-card.active{background:rgba(88,166,255,.08);border-left:3px solid var(--acc-bl)}
+
+/* ── Ficha Kanban ── */
+.fkan-cols{display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;align-items:flex-start}
+.fkan-col{min-width:230px;max-width:280px;flex:1;flex-shrink:0}
+.fkan-col-hdr{font-size:11px;font-weight:700;padding:8px 10px;border-radius:8px 8px 0 0;border:1px solid var(--border);border-bottom:none;background:var(--bg2);display:flex;align-items:center;gap:6px;border-top:3px solid var(--border)}
+.fkan-col-hdr.col-backlog{border-top-color:var(--tx3)}
+.fkan-col-hdr.col-progress{border-top-color:var(--acc-bl)}
+.fkan-col-hdr.col-review{border-top-color:var(--acc-pu)}
+.fkan-col-hdr.col-testing{border-top-color:var(--acc-or)}
+.fkan-col-hdr.col-deploy{border-top-color:var(--acc-cy)}
+.fkan-col-hdr.col-blocked{border-top-color:var(--acc-rd)}
+.fkan-col-hdr.col-done{border-top-color:var(--acc-gn)}
+.fkan-col-hdr.col-analisis{border-top-color:var(--acc-pu)}
+.fkan-drop{background:var(--bg-el);border:1px solid var(--border);border-radius:0 0 8px 8px;padding:6px;min-height:80px;display:flex;flex-direction:column;gap:6px}
+.fkan-drop.drag-over{background:rgba(88,166,255,.06);border-color:var(--acc-bl)}
+.fkan-card{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:8px 10px;cursor:grab;transition:.15s;border-left:3px solid var(--border)}
+.fkan-card:hover{box-shadow:0 2px 8px var(--shd);transform:translateY(-1px)}
+.fkan-card.dragging{opacity:.4}
+.fkan-card.prio-critica{border-left-color:var(--acc-rd)}
+.fkan-card.prio-alta{border-left-color:var(--acc-or)}
+.fkan-card.prio-media{border-left-color:var(--acc-bl)}
+.fkan-card.prio-baja{border-left-color:var(--tx3)}
+.fkan-expand{display:none;margin-top:6px;padding-top:6px;border-top:1px solid var(--border);font-size:10px;color:var(--tx2)}
+.fkan-expand.open{display:block}
+.fkan-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(210,153,34,.95);color:#000;padding:10px 20px;border-radius:8px;font-size:12px;font-weight:600;z-index:400;display:none;animation:fadeIn .2s}
+
+/* ── Ficha Técnico Full-Screen ── */
+.ficha-fs{display:none;position:fixed;inset:0;z-index:300;background:rgba(13,17,23,.95);overflow-y:auto}
+.ficha-fs.open{display:block;animation:fadeIn .2s ease}
+.ficha-hdr{position:sticky;top:0;z-index:2;background:var(--bg2);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:14px}
+.ficha-close{position:absolute;top:14px;right:20px;background:none;border:none;color:var(--tx2);font-size:22px;cursor:pointer;padding:4px 8px;border-radius:6px}
+.ficha-close:hover{color:var(--acc-rd);background:rgba(248,81,73,.08)}
+.ficha-av{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;flex-shrink:0}
+.ficha-tabs{display:flex;background:var(--bg2);border-bottom:1px solid var(--border);padding:0 24px;position:sticky;top:72px;z-index:1}
+.ficha-tb{padding:10px 18px;font-size:12px;font-weight:600;color:var(--tx2);background:none;border:none;cursor:pointer;position:relative;white-space:nowrap}
+.ficha-tb:hover{color:var(--tx)}
+.ficha-tb.active{color:var(--tx)}
+.ficha-tb.active::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:2px;background:var(--acc-bl);border-radius:2px 2px 0 0}
+.ficha-content{max-width:1200px;margin:0 auto;padding:20px 24px}
+.ficha-panel{display:none}.ficha-panel.active{display:block;animation:fadeIn .2s ease}
+
+/* ── Gantt ── */
+:root{--gantt-row-h:28px;--gantt-day-w:8px}
+.gantt-wrap{display:flex;height:calc(100vh - 200px);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.gantt-toolbar{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--border);background:var(--bg2);flex-wrap:wrap}
+.gantt-btn{background:var(--bg-el);color:var(--tx2);border:1px solid var(--border);padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit}
+.gantt-btn:hover{color:var(--tx);border-color:var(--acc-bl)}
+.gantt-zoom{display:flex;gap:2px;background:var(--bg-el);border-radius:6px;padding:2px}
+.gantt-zoom-btn{padding:3px 10px;border:none;background:none;color:var(--tx2);font-size:10px;font-weight:600;cursor:pointer;border-radius:4px}
+.gantt-zoom-btn.active{background:var(--acc-cy);color:#fff}
+.gantt-left{width:35%;min-width:280px;background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;resize:horizontal}
+.gantt-right{flex:1;overflow:auto;position:relative;background:var(--bg)}
+.gantt-tl-hdr{position:sticky;top:0;z-index:1;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;min-height:36px}
+.gantt-today{position:absolute;top:0;bottom:0;width:0;border-left:2px dashed var(--acc-rd);z-index:2;pointer-events:none}
+
+/* ── Gantt edit modal ── */
+.gantt-edit-overlay{display:none;position:fixed;inset:0;z-index:350;background:rgba(13,17,23,.92);align-items:center;justify-content:center}
+.gantt-edit-overlay.open{display:flex}
+.gantt-edit-modal{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;width:480px;max-height:85vh;overflow-y:auto;padding:24px;position:relative;box-shadow:0 20px 60px var(--shd-lg)}
+.gantt-edit-modal label{display:block;font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;margin-bottom:3px;margin-top:10px}
+.gantt-edit-modal input,.gantt-edit-modal select,.gantt-edit-modal textarea{width:100%;background:var(--bg-el);color:var(--tx);border:1px solid var(--border);padding:7px 10px;border-radius:6px;font-size:12px;font-family:inherit}
+.gantt-edit-modal textarea{min-height:60px;resize:vertical}
+.gantt-edit-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.gantt-edit-btns{display:flex;gap:8px;margin-top:16px;justify-content:flex-end}
+.gantt-edit-btns button{padding:8px 20px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:none}
+.gantt-save{background:var(--acc-bl);color:#fff}
+.gantt-cancel{background:var(--bg-el);color:var(--tx2);border:1px solid var(--border) !important}
+.gantt-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--acc-gn);color:#fff;padding:10px 20px;border-radius:8px;font-size:12px;font-weight:600;z-index:400;display:none;animation:fadeIn .2s}
+
+/* ── Gantt tree + bars ── */
+.gantt-tree-prj{padding:0 10px;height:var(--gantt-row-h);display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;border-bottom:1px solid var(--border);background:var(--bg-el);cursor:pointer}
+.gantt-tree-prj:hover{background:var(--bg-l2)}
+.gantt-tree-task{padding:0 10px 0 24px;height:var(--gantt-row-h);display:flex;align-items:center;gap:6px;font-size:10px;border-bottom:1px solid rgba(48,54,61,.3);color:var(--tx2)}
+.gantt-tree-task:hover{background:rgba(88,166,255,.03)}
+.gantt-color-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+
+/* ── Responsive ── */
+@media(max-width:768px){
+  .prj-grid{grid-template-columns:1fr}
+  .kanban-view.a{flex-direction:column}
+  .kanban-col{min-width:100%;max-width:100%}
+  .modal{width:95vw;padding:16px}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══ -->
+<div class="hdr">
+  <div class="hdr-l">
+    <div class="hdr-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+    <div>
+      <div class="hdr-t">PM Dashboard</div>
+      <div class="hdr-s">Cognitive PMO · Seguimiento PMBOK</div>
+    </div>
+  </div>
+  <div class="hdr-r">
+    <span class="hdr-id" id="hdr-pm-id">—</span>
+    <span class="hdr-role">Project Manager</span>
+    <span id="hdr-pm-name" style="font-weight:600">—</span>
+    <div class="thm" onclick="toggleTheme()"><div class="thm-dot"></div></div>
+    <button class="btn-logout" onclick="doLogout()">Salir</button>
+  </div>
+</div>
+
+<!-- ═══ TABS ═══ -->
+<div class="tabs">
+  <button class="tb a" data-tab="0" onclick="switchTab(0)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+    MIS PROYECTOS
+  </button>
+  <button class="tb" data-tab="1" onclick="switchTab(1)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    EQUIPO
+  </button>
+  <button class="tb" data-tab="2" onclick="switchTab(2)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><rect x="7" y="8" width="4" height="2" rx="1"/><rect x="9" y="12" width="6" height="2" rx="1"/><rect x="6" y="16" width="8" height="2" rx="1"/></svg>
+    GANTT
+  </button>
+  <button class="tb" data-tab="3" onclick="switchTab(3)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+    SEGUIMIENTO PMBOK
+  </button>
+  <button class="tb" data-tab="4" onclick="switchTab(4)">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M2 3h12v8H6l-3 2.5V11H2z" stroke-linejoin="round"/><circle cx="5.5" cy="7" r=".7" fill="currentColor" stroke="none"/><circle cx="8" cy="7" r=".7" fill="currentColor" stroke="none"/><circle cx="10.5" cy="7" r=".7" fill="currentColor" stroke="none"/></svg>
+    CHAT
+  </button>
+</div>
+
+<!-- ═══ CONTENT ═══ -->
+<div class="cnt">
+
+<!-- ── TAB 0: MIS PROYECTOS ── -->
+<div class="tp a" id="tab-0">
+  <div class="prj-sel">
+    <div class="filter-chips" id="estado-chips"></div>
+    <div style="flex:1"></div>
+    <div class="view-toggle">
+      <button class="view-btn a" id="vb-grid" onclick="setView('grid')">Grid</button>
+      <button class="view-btn" id="vb-kanban" onclick="setView('kanban')">Kanban</button>
+    </div>
+  </div>
+  <div class="prj-grid" id="prj-grid"></div>
+  <div class="kanban-view" id="kanban-view"></div>
+</div>
+
+<!-- ── TAB 1: EQUIPO ── -->
+<div class="tp" id="tab-1">
+  <!-- KPIs -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px" id="team-kpis"></div>
+  <!-- Filters -->
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+    <div class="filter-chips" id="team-filter-chips"></div>
+    <div style="flex:1"></div>
+    <input type="text" id="team-search" placeholder="Buscar técnico..." oninput="filterTeam()"
+      style="background:var(--bg-el);color:var(--tx);border:1px solid var(--border);padding:6px 12px;border-radius:8px;font-size:12px;width:200px;font-family:inherit">
+  </div>
+  <!-- Table -->
+  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+    <table style="width:100%;border-collapse:collapse;font-size:12px" id="team-table">
+      <thead>
+        <tr style="background:var(--bg2);border-bottom:1px solid var(--border)">
+          <th style="padding:10px 12px;text-align:left;font-size:10px;color:var(--tx2);text-transform:uppercase;font-weight:700"></th>
+          <th style="padding:10px 12px;text-align:left;font-size:10px;color:var(--tx2);text-transform:uppercase;font-weight:700">Nombre</th>
+          <th style="padding:10px 12px;text-align:left;font-size:10px;color:var(--tx2);text-transform:uppercase;font-weight:700">Skill</th>
+          <th style="padding:10px 12px;text-align:left;font-size:10px;color:var(--tx2);text-transform:uppercase;font-weight:700">Silo</th>
+          <th style="padding:10px 8px;text-align:center;font-size:10px;color:var(--tx2);text-transform:uppercase;font-weight:700">#Proy</th>
+          <th style="padding:10px 12px;text-align:left;font-size:10px;color:var(--tx2);text-transform:uppercase;font-weight:700">Imputado / Cap.</th>
+          <th style="padding:10px 12px;text-align:left;font-size:10px;color:var(--tx2);text-transform:uppercase;font-weight:700;min-width:120px">Carga</th>
+          <th style="padding:10px 12px;text-align:center;font-size:10px;color:var(--tx2);text-transform:uppercase;font-weight:700">Alerta</th>
+        </tr>
+      </thead>
+      <tbody id="team-tbody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- ═══ MODAL TÉCNICO ═══ -->
+<div class="modal-overlay" id="tech-modal-overlay" onclick="if(event.target===this)closeTechModal()">
+  <div class="modal" style="position:relative;max-width:800px">
+    <button class="modal-close" onclick="closeTechModal()">✕</button>
+    <div id="tech-modal-body"></div>
+  </div>
+</div>
+
+<!-- ═══ FICHA TÉCNICO FULL-SCREEN ═══ -->
+<div class="ficha-fs" id="tecnicoFichaModal">
+  <div class="ficha-hdr">
+    <div class="ficha-av" id="ficha-avatar"></div>
+    <div style="flex:1">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:16px;font-weight:700" id="ficha-nombre"></span>
+        <span class="hdr-id" id="ficha-fte"></span>
+        <span class="hdr-role" id="ficha-nivel"></span>
+      </div>
+      <div style="font-size:11px;color:var(--tx2);margin-top:2px">
+        <span id="ficha-silo"></span> · <span id="ficha-skill"></span> · Manager: <span id="ficha-manager"></span>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <div style="background:var(--bg-el);padding:6px 12px;border-radius:6px;text-align:center">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:800" id="ficha-carga-val"></div>
+        <div style="font-size:8px;color:var(--tx3);text-transform:uppercase">Carga</div>
+      </div>
+      <div style="background:var(--bg-el);padding:6px 12px;border-radius:6px;text-align:center">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--tx2)" id="ficha-libre"></div>
+        <div style="font-size:8px;color:var(--tx3);text-transform:uppercase">Fecha libre est.</div>
+      </div>
+    </div>
+    <button class="ficha-close" onclick="closeFicha()">✕</button>
+  </div>
+  <div class="ficha-tabs" id="ficha-tab-bar">
+    <button class="ficha-tb active" data-ftab="0" onclick="switchFichaTab(0)">Resumen</button>
+    <button class="ficha-tb" data-ftab="1" onclick="switchFichaTab(1)">Proyectos</button>
+    <button class="ficha-tb" data-ftab="2" onclick="switchFichaTab(2)">Tareas Kanban</button>
+    <button class="ficha-tb" data-ftab="3" onclick="switchFichaTab(3)">Salas Chat</button>
+    <button class="ficha-tb" data-ftab="4" onclick="switchFichaTab(4)">Skills</button>
+  </div>
+  <div class="ficha-content">
+    <div class="ficha-panel active" id="ftab-0">
+      <div style="text-align:center;padding:60px;color:var(--tx2)"><div style="font-size:14px;font-weight:600">Resumen</div><div style="font-size:12px;margin-top:4px;color:var(--tx3)">Pendiente F2</div></div>
+    </div>
+    <div class="ficha-panel" id="ftab-1">
+      <div style="text-align:center;padding:60px;color:var(--tx2)"><div style="font-size:14px;font-weight:600">Proyectos</div><div style="font-size:12px;margin-top:4px;color:var(--tx3)">Pendiente F3</div></div>
+    </div>
+    <div class="ficha-panel" id="ftab-2">
+      <div style="text-align:center;padding:60px;color:var(--tx2)"><div style="font-size:14px;font-weight:600">Tareas Kanban</div><div style="font-size:12px;margin-top:4px;color:var(--tx3)">Pendiente F4</div></div>
+    </div>
+    <div class="ficha-panel" id="ftab-3">
+      <div style="text-align:center;padding:60px;color:var(--tx2)"><div style="font-size:14px;font-weight:600">Salas Chat</div><div style="font-size:12px;margin-top:4px;color:var(--tx3)">Pendiente F5</div></div>
+    </div>
+    <div class="ficha-panel" id="ftab-4">
+      <div style="text-align:center;padding:60px;color:var(--tx2)"><div style="font-size:14px;font-weight:600">Skills</div><div style="font-size:12px;margin-top:4px;color:var(--tx3)">Pendiente F5</div></div>
+    </div>
+  </div>
+  <div class="fkan-toast" id="fkan-toast">Cambio NO persistido — edición disponible en v4</div>
+</div>
+
+<!-- ── TAB 2: GANTT ── -->
+<div class="tp" id="tab-2">
+  <div class="gantt-toolbar" id="gantt-toolbar">
+    <button class="gantt-btn" onclick="ganttScrollToday()">Hoy</button>
+    <button class="gantt-btn" onclick="ganttScroll(-200)">«</button>
+    <button class="gantt-btn" onclick="ganttScroll(200)">»</button>
+    <div class="gantt-zoom">
+      <button class="gantt-zoom-btn" data-gz="dia" onclick="setGanttZoom('dia')">Día</button>
+      <button class="gantt-zoom-btn" data-gz="semana" onclick="setGanttZoom('semana')">Semana</button>
+      <button class="gantt-zoom-btn active" data-gz="mes" onclick="setGanttZoom('mes')">Mes</button>
+    </div>
+    <span id="gantt-stats" style="font-size:10px;color:var(--tx3)"></span>
+    <div style="flex:1"></div>
+    <select id="gantt-prj-filter" onchange="renderGantt()" style="background:var(--bg-el);color:var(--tx);border:1px solid var(--border);padding:4px 10px;border-radius:6px;font-size:11px;font-family:inherit">
+      <option value="">Todos los proyectos</option>
+    </select>
+  </div>
+  <div class="gantt-wrap">
+    <div class="gantt-left" id="gantt-left">
+      <div style="padding:8px 14px;border-bottom:1px solid var(--border);font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;height:36px;display:flex;align-items:center">Tareas</div>
+      <div id="gantt-tree"></div>
+    </div>
+    <div class="gantt-right" id="gantt-right">
+      <div class="gantt-tl-hdr" id="gantt-hdr"></div>
+      <div id="gantt-canvas" style="position:relative"></div>
+    </div>
+  </div>
+  <div id="gantt-tooltip" style="display:none;position:fixed;z-index:350;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:10px;box-shadow:0 4px 16px var(--shd-lg);max-width:280px;pointer-events:none"></div>
+  <div class="gantt-edit-overlay" id="gantt-edit-overlay" onclick="if(event.target===this)closeGanttEdit()">
+    <div class="gantt-edit-modal">
+      <button onclick="closeGanttEdit()" style="position:absolute;top:12px;right:16px;background:none;border:none;color:var(--tx2);font-size:18px;cursor:pointer">✕</button>
+      <div id="gantt-edit-body"></div>
+    </div>
+  </div>
+  <div class="gantt-toast" id="gantt-toast-ok">Tarea actualizada</div>
+</div>
+
+<!-- ── TAB 3: SEGUIMIENTO PMBOK ── -->
+<div class="tp" id="tab-3">
+  <!-- Selector proyecto + mini KPIs -->
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+    <select id="pmbok-prj-select" onchange="loadPmbokFull(this.value)" style="background:var(--bg-el);color:var(--tx);border:1px solid var(--border);padding:8px 14px;border-radius:8px;font-size:13px;font-family:inherit;min-width:320px"></select>
+    <span id="pmbok-estado-badge"></span>
+    <div style="flex:1"></div>
+    <div style="display:flex;gap:8px" id="pmbok-mini-kpis"></div>
+  </div>
+  <div id="pmbok-loading" style="text-align:center;padding:40px;color:var(--tx2)">Selecciona un proyecto</div>
+  <div id="pmbok-content" style="display:none">
+    <!-- S1: EVM -->
+    <div class="pmbok-section" id="pmbok-evm"></div>
+    <!-- S2: Calidad -->
+    <div class="pmbok-section" id="pmbok-calidad"></div>
+    <!-- S3: Riesgos -->
+    <div class="pmbok-section" id="pmbok-riesgos"></div>
+    <!-- S4: Cronograma -->
+    <div class="pmbok-section" id="pmbok-cronograma"></div>
+    <!-- S5: Imputaciones -->
+    <div class="pmbok-section" id="pmbok-imputaciones"></div>
+    <!-- S6: Stakeholders -->
+    <div class="pmbok-section" id="pmbok-stakeholders"></div>
+  </div>
+</div>
+
+<!-- ── TAB 4: CHAT ── -->
+<div class="tp" id="tab-4">
+  <div style="display:flex;height:calc(100vh - 130px);gap:0;border:1px solid var(--border);border-radius:12px;overflow:hidden">
+    <!-- Sidebar salas -->
+    <div style="width:320px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column">
+      <div style="padding:12px;border-bottom:1px solid var(--border)">
+        <div style="font-size:13px;font-weight:700;margin-bottom:8px">Salas del proyecto</div>
+        <input type="text" id="chat-room-search" placeholder="Buscar sala..." oninput="filterChatRooms()"
+          style="width:100%;background:var(--bg-el);color:var(--tx);border:1px solid var(--border);padding:6px 10px;border-radius:6px;font-size:11px;font-family:inherit">
+      </div>
+      <div id="chat-rooms-list" style="flex:1;overflow-y:auto"></div>
+    </div>
+    <!-- Panel mensajes -->
+    <div style="flex:1;display:flex;flex-direction:column;background:var(--bg)">
+      <div id="chat-panel-header" style="padding:10px 16px;border-bottom:1px solid var(--border);background:var(--bg2);display:flex;align-items:center;gap:8px">
+        <span style="font-size:13px;font-weight:700;color:var(--tx2)">Selecciona una sala</span>
+      </div>
+      <div id="chat-messages" style="flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:6px"></div>
+      <div id="chat-input-area" style="padding:10px 16px;border-top:1px solid var(--border);background:var(--bg2);display:none">
+        <div style="display:flex;gap:8px">
+          <textarea id="chat-input" rows="2" placeholder="Escribe un mensaje... (Cmd+Enter para enviar)"
+            style="flex:1;background:var(--bg-el);color:var(--tx);border:1px solid var(--border);padding:8px 10px;border-radius:8px;font-size:12px;font-family:inherit;resize:none"
+            onkeydown="if((event.metaKey||event.ctrlKey)&&event.key==='Enter'){event.preventDefault();sendChatMsg();}"></textarea>
+          <button onclick="sendChatMsg()" style="background:var(--acc-bl);color:#fff;border:none;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;align-self:flex-end">Enviar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<!-- ═══ MODAL ═══ -->
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" style="position:relative">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+const API = window.location.origin;
+// F4 · PM_ID derivado dinámicamente de /api/pm/me (ver bootPmDashboard).
+let PM_ID = null;
+let PM_ME = null;
+let ALL_PROJECTS = [];
+let currentView = localStorage.getItem('pm-view') || 'grid';
+let activeEstado = localStorage.getItem('pm-filter-estado') || '';
+
+// ── Theme ──
+const savedTheme = localStorage.getItem('pmo-theme') || 'dark';
+document.documentElement.dataset.theme = savedTheme;
+function toggleTheme(){
+  const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  localStorage.setItem('pmo-theme', next);
+}
+
+// ── Tabs ──
+function switchTab(n){
+  document.querySelectorAll('.tb').forEach(t=>t.classList.remove('a'));
+  document.querySelectorAll('.tp').forEach(t=>t.classList.remove('a'));
+  document.querySelector(`.tb[data-tab="${n}"]`).classList.add('a');
+  document.getElementById(`tab-${n}`).classList.add('a');
+  localStorage.setItem('pm-active-tab', n);
+  closeDrawer();
+  if(n === 1 && ALL_TEAM_PM.length === 0) loadTeam();
+  if(n === 2) loadGantt();
+  if(n === 3) initPmbokSelector();
+  if(n === 4 && chatRooms.length === 0) loadChatRooms();
+  if(n !== 4 && chatPollTimer){ clearInterval(chatPollTimer); chatPollTimer = null; }
+}
+
+// ── Logout centralizado (FIX logout-shell) ──
+function doLogout(){
+  try { fetch('/auth/logout', {method:'POST', headers:{'Authorization':'Bearer '+(localStorage.getItem('pmo_token')||'')}}).catch(()=>{}); } catch(e){}
+  localStorage.removeItem('pmo_token');
+  localStorage.removeItem('pmo_user');
+  localStorage.removeItem('pmo_permisos');
+  localStorage.removeItem('pmo_role');
+  localStorage.removeItem('cpm_token');
+  sessionStorage.removeItem('p96_token');
+  sessionStorage.removeItem('p96_me');
+  window.location.replace('/');
+}
+
+// ── API fetch (F4: JWT Bearer · F6: 401 handling) ──
+async function apiFetch(path){
+  try {
+    const token = localStorage.getItem('pmo_token');
+    const headers = token ? {'Authorization': 'Bearer ' + token} : {};
+    const r = await fetch(API + path, {headers});
+    if(r.status === 401){
+      // F6 · sesión caducada → limpiar y redirigir a login con mensaje
+      localStorage.removeItem('pmo_token');
+      localStorage.removeItem('pmo_user');
+      localStorage.removeItem('pmo_role');
+      localStorage.removeItem('pmo_permisos');
+      sessionStorage.setItem('login_msg', 'Sesión caducada. Vuelve a iniciar sesión.');
+      window.location.href = '/';
+      return null;
+    }
+    if(!r.ok) return null;
+    return await r.json();
+  } catch(e){ console.warn('API error:', path, e); return null; }
+}
+
+// ── F4 · routeByRole (copia inline — pm/ es un standalone) ──
+function routeByRole(role){
+  if(!role || !role.code) return null;
+  const code = role.code;
+  if(code === 'SUPERADMIN') return '/';
+  if(code === 'VP_OPERATIONS') return '/gov-run.html';
+  if(code === 'VP_ENGINEERING') return '/gov-build.html';
+  if(code === 'PMO_SENIOR' || code === 'PMO_JUNIOR') return '/pm/';
+  if(code === 'TECH_SENIOR' || code === 'TECH_JUNIOR') return '/tech-dashboard.html';
+  const P96 = new Set(['CEO','CFO','CIO','CTO','CISO','VP_PMO',
+    'DIRECTOR_INFRA','DIRECTOR_SEC','DIRECTOR_DATA','DIRECTOR_IT','AUDITOR']);
+  if(P96.has(code)) return '/p96/';
+  return null;
+}
+
+// ── F4 · Boot gate: exige login + que sea PM activo ──
+async function bootPmDashboard(){
+  const token = localStorage.getItem('pmo_token');
+  if(!token){ window.location.href = '/'; return false; }
+  // Redirect C2: si no es PM, llevarlo a su landing por rol
+  const role = JSON.parse(localStorage.getItem('pmo_role') || 'null');
+  if(role && role.code !== 'PMO_SENIOR' && role.code !== 'PMO_JUNIOR'){
+    const dest = routeByRole(role) || '/';
+    if(dest !== '/pm/'){ window.location.href = dest; return false; }
+  }
+  // Resolver PM_ID vía /api/pm/me
+  const me = await apiFetch('/api/pm/me');
+  if(!me || !me.pm_code){
+    // FIX loop: limpiar sesión antes de volver a '/' para que
+    // checkExistingSession del shell no reenrute de vuelta a /pm/.
+    console.warn('[pm] /api/pm/me inválido · me=', me);
+    if(typeof doLogout === 'function'){ doLogout(); return false; }
+    localStorage.clear(); sessionStorage.clear();
+    window.location.replace('/');
+    return false;
+  }
+  PM_ME = me; PM_ID = me.pm_code;
+  const hdrId = document.getElementById('hdr-pm-id');
+  const hdrName = document.getElementById('hdr-pm-name');
+  if(hdrId) hdrId.textContent = me.pm_code;
+  if(hdrName) hdrName.textContent = me.nombre || '';
+  return true;
+}
+
+// ── Estado styling ──
+const ESTADO_MAP = {
+  'en ejecucion': {cls:'est-ejecucion', label:'En Ejecución', color:'var(--acc-bl)'},
+  'en revision':  {cls:'est-revision',  label:'En Revisión',  color:'var(--acc-or)'},
+  'En analisis':  {cls:'est-analisis',  label:'En Análisis',  color:'var(--acc-pu)'},
+  'pendiente':    {cls:'est-pendiente', label:'Pendiente',    color:'var(--tx2)'},
+  'Standby':      {cls:'est-standby',   label:'Standby',      color:'var(--tx3)'},
+  'en cierre':    {cls:'est-cierre',    label:'En Cierre',    color:'var(--acc-cy)'},
+  'cerrado':      {cls:'est-cerrado',   label:'Cerrado',      color:'var(--acc-gn)'},
+  'Aprobado':     {cls:'est-aprobado',  label:'Aprobado',     color:'var(--acc-gn)'},
+  'PAUSADO_POR_RIESGO_P1': {cls:'est-pausado', label:'PAUSADO', color:'var(--acc-rd)'},
+};
+function estadoBadge(estado){
+  const m = ESTADO_MAP[estado] || {cls:'est-pendiente', label:estado, color:'var(--tx2)'};
+  return `<span class="prj-estado ${m.cls}">${m.label}</span>`;
+}
+
+// ── EVM color ──
+function evmClass(val){ return val >= 1.0 ? 'evm-gn' : val >= 0.9 ? 'evm-or' : 'evm-rd'; }
+function evmColor(val){ return val >= 1.0 ? 'var(--acc-gn)' : val >= 0.9 ? 'evm-or' : 'var(--acc-rd)'; }
+function barColor(cpi){ return cpi >= 1.0 ? 'var(--acc-gn)' : cpi >= 0.9 ? 'var(--acc-or)' : 'var(--acc-rd)'; }
+
+// ── Initials ──
+function initials(name){ return (name||'??').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase(); }
+
+// ── Load projects ──
+async function loadProjects(){
+  // F4: pm_id dinámico derivado de /api/pm/me
+  const data = await apiFetch('/api/pm/dashboard/projects?pm_id=' + encodeURIComponent(PM_ID));
+  if(!data || !data.length){
+    document.getElementById('prj-grid').innerHTML = '<div style="text-align:center;padding:40px;color:var(--tx2)">Sin proyectos asignados</div>';
+    return;
+  }
+  ALL_PROJECTS = data;
+  renderEstadoChips();
+  renderView();
+}
+
+// ── Estado filter chips ──
+function renderEstadoChips(){
+  const counts = {};
+  ALL_PROJECTS.forEach(p => { counts[p.estado] = (counts[p.estado]||0) + 1; });
+  const container = document.getElementById('estado-chips');
+  let html = `<div class="chip ${!activeEstado?'a':''}" onclick="filterEstado('')">Todos (${ALL_PROJECTS.length})</div>`;
+  for(const [est, cnt] of Object.entries(counts).sort((a,b)=>b[1]-a[1])){
+    const m = ESTADO_MAP[est] || {label:est};
+    html += `<div class="chip ${activeEstado===est?'a':''}" onclick="filterEstado('${est}')">${m.label} (${cnt})</div>`;
+  }
+  container.innerHTML = html;
+}
+
+function filterEstado(est){
+  activeEstado = est;
+  localStorage.setItem('pm-filter-estado', est);
+  renderEstadoChips();
+  renderView();
+}
+
+// ── View toggle ──
+function setView(v){
+  currentView = v;
+  localStorage.setItem('pm-view', v);
+  document.getElementById('vb-grid').classList.toggle('a', v==='grid');
+  document.getElementById('vb-kanban').classList.toggle('a', v==='kanban');
+  renderView();
+}
+
+function renderView(){
+  const filtered = activeEstado ? ALL_PROJECTS.filter(p=>p.estado===activeEstado) : ALL_PROJECTS;
+  if(currentView === 'grid'){
+    document.getElementById('prj-grid').style.display = 'grid';
+    document.getElementById('kanban-view').classList.remove('a');
+    renderGrid(filtered);
+  } else {
+    document.getElementById('prj-grid').style.display = 'none';
+    document.getElementById('kanban-view').classList.add('a');
+    renderKanban(filtered);
+  }
+}
+
+// ── Render card ──
+function renderCard(p){
+  const prio = (p.prioridad||'Media').toLowerCase();
+  const prioCls = prio.includes('alta')||prio.includes('crít') ? 'prio-alta' : prio.includes('baja') ? 'prio-baja' : 'prio-media';
+  const avance = p.pct_avance || 0;
+  const cpi = p.cpi || 0;
+  const spi = p.spi || 0;
+
+  // Team avatars
+  let avatarsHtml = '';
+  const team = p.team || [];
+  const show = team.slice(0, 4);
+  show.forEach(t => { avatarsHtml += `<div class="team-av" title="${t.nombre}">${initials(t.nombre)}</div>`; });
+  if(team.length > 4) avatarsHtml += `<div class="team-av extra">+${team.length - 4}</div>`;
+
+  // Next milestone
+  const hito = p.proximo_hito;
+  let hitoHtml = '';
+  if(hito){
+    const diasColor = hito.dias_para < 0 ? 'var(--acc-rd)' : hito.dias_para < 14 ? 'var(--acc-or)' : 'var(--acc-gn)';
+    hitoHtml = `<div class="hito-row"><div class="hito-dot" style="background:${diasColor}"></div>${hito.nombre} · <span style="color:${diasColor};font-weight:600">${hito.dias_para > 0 ? hito.dias_para+'d' : Math.abs(hito.dias_para)+'d atrás'}</span></div>`;
+  }
+
+  return `<div class="prj-card" onclick="openProjectModal('${encodeURIComponent(p.id_proyecto)}')">
+    <div class="prj-card-hdr">
+      <div class="prj-name">${esc(p.nombre_proyecto)}</div>
+      <div class="prj-prio ${prioCls}">${esc(p.prioridad||'Media')}</div>
+    </div>
+    ${estadoBadge(p.estado)}
+    <div class="pbar"><div class="pbar-fill" style="width:${avance}%;background:${barColor(cpi)}"></div></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--tx2);margin-bottom:4px">
+      <span>${avance}% avance</span>
+      <span style="font-family:'JetBrains Mono',monospace">BAC ${(p.bac||0).toLocaleString('es-ES',{maximumFractionDigits:0})}€</span>
+    </div>
+    <div class="evm-row">
+      <span class="evm-badge ${evmClass(cpi)}">CPI ${cpi.toFixed(2)}</span>
+      <span class="evm-badge ${evmClass(spi)}">SPI ${spi.toFixed(2)}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div class="team-avs">${avatarsHtml || '<span style="font-size:10px;color:var(--tx3)">Sin equipo</span>'}</div>
+    </div>
+    ${hitoHtml}
+  </div>`;
+}
+
+function esc(s){ const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+
+// ── Grid view ──
+function renderGrid(projects){
+  document.getElementById('prj-grid').innerHTML = projects.length
+    ? projects.map(renderCard).join('')
+    : '<div style="text-align:center;padding:40px;color:var(--tx2)">No hay proyectos con ese filtro</div>';
+}
+
+// ── Kanban view ──
+function renderKanban(projects){
+  const columns = {};
+  const colOrder = ['Standby','En analisis','pendiente','en revision','Aprobado','en ejecucion','en cierre','cerrado'];
+  projects.forEach(p => {
+    const est = p.estado || 'pendiente';
+    if(!columns[est]) columns[est] = [];
+    columns[est].push(p);
+  });
+
+  let html = '';
+  colOrder.forEach(est => {
+    const cards = columns[est];
+    if(!cards || !cards.length) return;
+    const m = ESTADO_MAP[est] || {label:est, color:'var(--tx2)'};
+    html += `<div class="kanban-col">
+      <div class="kanban-col-hdr"><span style="color:${m.color}">●</span> ${m.label} <span style="font-size:10px;color:var(--tx3);font-weight:400">(${cards.length})</span></div>
+      <div class="kanban-col-cnt">${cards.map(renderCard).join('')}</div>
+    </div>`;
+  });
+  document.getElementById('kanban-view').innerHTML = html || '<div style="padding:40px;color:var(--tx2);text-align:center">Sin proyectos</div>';
+}
+
+// ── Modal ──
+async function openProjectModal(idEnc){
+  const id = decodeURIComponent(idEnc);
+  document.getElementById('modal-overlay').classList.add('show');
+  document.getElementById('modal-body').innerHTML = '<div style="text-align:center;padding:30px;color:var(--tx2)">Cargando...</div>';
+  const d = await apiFetch(`/api/pm/project/${encodeURIComponent(id)}/detalle`);
+  if(!d){ document.getElementById('modal-body').innerHTML='<div style="color:var(--acc-rd)">Error</div>'; return; }
+  const p=d.proyecto, e=d.evm, f=d.fechas, ident=d.identificacion;
+  const fmt=v=>(v||0).toLocaleString('es-ES',{maximumFractionDigits:0})+'€';
+  const ec=v=>v>=1?'var(--acc-gn)':v>=0.9?'var(--acc-or)':'var(--acc-rd)';
+  const devCol=f.desviacion==='OK'?'var(--acc-gn)':f.desviacion==='ADELANTADO'?'var(--acc-bl)':'var(--acc-rd)';
+  const bk=d.bac_desglose;
+  document.getElementById('modal-body').innerHTML=`
+    <h2 style="margin-bottom:4px">${esc(p.nombre)}</h2>
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:14px">${estadoBadge(p.estado)}<span class="prj-prio ${(p.prioridad||'').toLowerCase().includes('alta')?'prio-alta':'prio-media'}">${esc(p.prioridad)}</span><span style="font-size:10px;color:var(--tx3)">${esc(p.id)} · ${p.tipo}</span></div>
+    <div class="modal-section"><h3>Identificación</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:11px">
+        <div style="background:var(--bg-el);padding:6px 8px;border-radius:6px"><span style="color:var(--tx3);font-size:9px">Sponsor</span><div style="font-weight:600">${esc(ident.sponsor)}</div></div>
+        <div style="background:var(--bg-el);padding:6px 8px;border-radius:6px"><span style="color:var(--tx3);font-size:9px">Resp. Negocio</span><div style="font-weight:600">${esc(ident.responsable_negocio)}</div></div>
+        <div style="background:var(--bg-el);padding:6px 8px;border-radius:6px"><span style="color:var(--tx3);font-size:9px">PM</span><div style="font-weight:600">${esc(ident.pm)}</div></div>
+      </div>
+    </div>
+    <div class="modal-section"><h3>Fechas clave</h3>
+      <div class="modal-kv">
+        <div class="modal-kv-item"><div class="modal-kv-label">Inicio</div><div class="modal-kv-val" style="font-size:12px">${f.inicio}</div></div>
+        <div class="modal-kv-item"><div class="modal-kv-label">Fin plan</div><div class="modal-kv-val" style="font-size:12px">${f.fin_plan}</div></div>
+        <div class="modal-kv-item"><div class="modal-kv-label">Fin est. (SPI)</div><div class="modal-kv-val" style="font-size:12px;color:${devCol}">${f.fin_estimado_spi}</div></div>
+        <div class="modal-kv-item"><div class="modal-kv-label">Días restantes</div><div class="modal-kv-val" style="color:${f.dias_restantes<0?'var(--acc-rd)':'var(--tx)'}">${f.dias_restantes}d</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:6px;font-size:10px"><span>Tiempo: ${f.pct_tiempo}%</span><div style="flex:1;height:6px;background:var(--bg-el);border-radius:3px"><div style="height:100%;width:${Math.min(f.pct_tiempo,100)}%;background:var(--acc-bl);border-radius:3px"></div></div><span>Avance: ${f.pct_avance}%</span><div style="flex:1;height:6px;background:var(--bg-el);border-radius:3px"><div style="height:100%;width:${Math.min(f.pct_avance,100)}%;background:${ec(e.spi)};border-radius:3px"></div></div><span class="alert-chip" style="background:${devCol}15;color:${devCol}">${f.desviacion}</span></div>
+    </div>
+    <div class="modal-section"><h3>EVM</h3>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
+        <div class="evm-cell"><div class="evm-cell-label">BAC</div><div class="evm-cell-val" style="font-size:14px">${fmt(e.bac)}</div></div>
+        <div class="evm-cell"><div class="evm-cell-label">EV</div><div class="evm-cell-val" style="font-size:14px;color:var(--acc-gn)">${fmt(e.ev)}</div></div>
+        <div class="evm-cell"><div class="evm-cell-label">AC</div><div class="evm-cell-val" style="font-size:14px;color:var(--acc-rd)">${fmt(e.ac)}</div></div>
+        <div class="evm-cell"><div class="evm-cell-label">EAC</div><div class="evm-cell-val" style="font-size:14px">${fmt(e.eac)}</div></div>
+        <div class="evm-cell"><div class="evm-cell-label">CPI</div><div class="evm-cell-val" style="font-size:16px;color:${ec(e.cpi)}">${e.cpi}</div></div>
+        <div class="evm-cell"><div class="evm-cell-label">SPI</div><div class="evm-cell-val" style="font-size:16px;color:${ec(e.spi)}">${e.spi}</div></div>
+        <div class="evm-cell"><div class="evm-cell-label">VAC</div><div class="evm-cell-val" style="font-size:14px;color:${e.vac>=0?'var(--acc-gn)':'var(--acc-rd)'}">${e.vac>=0?'+':''}${fmt(e.vac)}</div></div>
+        <div class="evm-cell"><div class="evm-cell-label">PV</div><div class="evm-cell-val" style="font-size:14px;color:var(--acc-bl)">${fmt(e.pv)}</div></div>
+      </div>
+    </div>
+    <div class="modal-section"><h3>BAC desglosado</h3>
+      <table style="width:100%;font-size:11px;border-collapse:collapse">
+        <tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 8px">CapEx</td><td style="padding:4px 8px;text-align:right;font-family:'JetBrains Mono',monospace">${fmt(bk.capex)}</td><td style="padding:4px 8px;text-align:right;color:var(--tx3)">${e.bac>0?Math.round(bk.capex/e.bac*100):0}%</td></tr>
+        <tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 8px">OpEx</td><td style="padding:4px 8px;text-align:right;font-family:'JetBrains Mono',monospace">${fmt(bk.opex)}</td><td style="padding:4px 8px;text-align:right;color:var(--tx3)">${e.bac>0?Math.round(bk.opex/e.bac*100):0}%</td></tr>
+        <tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 8px">Labor interna</td><td style="padding:4px 8px;text-align:right;font-family:'JetBrains Mono',monospace">${fmt(bk.labor)}</td><td style="padding:4px 8px;text-align:right;color:var(--tx3)">${e.bac>0?Math.round(bk.labor/e.bac*100):0}%</td></tr>
+        <tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 8px">Proveedores</td><td style="padding:4px 8px;text-align:right;font-family:'JetBrains Mono',monospace">${fmt(bk.proveedores)}</td><td style="padding:4px 8px;text-align:right;color:var(--tx3)">${e.bac>0?Math.round(bk.proveedores/e.bac*100):0}%</td></tr>
+        <tr style="border-bottom:1px solid var(--border);font-weight:700"><td style="padding:4px 8px">Internos vs Externos</td><td colspan="2" style="padding:4px 8px;text-align:right;font-family:'JetBrains Mono',monospace">${fmt(bk.internos)} / ${fmt(bk.externos)}</td></tr>
+      </table>
+    </div>
+    <div class="modal-section"><h3>Hitos (${d.hitos.length})</h3>
+      ${d.hitos.map(h=>{const col=h.estado==='COMPLETADO'?'var(--acc-gn)':h.estado==='EN_CURSO'?'var(--acc-bl)':'var(--tx3)';
+        return `<div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:10px"><div class="hito-dot" style="background:${col}"></div><span style="font-family:'JetBrains Mono',monospace;width:72px;color:${col}">${h.fecha_objetivo}</span><span style="flex:1">${esc(h.nombre)}</span><span style="font-size:9px;color:${col};font-weight:600">${h.estado}</span></div>`;}).join('')}
+    </div>
+    <div class="modal-section"><h3>Riesgos top</h3>
+      ${d.riesgos.map(r=>{const col=r.score>=12?'var(--acc-rd)':r.score>=8?'var(--acc-or)':'var(--acc-gn)';
+        return `<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:var(--bg-el);border-radius:6px;margin-bottom:3px;font-size:10px;border-left:3px solid ${col}"><span style="font-family:'JetBrains Mono',monospace;font-weight:800;color:${col}">${r.score}</span><span style="flex:1">${esc(r.descripcion)}</span><span style="color:var(--tx3)">${esc(r.owner)}</span></div>`;}).join('')}
+    </div>
+    <div class="modal-section"><h3>Cambios de scope (${d.cambios_scope.length})</h3>
+      ${d.cambios_scope.map(c=>`<div style="display:flex;gap:8px;padding:4px 8px;background:var(--bg-el);border-radius:6px;margin-bottom:3px;font-size:10px"><span style="font-family:'JetBrains Mono',monospace;color:var(--tx3);width:72px">${c.fecha}</span><span style="flex:1">${esc(c.motivo)}</span><span style="color:var(--acc-or);font-weight:600">${esc(c.impacto)}</span></div>`).join('')}
+    </div>
+    <div class="modal-section"><h3>Documentación</h3>
+      ${d.documentacion.map(doc=>`<div style="display:flex;align-items:center;gap:8px;padding:3px 8px;font-size:10px"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="2"/><line x1="5" y1="5.5" x2="11" y2="5.5"/><line x1="5" y1="8" x2="11" y2="8"/></svg><span style="flex:1;font-weight:600">${esc(doc.nombre)}</span><span style="color:var(--tx3)">${doc.fecha}</span><span style="font-size:9px;padding:1px 5px;border-radius:3px;background:${doc.estado==='Aprobado'||doc.estado==='Firmado'?'rgba(63,185,80,.1)':'rgba(139,148,158,.1)'};color:${doc.estado==='Aprobado'||doc.estado==='Firmado'?'var(--acc-gn)':'var(--tx3)'}">${doc.estado}</span></div>`).join('')}
+    </div>`;
+}
+
+function closeModal(){ document.getElementById('modal-overlay').classList.remove('show'); }
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeGanttEdit(); closeFicha(); closeModal(); } });
+
+// ══════════════════════════════════════════════
+// TAB 1: EQUIPO
+// ══════════════════════════════════════════════
+let ALL_TEAM_PM = [];
+let teamFilter = '';
+
+async function loadTeam(){
+  const data = await apiFetch('/api/pm/dashboard/team?pm_id=' + encodeURIComponent(PM_ID));
+  if(!data){ document.getElementById('team-tbody').innerHTML='<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--tx2)">Error cargando equipo</td></tr>'; return; }
+  ALL_TEAM_PM = data;
+  renderTeamKPIs();
+  renderTeamFilters();
+  renderTeamTable();
+}
+
+function renderTeamKPIs(){
+  const t = ALL_TEAM_PM;
+  const total = t.length;
+  const sobre = t.filter(x=>x.estado_carga==='SOBRECARGA').length;
+  const conflictos = t.filter(x=>x.conflicto).length;
+  const avg_libre = total > 0 ? Math.round(t.reduce((s,x)=>s+Math.max(0,100-x.carga_pct),0)/total) : 0;
+
+  document.getElementById('team-kpis').innerHTML = `
+    <div class="kpi-card kpi-bl"><div class="kpi-val" style="color:var(--acc-bl)">${total}</div><div class="kpi-label">Técnicos en pool</div></div>
+    <div class="kpi-card kpi-rd"><div class="kpi-val" style="color:${sobre>0?'var(--acc-rd)':'var(--acc-gn)'}">${sobre}</div><div class="kpi-label">Sobrecargados</div></div>
+    <div class="kpi-card kpi-or"><div class="kpi-val" style="color:${conflictos>0?'var(--acc-or)':'var(--acc-gn)'}">${conflictos}</div><div class="kpi-label">Conflictos multi-proy</div></div>
+    <div class="kpi-card kpi-gn"><div class="kpi-val" style="color:var(--acc-gn)">${avg_libre}%</div><div class="kpi-label">Capacidad libre media</div></div>
+  `;
+}
+
+function renderTeamFilters(){
+  const chips = document.getElementById('team-filter-chips');
+  chips.innerHTML = `
+    <div class="chip ${teamFilter===''?'a':''}" onclick="setTeamFilter('')">Todos (${ALL_TEAM_PM.length})</div>
+    <div class="chip ${teamFilter==='SOBRECARGA'?'a':''}" onclick="setTeamFilter('SOBRECARGA')">Sobrecargas (${ALL_TEAM_PM.filter(x=>x.estado_carga==='SOBRECARGA').length})</div>
+    <div class="chip ${teamFilter==='CONFLICTO'?'a':''}" onclick="setTeamFilter('CONFLICTO')">Conflictos (${ALL_TEAM_PM.filter(x=>x.conflicto).length})</div>
+    <div class="chip ${teamFilter==='AJUSTADO'?'a':''}" onclick="setTeamFilter('AJUSTADO')">Ajustados (${ALL_TEAM_PM.filter(x=>x.estado_carga==='AJUSTADO').length})</div>
+  `;
+}
+
+function setTeamFilter(f){ teamFilter = f; renderTeamFilters(); renderTeamTable(); }
+
+function filterTeam(){ renderTeamTable(); }
+
+function renderTeamTable(){
+  const search = (document.getElementById('team-search').value||'').toLowerCase();
+  let filtered = ALL_TEAM_PM;
+  if(teamFilter==='SOBRECARGA') filtered = filtered.filter(x=>x.estado_carga==='SOBRECARGA');
+  else if(teamFilter==='CONFLICTO') filtered = filtered.filter(x=>x.conflicto);
+  else if(teamFilter==='AJUSTADO') filtered = filtered.filter(x=>x.estado_carga==='AJUSTADO');
+  if(search) filtered = filtered.filter(x=>(x.nombre||'').toLowerCase().includes(search)||(x.silo||'').toLowerCase().includes(search));
+
+  const tbody = document.getElementById('team-tbody');
+  if(!filtered.length){
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--tx2)">Sin técnicos con ese filtro</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(t => {
+    const loadColor = t.carga_pct > 100 ? 'var(--acc-rd)' : t.carga_pct > 85 ? 'var(--acc-or)' : 'var(--acc-gn)';
+    const loadW = Math.min(t.carga_pct, 150);
+    let alertHtml = '';
+    if(t.estado_carga==='SOBRECARGA') alertHtml = '<span class="alert-chip alert-sobrecarga">SOBRECARGA</span>';
+    else if(t.conflicto) alertHtml = '<span class="alert-chip alert-conflicto">CONFLICTO</span>';
+    else if(t.estado_carga==='AJUSTADO') alertHtml = '<span class="alert-chip alert-ajustado">AJUSTADO</span>';
+
+    return `<tr onclick="openTeamDrawer('${t.id_tecnico}')">
+      <td style="padding:8px 12px"><div class="team-av" style="margin:0;background:${loadColor}15;color:${loadColor}">${initials(t.nombre)}</div></td>
+      <td style="padding:8px 12px"><div style="font-weight:600;font-size:12px">${esc(t.nombre)}</div><div style="font-size:10px;color:var(--tx3)">${esc(t.id_tecnico)} · ${esc(t.nivel)}</div></td>
+      <td style="padding:8px 12px;font-size:11px;color:var(--tx2);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.skill)}</td>
+      <td style="padding:8px 12px;font-size:11px;color:var(--tx2)">${esc(t.silo)}</td>
+      <td style="padding:8px 8px;text-align:center"><span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:${t.num_proyectos>2?'var(--acc-or)':'var(--tx)'}">${t.num_proyectos}</span></td>
+      <td style="padding:8px 12px;font-family:'JetBrains Mono',monospace;font-size:11px">${t.horas_imputadas_mes}h <span style="color:var(--tx3)">/ ${t.horas_estimadas_mes}h</span></td>
+      <td style="padding:8px 12px"><div style="display:flex;align-items:center;gap:6px"><div class="load-bar" style="width:100px"><div class="load-fill" style="width:${Math.min(loadW,100)}%;background:${loadColor}"></div></div><span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:${loadColor}">${t.carga_pct}%</span></div></td>
+      <td style="padding:8px 12px;text-align:center">${alertHtml}</td>
+    </tr>`;
+  }).join('');
+}
+
+let fichaActiveTecnico = null;
+let fichaCache = null;
+
+async function openTeamDrawer(tid){
+  const t = ALL_TEAM_PM.find(x=>x.id_tecnico===tid);
+  if(!t) return;
+  fichaActiveTecnico = tid;
+  fichaCache = null; fichaKanbanCache = null; fichaSalasCache = null; // force re-fetch
+
+  const lc = t.carga_pct>100?'var(--acc-rd)':t.carga_pct>85?'var(--acc-or)':'var(--acc-gn)';
+  const modal = document.getElementById('tecnicoFichaModal');
+
+  // Populate header from table row data (instant)
+  document.getElementById('ficha-avatar').style.cssText = `background:${lc}15;color:${lc}`;
+  document.getElementById('ficha-avatar').textContent = initials(t.nombre);
+  document.getElementById('ficha-nombre').textContent = t.nombre;
+  document.getElementById('ficha-fte').textContent = t.id_tecnico;
+  document.getElementById('ficha-nivel').textContent = t.nivel || 'N/A';
+  document.getElementById('ficha-silo').textContent = t.silo || '';
+  document.getElementById('ficha-skill').textContent = t.skill || '';
+  document.getElementById('ficha-manager').textContent = '—';
+  document.getElementById('ficha-carga-val').textContent = t.carga_pct + '%';
+  document.getElementById('ficha-carga-val').style.color = lc;
+  document.getElementById('ficha-libre').textContent = '—';
+
+  // Show loading in panels
+  document.getElementById('ftab-0').innerHTML = '<div style="text-align:center;padding:40px;color:var(--tx2)">Cargando datos...</div>';
+  document.getElementById('ftab-1').innerHTML = '<div style="text-align:center;padding:40px;color:var(--tx2)">Cargando...</div>';
+
+  switchFichaTab(0);
+  modal.classList.add('open');
+
+  // Fetch ficha-360
+  try {
+    const d = await apiFetch(`/api/pm/team/tecnico/${encodeURIComponent(tid)}/ficha-360?pm_id=${encodeURIComponent(PM_ID)}`);
+    if(!d){ document.getElementById('ftab-0').innerHTML='<div style="color:var(--acc-rd);padding:20px">No se pudo cargar</div>'; return; }
+    fichaCache = d;
+
+    // Update header with real data
+    const lc2 = d.kpis.carga_pct>100?'var(--acc-rd)':d.kpis.carga_pct>85?'var(--acc-or)':'var(--acc-gn)';
+    document.getElementById('ficha-carga-val').textContent = d.kpis.carga_pct + '%';
+    document.getElementById('ficha-carga-val').style.color = lc2;
+    document.getElementById('ficha-skill').textContent = d.skill_principal || '';
+    // Liberación badge
+    const lib = d.liberacion || {};
+    const libreEl = document.getElementById('ficha-libre');
+    if(lib.tipo === 'libre'){
+      libreEl.innerHTML = '<span style="color:var(--acc-gn);font-weight:700">Disponible YA</span>';
+    } else if(lib.fecha){
+      const fDate = new Date(lib.fecha);
+      const fStr = fDate.toLocaleDateString('es-ES',{day:'numeric',month:'short'});
+      libreEl.innerHTML = `<span style="color:var(--acc-or);font-weight:700">~${fStr}</span><div style="font-size:8px;font-style:italic;color:var(--tx3)">Estimada · ${lib.num_tareas_activas} tareas · ${lib.horas_restantes}h</div>`;
+    } else {
+      libreEl.textContent = '—';
+    }
+
+    renderFichaResumen(d);
+    renderFichaProyectos(d);
+    renderFichaSkills(d);
+  } catch(e){ document.getElementById('ftab-0').innerHTML='<div style="color:var(--acc-rd);padding:20px">Error de conexión</div>'; }
+}
+
+function renderFichaResumen(d){
+  const k = d.kpis;
+  const lc = k.carga_pct>100?'var(--acc-rd)':k.carga_pct>85?'var(--acc-or)':'var(--acc-gn)';
+
+  // Sparkline SVG
+  const spk = d.sparkline_12w || [];
+  const spkMax = Math.max(...spk.map(s=>s.horas), 1);
+  const W=500, H=80, padL=30, padB=16;
+  let svgSpk = `<svg viewBox="0 0 ${W} ${H+padB}" style="width:100%;max-height:110px">`;
+  // Grid
+  for(let i=0;i<4;i++){const yy=4+i*(H/3); svgSpk+=`<line x1="${padL}" y1="${yy}" x2="${W}" y2="${yy}" stroke="var(--border)" stroke-width="0.5" stroke-dasharray="3"/>
+    <text x="${padL-3}" y="${yy+3}" fill="var(--tx3)" font-size="7" text-anchor="end">${Math.round(spkMax*(1-i/3))}h</text>`;}
+  if(spk.length > 1){
+    const sx = i => padL + i * (W-padL) / (spk.length-1);
+    const sy = v => 4 + (1 - v/spkMax) * H;
+    // Area fill
+    svgSpk += `<polygon points="${sx(0)},${H+4} ${spk.map((s,i)=>`${sx(i)},${sy(s.horas)}`).join(' ')} ${sx(spk.length-1)},${H+4}" fill="var(--acc-bl)" opacity="0.08"/>`;
+    // Line
+    svgSpk += `<polyline points="${spk.map((s,i)=>`${sx(i)},${sy(s.horas)}`).join(' ')}" fill="none" stroke="var(--acc-bl)" stroke-width="2" stroke-linejoin="round"/>`;
+    // Dots
+    spk.forEach((s,i)=>{svgSpk+=`<circle cx="${sx(i)}" cy="${sy(s.horas)}" r="3" fill="var(--acc-bl)"/>`});
+    // X labels
+    spk.forEach((s,i)=>{if(i%2===0||i===spk.length-1) svgSpk+=`<text x="${sx(i)}" y="${H+padB}" fill="var(--tx3)" font-size="7" text-anchor="middle">S${s.semana_iso}</text>`;});
+  }
+  svgSpk += '</svg>';
+
+  document.getElementById('ftab-0').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+      <div class="kpi-card kpi-bl"><div class="kpi-val" style="color:${lc}">${k.carga_pct}%</div><div class="kpi-label">Carga mensual</div></div>
+      <div class="kpi-card kpi-gn"><div class="kpi-val">${k.horas_mes}h</div><div class="kpi-label">Horas imputadas mes</div></div>
+      <div class="kpi-card kpi-or"><div class="kpi-val">${k.num_proyectos}</div><div class="kpi-label">Proyectos activos</div></div>
+      <div class="kpi-card kpi-pu" style="--acc-pu:var(--acc-pu)"><div class="kpi-val" style="color:var(--acc-pu)">${k.coste_hora}€</div><div class="kpi-label">Coste / hora</div></div>
+    </div>
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:14px">
+      <div style="font-size:12px;font-weight:700;margin-bottom:8px">Horas últimas 12 semanas</div>
+      ${svgSpk}
+    </div>
+    <div style="font-size:11px;color:var(--tx2);display:flex;gap:16px">
+      <span>${d.total_tareas_activas} tareas activas</span>
+      <span>Última imputación: <strong style="color:var(--tx)">${d.ultima_imputacion || '—'}</strong></span>
+    </div>
+  `;
+}
+
+function renderFichaProyectos(d){
+  const prjs = d.proyectos || [];
+  if(!prjs.length){ document.getElementById('ftab-1').innerHTML='<div style="padding:30px;text-align:center;color:var(--tx3)">Sin proyectos asignados</div>'; return; }
+
+  document.getElementById('ftab-1').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px">
+      ${prjs.map(p => {
+        const pct = p.pct_consumido;
+        const col = pct>100?'var(--acc-rd)':pct>75?'var(--acc-or)':'var(--acc-gn)';
+        const badges = (p.tareas_activas||[]).map(t =>
+          `<span style="font-size:9px;padding:1px 6px;border-radius:4px;background:var(--bg-el);color:var(--acc-bl)">${t.columna} ×${t.count}</span>`
+        ).join(' ');
+        return `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px;overflow:hidden">
+          <div style="font-size:12px;font-weight:700;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.nombre)}</div>
+          <div style="font-size:9px;color:var(--tx3);margin-bottom:8px;font-family:'JetBrains Mono',monospace">${esc(p.id_proyecto)}</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <div style="flex:1;height:8px;background:var(--bg-el);border-radius:4px;overflow:hidden"><div style="height:100%;width:${Math.min(pct,100)}%;background:${col};border-radius:4px"></div></div>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:${col}">${pct}%</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--tx2);margin-bottom:6px">
+            <span>${p.horas_imputadas}h / ${p.capacidad_asignable}h</span>
+            <span>${p.num_imputaciones} imputaciones</span>
+          </div>
+          <div style="font-size:10px;color:var(--tx3);margin-bottom:4px">Última: ${p.ultima_imputacion || '—'}</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap">${badges || '<span style="font-size:9px;color:var(--tx3)">Sin tareas activas</span>'}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function switchFichaTab(n){
+  document.querySelectorAll('.ficha-tb').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.ficha-panel').forEach(p=>p.classList.remove('active'));
+  const btn = document.querySelector(`.ficha-tb[data-ftab="${n}"]`);
+  if(btn) btn.classList.add('active');
+  const panel = document.getElementById(`ftab-${n}`);
+  if(panel) panel.classList.add('active');
+  if(n===2) loadFichaKanban();
+  if(n===3) loadFichaSalas();
+  if(n===4 && fichaCache) renderFichaSkills(fichaCache);
+  if(n!==3) stopFichaChatPoll();
+}
+
+function closeFicha(){
+  document.getElementById('tecnicoFichaModal').classList.remove('open');
+  fichaActiveTecnico = null;
+  fichaActiveSala = null;
+  stopFichaChatPoll();
+}
+
+// Keep old modal funcs as no-ops (cleaned in F6)
+function closeTechModal(){ closeFicha(); }
+function closeDrawer(){ closeFicha(); }
+
+// ══════════════════════════════════════════════
+// TAB 2: SEGUIMIENTO PMBOK
+// ══════════════════════════════════════════════
+let pmbokData = null;
+
+function initPmbokSelector(){
+  const sel = document.getElementById('pmbok-prj-select');
+  if(!sel || sel.options.length > 1) return;
+  sel.innerHTML = '<option value="">— Seleccionar proyecto —</option>' +
+    ALL_PROJECTS.map(p=>`<option value="${p.id_proyecto}">${esc(p.id_proyecto)} — ${esc(p.nombre_proyecto).substring(0,45)}</option>`).join('');
+}
+
+async function loadPmbokFull(id){
+  if(!id){ document.getElementById('pmbok-loading').style.display='block'; document.getElementById('pmbok-content').style.display='none'; return; }
+  document.getElementById('pmbok-loading').innerHTML='<div style="padding:20px;color:var(--tx2)">Cargando PMBOK...</div>';
+  document.getElementById('pmbok-loading').style.display='block';
+  document.getElementById('pmbok-content').style.display='none';
+  const data = await apiFetch(`/api/pm/project/${encodeURIComponent(id)}/pmbok-full`);
+  if(!data){ document.getElementById('pmbok-loading').innerHTML='<div style="color:var(--acc-rd);padding:20px">Error cargando datos</div>'; return; }
+  pmbokData = data;
+  document.getElementById('pmbok-loading').style.display='none';
+  document.getElementById('pmbok-content').style.display='block';
+  renderPmbokAll(data);
+}
+
+function evmC(v){ return v>=1?'var(--acc-gn)':v>=0.9?'var(--acc-or)':'var(--acc-rd)'; }
+
+function renderPmbokAll(d){
+  const p=d.proyecto, e=d.evm;
+
+  // Estado badge + mini KPIs
+  document.getElementById('pmbok-estado-badge').innerHTML = estadoBadge(p.estado);
+  document.getElementById('pmbok-mini-kpis').innerHTML = `
+    <div style="background:var(--bg-el);padding:5px 10px;border-radius:6px;text-align:center"><div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:800;color:${evmC(e.cpi)}">${e.cpi}</div><div style="font-size:8px;color:var(--tx3)">CPI</div></div>
+    <div style="background:var(--bg-el);padding:5px 10px;border-radius:6px;text-align:center"><div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:800;color:${evmC(e.spi)}">${e.spi}</div><div style="font-size:8px;color:var(--tx3)">SPI</div></div>
+    <div style="background:var(--bg-el);padding:5px 10px;border-radius:6px;text-align:center"><div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:800">${p.pct_avance}%</div><div style="font-size:8px;color:var(--tx3)">Avance</div></div>
+    <div style="background:var(--bg-el);padding:5px 10px;border-radius:6px;text-align:center"><div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:800;color:${d.riesgo_nivel>12?'var(--acc-rd)':d.riesgo_nivel>6?'var(--acc-or)':'var(--acc-gn)'}">${d.riesgo_nivel}</div><div style="font-size:8px;color:var(--tx3)">Riesgo</div></div>
+  `;
+
+  renderEVM(d);
+  renderCalidad(d.calidad);
+  renderRiesgos(d.riesgos);
+  renderCronograma(d.cronograma);
+  renderImputaciones(d.imputaciones, p);
+  renderStakeholders(d.stakeholders);
+}
+
+// S1: EVM
+function renderEVM(d){
+  const e=d.evm, curve=d.evm_curve;
+  const fmt = v => v.toLocaleString('es-ES',{maximumFractionDigits:0})+'€';
+
+  // Curve-S SVG
+  const W=600, H=180, pad=40;
+  const maxVal = Math.max(...curve.map(c=>Math.max(c.pv,c.ev,c.ac)),1);
+  const sx = i => pad + i*(W-2*pad)/(curve.length-1);
+  const sy = v => H - pad - (v/maxVal)*(H-2*pad);
+  const line = (pts,col) => `<polyline points="${pts.map((p,i)=>`${sx(i)},${sy(p)}`).join(' ')}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round"/>`;
+  const dots = (pts,col) => pts.map((p,i)=>`<circle cx="${sx(i)}" cy="${sy(p)}" r="3" fill="${col}"/>`).join('');
+
+  let svgChart = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-height:200px">`;
+  // Grid lines
+  for(let i=0;i<5;i++){const yy=pad+i*(H-2*pad)/4; svgChart+=`<line x1="${pad}" y1="${yy}" x2="${W-pad}" y2="${yy}" stroke="var(--border)" stroke-width="0.5" stroke-dasharray="4"/><text x="${pad-4}" y="${yy+3}" fill="var(--tx3)" font-size="8" text-anchor="end">${fmt(maxVal*(1-i/4))}</text>`;}
+  // X labels
+  curve.forEach((c,i)=>{if(i%2===0) svgChart+=`<text x="${sx(i)}" y="${H-8}" fill="var(--tx3)" font-size="8" text-anchor="middle">${c.semana}</text>`;});
+  svgChart += line(curve.map(c=>c.pv),'var(--acc-bl)');
+  svgChart += line(curve.map(c=>c.ev),'var(--acc-gn)');
+  svgChart += line(curve.map(c=>c.ac),'var(--acc-rd)');
+  svgChart += dots(curve.map(c=>c.pv),'var(--acc-bl)');
+  svgChart += dots(curve.map(c=>c.ev),'var(--acc-gn)');
+  svgChart += dots(curve.map(c=>c.ac),'var(--acc-rd)');
+  svgChart += '</svg>';
+
+  const legend = `<div style="display:flex;gap:16px;justify-content:center;margin-top:6px;font-size:10px"><span style="color:var(--acc-bl)">● PV Planificado</span><span style="color:var(--acc-gn)">● EV Ganado</span><span style="color:var(--acc-rd)">● AC Real</span></div>`;
+
+  document.getElementById('pmbok-evm').innerHTML = `
+    <div class="pmbok-hdr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><h3>Earned Value Management</h3></div>
+    <div class="pmbok-body">
+      <div class="evm-grid">
+        <div class="evm-cell"><div class="evm-cell-label">PV</div><div class="evm-cell-val" style="color:var(--acc-bl)">${fmt(e.pv)}</div></div>
+        <div class="evm-cell"><div class="evm-cell-label">EV</div><div class="evm-cell-val" style="color:var(--acc-gn)">${fmt(e.ev)}</div></div>
+        <div class="evm-cell"><div class="evm-cell-label">AC</div><div class="evm-cell-val" style="color:var(--acc-rd)">${fmt(e.ac)}</div></div>
+        <div class="evm-cell"><div class="evm-cell-label">CPI</div><div class="evm-cell-val" style="color:${evmC(e.cpi)}">${e.cpi}</div></div>
+        <div class="evm-cell"><div class="evm-cell-label">SPI</div><div class="evm-cell-val" style="color:${evmC(e.spi)}">${e.spi}</div></div>
+        <div class="evm-cell"><div class="evm-cell-label">EAC</div><div class="evm-cell-val">${fmt(e.eac)}</div></div>
+        <div class="evm-cell"><div class="evm-cell-label">ETC</div><div class="evm-cell-val">${fmt(e.etc)}</div></div>
+        <div class="evm-cell"><div class="evm-cell-label">VAC</div><div class="evm-cell-val" style="color:${e.vac>=0?'var(--acc-gn)':'var(--acc-rd)'}">${e.vac>=0?'+':''}${fmt(e.vac)}</div></div>
+      </div>
+      <div style="margin-top:8px;padding:8px 12px;background:var(--bg-el);border-radius:8px;font-size:11px;color:var(--tx2)">${esc(e.interpretacion)}</div>
+      <div style="margin-top:14px"><div style="font-size:11px;font-weight:700;margin-bottom:6px">Curva S — Últimas 12 semanas</div>${svgChart}${legend}</div>
+    </div>`;
+}
+
+// S2: Calidad
+function renderCalidad(c){
+  const sevColor = s => s==='Crítica'?'var(--acc-rd)':s==='Alta'?'var(--acc-or)':s==='Media'?'var(--acc-bl)':'var(--tx2)';
+  document.getElementById('pmbok-calidad').innerHTML = `
+    <div class="pmbok-hdr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><h3>Calidad</h3></div>
+    <div class="pmbok-body">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px">
+        <div class="evm-cell"><div class="evm-cell-label">Defectos abiertos</div><div class="evm-cell-val" style="color:${c.defectos_abiertos>3?'var(--acc-rd)':'var(--acc-gn)'}">${c.defectos_abiertos}</div></div>
+        <div class="evm-cell"><div class="evm-cell-label">Cerrados</div><div class="evm-cell-val" style="color:var(--acc-gn)">${c.defectos_cerrados}</div></div>
+        <div class="evm-cell"><div class="evm-cell-label">Ratio calidad</div><div class="evm-cell-val">${c.ratio_calidad}%</div></div>
+        <div class="evm-cell"><div class="evm-cell-label">Retrabajo</div><div class="evm-cell-val" style="color:${c.tasa_retrabajo>10?'var(--acc-or)':'var(--acc-gn)'}">${c.tasa_retrabajo}%</div></div>
+      </div>
+      ${c.defectos_top.length ? '<div style="font-size:11px;font-weight:700;margin-bottom:6px">Top defectos</div>'+c.defectos_top.map(d=>`<div style="display:flex;align-items:center;gap:8px;padding:4px 8px;background:var(--bg-el);border-radius:6px;margin-bottom:3px;font-size:11px"><span style="width:6px;height:6px;border-radius:50%;background:${sevColor(d.severidad)};flex-shrink:0"></span><span style="font-family:'JetBrains Mono',monospace;color:var(--tx3);font-size:9px">${d.id}</span> ${esc(d.descripcion)} <span style="margin-left:auto;font-size:9px;font-weight:700;color:${sevColor(d.severidad)}">${d.severidad}</span></div>`).join('') : ''}
+    </div>`;
+}
+
+// S3: Riesgos
+function renderRiesgos(risks){
+  // Matriz 5x5
+  let matrix = '<div style="display:flex;gap:16px;flex-wrap:wrap">';
+  matrix += '<div><div style="font-size:10px;font-weight:700;margin-bottom:6px">Matriz Probabilidad × Impacto</div><div class="risk-matrix">';
+  // Y axis labels (probabilidad 5→1 top to bottom)
+  for(let prob=5;prob>=1;prob--){
+    matrix += `<div style="display:flex;align-items:center;justify-content:center;font-size:8px;color:var(--tx3)">${prob}</div>`;
+    for(let imp=1;imp<=5;imp++){
+      const score = prob*imp;
+      const cls = score>12?'hi':score>6?'med':'low';
+      const dots = risks.filter(r=>r.probabilidad===prob && r.impacto===imp);
+      matrix += `<div class="risk-cell ${cls}">${dots.map(r=>`<div class="risk-dot" style="background:${score>12?'var(--acc-rd)':score>6?'var(--acc-or)':'var(--acc-gn)'}"></div>`).join('')}${dots.length?'':'<span style="color:var(--tx3);opacity:.3">${score}</span>'}</div>`;
+    }
+  }
+  matrix += '<div></div>'; // empty corner
+  for(let i=1;i<=5;i++) matrix += `<div style="text-align:center;font-size:8px;color:var(--tx3)">${i}</div>`;
+  matrix += '</div><div style="font-size:8px;color:var(--tx3);text-align:center;margin-top:2px">Impacto →</div></div>';
+
+  // Risk list
+  matrix += '<div style="flex:1;min-width:280px"><div style="font-size:10px;font-weight:700;margin-bottom:6px">Top riesgos</div>';
+  risks.slice(0,5).forEach(r=>{
+    const col = r.score>12?'var(--acc-rd)':r.score>6?'var(--acc-or)':'var(--acc-gn)';
+    matrix += `<div style="background:var(--bg-el);border-radius:8px;padding:8px 10px;margin-bottom:4px;border-left:3px solid ${col}"><div style="display:flex;justify-content:space-between;font-size:11px;font-weight:600"><span>${esc(r.descripcion).substring(0,60)}</span><span style="font-family:'JetBrains Mono',monospace;color:${col};font-weight:800">${r.score}</span></div><div style="font-size:9px;color:var(--tx3);margin-top:2px">Mitigación: ${esc(r.mitigacion).substring(0,80)} · <span style="color:var(--acc-bl)">${r.owner}</span></div></div>`;
+  });
+  matrix += '</div></div>';
+
+  document.getElementById('pmbok-riesgos').innerHTML = `
+    <div class="pmbok-hdr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><h3>Riesgos</h3><span style="font-size:10px;color:var(--tx3);margin-left:auto">${risks.length} registrados</span></div>
+    <div class="pmbok-body">${matrix}</div>`;
+}
+
+// S4: Cronograma
+function renderCronograma(cr){
+  const hitos = cr.hitos;
+  let tlHtml = '<div style="position:relative;margin:12px 0"><div class="tl-line"></div><div class="timeline-bar">';
+  hitos.forEach(h=>{
+    const cls = h.estado==='COMPLETADO'?'done':h.estado==='EN_CURSO'?'current':'pending';
+    const col = cls==='done'?'var(--acc-gn)':cls==='current'?'var(--acc-bl)':'var(--tx3)';
+    tlHtml += `<div class="tl-node"><div class="tl-dot ${cls}"></div><div style="font-size:8px;font-weight:600;color:${col};margin-top:4px;text-align:center;max-width:80px">${h.nombre}</div><div style="font-size:7px;color:var(--tx3)">${h.fecha_objetivo}</div></div>`;
+  });
+  tlHtml += '</div></div>';
+
+  // Camino crítico
+  let ccHtml = '<div style="font-size:10px;font-weight:700;margin:12px 0 6px">Camino Crítico</div><table style="width:100%;font-size:11px;border-collapse:collapse">';
+  ccHtml += '<tr style="border-bottom:1px solid var(--border)"><th style="text-align:left;padding:4px 8px;color:var(--tx3);font-size:9px">Tarea</th><th style="padding:4px 8px;color:var(--tx3);font-size:9px">Fecha fin</th><th style="padding:4px 8px;color:var(--tx3);font-size:9px">Holgura</th><th style="padding:4px 8px;color:var(--tx3);font-size:9px">Crítico</th></tr>';
+  cr.camino_critico.forEach(t=>{
+    const col = t.en_critico?'var(--acc-rd)':'var(--tx)';
+    ccHtml += `<tr style="border-bottom:1px solid var(--border);${t.en_critico?'background:rgba(248,81,73,.04)':''}"><td style="padding:4px 8px;color:${col};font-weight:${t.en_critico?'700':'400'}">${t.tarea}</td><td style="padding:4px 8px;font-family:'JetBrains Mono',monospace;font-size:10px">${t.fecha_fin}</td><td style="padding:4px 8px;font-family:'JetBrains Mono',monospace;font-size:10px;color:${t.holgura_dias===0?'var(--acc-rd)':'var(--acc-gn)'}">${t.holgura_dias}d</td><td style="padding:4px 8px;text-align:center">${t.en_critico?'<span style="color:var(--acc-rd);font-weight:800">●</span>':'<span style="color:var(--acc-gn)">○</span>'}</td></tr>`;
+  });
+  ccHtml += '</table>';
+
+  document.getElementById('pmbok-cronograma').innerHTML = `
+    <div class="pmbok-hdr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><h3>Cronograma / Hitos</h3></div>
+    <div class="pmbok-body">${tlHtml}${ccHtml}</div>`;
+}
+
+// S5: Imputaciones
+function renderImputaciones(imp, prj){
+  const maxH = Math.max(...imp.top_imputadores.map(t=>t.horas),1);
+  let barsHtml = imp.top_imputadores.map(t=>{
+    const w = Math.round(t.horas/maxH*100);
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span style="width:120px;font-size:10px;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.tecnico)}</span><div style="flex:1;background:var(--bg-el);border-radius:4px;height:14px;overflow:hidden"><div style="width:${w}%;height:100%;background:var(--acc-bl);border-radius:4px"></div></div><span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;width:40px">${t.horas}h</span></div>`;
+  }).join('');
+
+  // Sparkline
+  const sparkMax = Math.max(...imp.serie_semanal.map(s=>s.horas),1);
+  const sparkH = 40;
+  let sparkHtml = '<div style="display:flex;align-items:flex-end;gap:3px;height:'+sparkH+'px">';
+  imp.serie_semanal.reverse().forEach(s=>{
+    const h = Math.max(4, Math.round(s.horas/sparkMax*sparkH));
+    sparkHtml += `<div style="display:flex;flex-direction:column;align-items:center;gap:2px"><div class="spark-bar" style="height:${h}px"></div><span style="font-size:7px;color:var(--tx3)">${s.semana}</span></div>`;
+  });
+  sparkHtml += '</div>';
+
+  const pctUsado = prj.bac > 0 ? Math.round(imp.total_horas_proyecto / Math.max(imp.horas_estimadas,1) * 100) : 0;
+
+  document.getElementById('pmbok-imputaciones').innerHTML = `
+    <div class="pmbok-hdr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><h3>Imputaciones de Horas</h3></div>
+    <div class="pmbok-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+        <div class="evm-cell"><div class="evm-cell-label">Total proyecto</div><div class="evm-cell-val">${imp.total_horas_proyecto}h</div></div>
+        <div class="evm-cell"><div class="evm-cell-label">Estimadas</div><div class="evm-cell-val">${imp.horas_estimadas}h</div></div>
+        <div class="evm-cell"><div class="evm-cell-label">Consumido</div><div class="evm-cell-val" style="color:${pctUsado>100?'var(--acc-rd)':pctUsado>80?'var(--acc-or)':'var(--acc-gn)'}">${pctUsado}%</div></div>
+      </div>
+      <div style="display:flex;gap:20px;flex-wrap:wrap">
+        <div style="flex:1;min-width:250px"><div style="font-size:10px;font-weight:700;margin-bottom:6px">Top imputadores</div>${barsHtml}</div>
+        <div><div style="font-size:10px;font-weight:700;margin-bottom:6px">Serie semanal</div>${sparkHtml}</div>
+      </div>
+    </div>`;
+}
+
+// S6: Stakeholders
+function renderStakeholders(sths){
+  // Mendelow matrix: poder(Y) × interés(X)
+  // Q1: Alto poder, Bajo interés = "Mantener satisfecho"
+  // Q2: Alto poder, Alto interés = "Gestionar de cerca"
+  // Q3: Bajo poder, Bajo interés = "Monitorizar"
+  // Q4: Bajo poder, Alto interés = "Mantener informado"
+  const q1=sths.filter(s=>s.poder>=3 && s.interes<3);
+  const q2=sths.filter(s=>s.poder>=3 && s.interes>=3);
+  const q3=sths.filter(s=>s.poder<3 && s.interes<3);
+  const q4=sths.filter(s=>s.poder<3 && s.interes>=3);
+
+  const dotHtml = list => list.map(s=>`<div class="sth-dot"><span style="width:6px;height:6px;border-radius:50%;background:var(--acc-bl);flex-shrink:0"></span>${esc(s.nombre)}</div>`).join('');
+
+  document.getElementById('pmbok-stakeholders').innerHTML = `
+    <div class="pmbok-hdr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><h3>Stakeholders — Matriz Mendelow</h3><span style="font-size:10px;color:var(--tx3);margin-left:auto">${sths.length} identificados</span></div>
+    <div class="pmbok-body">
+      <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px"><span style="font-size:9px;color:var(--tx3);writing-mode:vertical-lr;transform:rotate(180deg);letter-spacing:1px">PODER ↑</span>
+        <div class="sth-matrix">
+          <div class="sth-quad" style="border-left:2px solid var(--acc-or)"><div class="sth-quad-title">Mantener satisfecho</div>${dotHtml(q1)}</div>
+          <div class="sth-quad" style="border-left:2px solid var(--acc-rd)"><div class="sth-quad-title">Gestionar de cerca</div>${dotHtml(q2)}</div>
+          <div class="sth-quad" style="border-left:2px solid var(--acc-gn)"><div class="sth-quad-title">Monitorizar</div>${dotHtml(q3)}</div>
+          <div class="sth-quad" style="border-left:2px solid var(--acc-bl)"><div class="sth-quad-title">Mantener informado</div>${dotHtml(q4)}</div>
+        </div>
+      </div>
+      <div style="text-align:center;font-size:9px;color:var(--tx3);letter-spacing:1px">INTERÉS →</div>
+    </div>`;
+}
+
+// ══════════════════════════════════════════════
+// TAB 3: CHAT WAR ROOM
+// ══════════════════════════════════════════════
+let chatRooms = [];
+let activeSala = null;
+let chatPollTimer = null;
+
+async function loadChatRooms(){
+  try {
+    const data = await apiFetch('/api/pm/chat/rooms?pm_id=' + encodeURIComponent(PM_ID));
+    if(!data){ document.getElementById('chat-rooms-list').innerHTML='<div style="padding:20px;text-align:center;color:var(--tx3)">Sin salas disponibles</div>'; return; }
+    chatRooms = data;
+    renderChatRooms();
+  } catch(e){ console.warn('loadChatRooms error:', e); }
+}
+
+function timeAgo(ts){
+  if(!ts) return '';
+  const diff = (Date.now() - new Date(ts).getTime()) / 1000;
+  if(diff < 60) return 'ahora';
+  if(diff < 3600) return Math.floor(diff/60) + 'min';
+  if(diff < 86400) return Math.floor(diff/3600) + 'h';
+  if(diff < 604800) return Math.floor(diff/86400) + 'd';
+  return new Date(ts).toLocaleDateString('es-ES',{day:'numeric',month:'short'});
+}
+
+function filterChatRooms(){ renderChatRooms(); }
+
+function renderChatRooms(){
+  const search = (document.getElementById('chat-room-search').value||'').toLowerCase();
+  const filtered = search ? chatRooms.filter(r=>(r.nombre_proyecto||'').toLowerCase().includes(search)) : chatRooms;
+  const list = document.getElementById('chat-rooms-list');
+  if(!filtered.length){ list.innerHTML='<div style="padding:20px;text-align:center;color:var(--tx3);font-size:11px">Sin salas</div>'; return; }
+  list.innerHTML = filtered.map(r=>{
+    const isActive = activeSala === r.id_sala;
+    const last = r.ultimo_mensaje;
+    const unread = r.num_no_leidos || 0;
+    return `<div class="chat-room ${isActive?'active':''}" onclick="openChatRoom(${r.id_sala})">
+      <div class="chat-room-info">
+        <div class="chat-room-name">${esc(r.nombre_proyecto)}</div>
+        ${last ? `<div class="chat-room-last"><strong>${esc((last.autor||'').split(' ')[0])}</strong>: ${esc((last.texto||'').substring(0,40))}</div>` : '<div class="chat-room-last" style="font-style:italic">Sin mensajes</div>'}
+      </div>
+      <div class="chat-room-meta">
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
+          ${last ? `<div class="chat-room-time">${timeAgo(last.timestamp)}</div>` : ''}
+          ${unread > 0 ? `<div class="chat-unread">${unread}</div>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function openChatRoom(salaId){
+  activeSala = salaId;
+  renderChatRooms();
+  const room = chatRooms.find(r=>r.id_sala===salaId);
+
+  // Header
+  document.getElementById('chat-panel-header').innerHTML = `
+    <div style="font-size:13px;font-weight:700">${esc(room ? room.nombre_proyecto : '')}</div>
+    ${room ? estadoBadge(room.estado_proyecto) : ''}
+    <span style="font-size:10px;color:var(--tx3);margin-left:auto">${room ? room.num_participantes : 0} participantes · ${room ? room.num_mensajes : 0} mensajes</span>
+  `;
+  document.getElementById('chat-input-area').style.display = 'block';
+
+  await refreshMessages();
+  // Start polling
+  if(chatPollTimer) clearInterval(chatPollTimer);
+  chatPollTimer = setInterval(()=>{ if(document.hasFocus() && activeSala===salaId) refreshMessages(); }, 5000);
+}
+
+async function refreshMessages(){
+  if(!activeSala) return;
+  const msgs = await apiFetch(`/api/pm/chat/room/${activeSala}/messages?limit=100`);
+  if(!msgs) return;
+  const container = document.getElementById('chat-messages');
+  const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 50;
+
+  container.innerHTML = msgs.map(m=>{
+    const isMine = m.autor_id === PM_ID;
+    const rolCls = `role-${m.autor_rol}`;
+    const rolLabel = m.autor_rol === 'pm' ? 'PM' : m.autor_rol === 'tecnico' ? 'TÉC' : m.autor_rol === 'gobernador' ? 'STK' : 'AG';
+    const time = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}) : '';
+    const dateStr = m.timestamp ? new Date(m.timestamp).toLocaleDateString('es-ES',{day:'numeric',month:'short'}) : '';
+    return `<div style="display:flex;flex-direction:column;align-items:${isMine?'flex-end':'flex-start'}">
+      <div class="chat-bubble ${isMine?'mine':'other'}">
+        ${!isMine ? `<div class="chat-bubble-author"><span class="chat-role-badge ${rolCls}">${rolLabel}</span> ${esc(m.autor_nombre)}</div>` : ''}
+        <div>${esc(m.texto)}</div>
+        <div class="chat-bubble-time">${dateStr} ${time}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  if(wasAtBottom) container.scrollTop = container.scrollHeight;
+}
+
+async function sendChatMsg(){
+  const input = document.getElementById('chat-input');
+  const texto = input.value.trim();
+  if(!texto || !activeSala) return;
+  input.value = '';
+  try {
+    await fetch(API + `/api/pm/chat/room/${activeSala}/send`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({autor_id: PM_ID, texto: texto})
+    });
+    await refreshMessages();
+    document.getElementById('chat-messages').scrollTop = 999999;
+    loadChatRooms();
+  } catch(e){ console.warn('Send error:', e); input.value = texto; }
+}
+
+// ── Gantt edit modal ──
+let ganttEditTid = null;
+
+function openGanttEdit(tid){
+  const t = ganttData?.tareas?.find(x=>x.id===tid);
+  if(!t) return;
+  ganttEditTid = tid;
+
+  const columnas = ['Backlog','Análisis','En Progreso','Code Review','Testing','Despliegue','Bloqueado','Completado'];
+  const prioridades = ['Crítica','Alta','Media','Baja'];
+  const pool = ganttData?.tecnicos_pool || [];
+
+  document.getElementById('gantt-edit-body').innerHTML = `
+    <label style="margin-top:0">Título</label>
+    <input type="text" id="ge-titulo" value="${esc(t.titulo)}">
+
+    <label>Proyecto</label>
+    <div style="background:var(--bg-el);padding:7px 10px;border-radius:6px;font-size:12px;color:var(--tx2)">${esc(t.id_proyecto)}</div>
+
+    <div class="gantt-edit-row">
+      <div>
+        <label>Técnico</label>
+        <select id="ge-tecnico">
+          <option value="">— Sin asignar —</option>
+          ${pool.map(p=>`<option value="${p.id}" ${p.id===t.id_tecnico?'selected':''}>${esc(p.nombre)} (${esc(p.skill)})</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label>Columna</label>
+        <select id="ge-columna">
+          ${columnas.map(c=>`<option ${c===t.columna?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+
+    <div class="gantt-edit-row">
+      <div>
+        <label>Prioridad</label>
+        <select id="ge-prioridad">
+          ${prioridades.map(p=>`<option ${p===t.prioridad?'selected':''}>${p}</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label>Horas estimadas</label>
+        <input type="number" id="ge-horas" value="${t.horas_estimadas}" min="0.5" step="0.5">
+      </div>
+    </div>
+
+    <div class="gantt-edit-row">
+      <div>
+        <label>% Completado</label>
+        <input type="number" id="ge-pct" value="${t.pct_completado}" min="0" max="100" step="5">
+      </div>
+      <div></div>
+    </div>
+
+    <div class="gantt-edit-row">
+      <div>
+        <label>Fecha inicio</label>
+        <input type="date" id="ge-inicio" value="${t.inicio}">
+      </div>
+      <div>
+        <label>Fecha fin</label>
+        <input type="date" id="ge-fin" value="${t.fin}">
+      </div>
+    </div>
+
+    ${(t.historial && t.historial.length) ? `<details style="margin-top:12px;border-top:1px solid var(--border);padding-top:8px">
+      <summary style="font-size:10px;font-weight:700;color:var(--tx3);cursor:pointer">Historial (${t.historial.length})</summary>
+      <div style="margin-top:6px;max-height:120px;overflow-y:auto">${t.historial.slice().reverse().map(h => {
+        const ts = h.ts ? new Date(h.ts).toLocaleString('es-ES',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
+        const keys = Object.keys(h.changes||{}).filter(k=>k!=='gantt').join(', ');
+        const ganttKeys = h.changes?.gantt ? Object.keys(h.changes.gantt).map(k=>'gantt.'+k).join(', ') : '';
+        const allKeys = [keys, ganttKeys].filter(Boolean).join(', ');
+        return `<div style="font-size:9px;padding:3px 0;border-bottom:1px solid rgba(48,54,61,.3);color:var(--tx2)"><span style="font-family:'JetBrains Mono',monospace;color:var(--tx3)">${ts}</span> — ${allKeys||'sin detalle'}</div>`;
+      }).join('')}</div>
+    </details>` : ''}
+    <div class="gantt-edit-btns">
+      <button class="gantt-cancel" onclick="closeGanttEdit()">Cancelar</button>
+      <button class="gantt-save" onclick="saveGanttEdit()">Guardar</button>
+    </div>
+  `;
+  document.getElementById('gantt-edit-overlay').classList.add('open');
+}
+
+function closeGanttEdit(){
+  document.getElementById('gantt-edit-overlay').classList.remove('open');
+  ganttEditTid = null;
+}
+
+async function saveGanttEdit(){
+  if(!ganttEditTid) return;
+  const titulo = document.getElementById('ge-titulo').value.trim();
+  const id_tecnico = document.getElementById('ge-tecnico').value;
+  const columna = document.getElementById('ge-columna').value;
+  const prioridad = document.getElementById('ge-prioridad').value;
+  const horas = parseFloat(document.getElementById('ge-horas').value);
+  const pct = parseInt(document.getElementById('ge-pct').value);
+  const inicio = document.getElementById('ge-inicio').value;
+  const fin = document.getElementById('ge-fin').value;
+
+  // Validation
+  if(!titulo){ alert('Título requerido'); return; }
+  if(horas <= 0){ alert('Horas debe ser > 0'); return; }
+  if(pct < 0 || pct > 100){ alert('% debe ser 0-100'); return; }
+  if(fin < inicio){ alert('Fecha fin debe ser >= inicio'); return; }
+
+  const body = {
+    titulo, id_tecnico: id_tecnico || null, columna, prioridad,
+    horas_estimadas: horas,
+    gantt: { start: inicio, end: fin, pct: pct }
+  };
+
+  try {
+    const resp = await fetch(API + `/api/pm/gantt/tarea/${encodeURIComponent(ganttEditTid)}`, {
+      method: 'PATCH', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    if(resp.ok){
+      // Update local cache
+      const t = ganttData.tareas.find(x=>x.id===ganttEditTid);
+      if(t){
+        t.titulo = titulo; t.id_tecnico = id_tecnico;
+        t.tecnico_nombre = (ganttData.tecnicos_pool.find(p=>p.id===id_tecnico)||{}).nombre || id_tecnico;
+        t.columna = columna; t.prioridad = prioridad;
+        t.horas_estimadas = horas; t.pct_completado = pct;
+        t.inicio = inicio; t.fin = fin; t.fuente_fechas = 'stored';
+      }
+      closeGanttEdit();
+      renderGantt();
+      // Toast
+      const toast = document.getElementById('gantt-toast-ok');
+      toast.style.display = 'block';
+      setTimeout(()=>{toast.style.display='none'},2500);
+    } else {
+      const err = await resp.json().catch(()=>({}));
+      alert('Error: ' + (err.detail || resp.status));
+    }
+  } catch(e){ alert('Error de conexión'); console.warn(e); }
+}
+
+// ══════════════════════════════════════════════
+// FICHA TAB 2: TAREAS KANBAN
+// ══════════════════════════════════════════════
+let fichaKanbanCache = null;
+let fichaKanbanFilter = '';
+
+async function loadFichaKanban(){
+  if(!fichaActiveTecnico) return;
+  if(fichaKanbanCache && fichaKanbanCache._tid === fichaActiveTecnico){
+    renderFichaKanban(fichaKanbanCache); return;
+  }
+  document.getElementById('ftab-2').innerHTML='<div style="padding:30px;text-align:center;color:var(--tx2)">Cargando tareas...</div>';
+  try {
+    const d = await apiFetch(`/api/pm/team/tecnico/${encodeURIComponent(fichaActiveTecnico)}/kanban`);
+    if(!d){document.getElementById('ftab-2').innerHTML='<div style="color:var(--acc-rd);padding:20px">Error</div>';return;}
+    d._tid = fichaActiveTecnico;
+    fichaKanbanCache = d;
+    renderFichaKanban(d);
+  } catch(e){document.getElementById('ftab-2').innerHTML='<div style="color:var(--acc-rd);padding:20px">Error de conexión</div>';}
+}
+
+function renderFichaKanban(d){
+  const tareas = fichaKanbanFilter ? d.tareas.filter(t=>t.tipo===fichaKanbanFilter) : d.tareas;
+  const activas = tareas.filter(t=>!['Completado','Done','Backlog'].includes(t.columna)).length;
+  const cerradas = tareas.filter(t=>['Completado','Done'].includes(t.columna)).length;
+
+  // Fixed column order + dynamic extras
+  const fixedCols = ['Backlog','En Progreso','Testing'];
+  const endCols = ['Completado'];
+  const midCols = d.columnas_existentes.filter(c=>!fixedCols.includes(c)&&!endCols.includes(c)&&c!=='Done');
+  const allCols = [...fixedCols, ...midCols, ...endCols];
+
+  const colCls = c => ({
+    'Backlog':'col-backlog','En Progreso':'col-progress','Testing':'col-testing',
+    'Completado':'col-done','Done':'col-done','Code Review':'col-review',
+    'Despliegue':'col-deploy','Bloqueado':'col-blocked','Análisis':'col-analisis'
+  }[c]||'');
+
+  const prioCls = p => ({'Crítica':'prio-critica','Alta':'prio-alta','Media':'prio-media','Baja':'prio-baja'}[p]||'');
+  const tipoBg = t => t==='RUN'?'rgba(248,81,73,.12)':'rgba(63,185,80,.12)';
+  const tipoCol = t => t==='RUN'?'var(--acc-rd)':'var(--acc-gn)';
+
+  // Header
+  let hdr = `<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+    <span style="font-size:12px;font-weight:700">${tareas.length} tareas</span>
+    <span style="font-size:11px;color:var(--tx2)">${activas} activas · ${cerradas} cerradas</span>
+    <div style="flex:1"></div>
+    <div class="filter-chips">
+      <div class="chip ${fichaKanbanFilter===''?'a':''}" onclick="fichaKanbanFilter='';renderFichaKanban(fichaKanbanCache)">Todas</div>
+      <div class="chip ${fichaKanbanFilter==='RUN'?'a':''}" onclick="fichaKanbanFilter='RUN';renderFichaKanban(fichaKanbanCache)">RUN</div>
+      <div class="chip ${fichaKanbanFilter==='BUILD'?'a':''}" onclick="fichaKanbanFilter='BUILD';renderFichaKanban(fichaKanbanCache)">BUILD</div>
+    </div>
+  </div>`;
+
+  // Columns
+  let colsHtml = '<div class="fkan-cols">';
+  for(const col of allCols){
+    const colTareas = tareas.filter(t=>t.columna===col);
+    colsHtml += `<div class="fkan-col">
+      <div class="fkan-col-hdr ${colCls(col)}"><span>${col}</span><span style="font-size:10px;color:var(--tx3);margin-left:auto">${colTareas.length}</span></div>
+      <div class="fkan-drop" data-col="${col}"
+        ondragover="event.preventDefault();this.classList.add('drag-over')"
+        ondragleave="this.classList.remove('drag-over')"
+        ondrop="dropKanCard(event,this)">
+        ${colTareas.map(t => {
+          const prjShort = (t.id_proyecto||'').split(' ')[0];
+          const incShort = (t.id_incidencia||'').split('-').slice(-1)[0];
+          return `<div class="fkan-card ${prioCls(t.prioridad)}" draggable="true" data-id="${t.id}"
+              ondragstart="event.dataTransfer.setData('text/plain','${t.id}');this.classList.add('dragging')"
+              ondragend="this.classList.remove('dragging')">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+              <div style="display:flex;gap:4px">
+                <span style="font-size:8px;padding:1px 5px;border-radius:3px;background:${tipoBg(t.tipo)};color:${tipoCol(t.tipo)};font-weight:700">${t.tipo}</span>
+                <span style="font-size:8px;padding:1px 5px;border-radius:3px;background:var(--bg-el);color:var(--tx2)">${t.prioridad}</span>
+              </div>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--tx3)">${t.horas_estimadas}h</span>
+            </div>
+            <div style="font-size:11px;font-weight:600;line-height:1.3;margin-bottom:3px">${esc(t.titulo).substring(0,50)}</div>
+            <div style="font-size:9px;color:var(--tx3)">${prjShort}${incShort?' · '+incShort:''}</div>
+            ${t.checklist_total?`<div style="font-size:8px;color:var(--tx3);margin-top:2px">✓${t.checklist_total} pasos${t.skill_requerida?' · '+esc(t.skill_requerida).substring(0,25):''}</div>`:''}
+            <div style="text-align:right;margin-top:2px"><button onclick="event.stopPropagation();toggleKanExpand('${t.id}')" style="background:none;border:none;color:var(--acc-bl);font-size:9px;cursor:pointer;padding:0">▼ detalle</button></div>
+            <div class="fkan-expand" id="kx-${t.id.replace(/[^a-zA-Z0-9]/g,'_')}"></div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+  colsHtml += '</div>';
+  document.getElementById('ftab-2').innerHTML = hdr + colsHtml;
+}
+
+function toggleKanExpand(id){
+  const safeId = id.replace(/[^a-zA-Z0-9]/g,'_');
+  const el = document.getElementById('kx-'+safeId);
+  if(!el) return;
+  if(el.classList.contains('open')){ el.classList.remove('open'); return; }
+  // Find task data
+  const t = fichaKanbanCache?.tareas?.find(x=>x.id===id);
+  if(!t||!t.descripcion_full){ el.innerHTML='<div style="color:var(--tx3)">Sin detalle</div>'; el.classList.add('open'); return; }
+  const instr = t.descripcion_full.instrucciones || [];
+  if(!instr.length){ el.innerHTML='<div style="color:var(--tx3)">Sin instrucciones</div>'; el.classList.add('open'); return; }
+  el.innerHTML = instr.map((s,i)=>`<div style="margin-bottom:4px"><span style="color:var(--acc-bl);font-weight:700;margin-right:4px">${s.paso||i+1}.</span><span style="font-weight:600">${esc(s.titulo||'')}</span><div style="color:var(--tx3);margin-left:16px">${esc(s.detalle||'')}</div></div>`).join('');
+  el.classList.add('open');
+}
+
+function dropKanCard(ev,dropzone){
+  ev.preventDefault();
+  dropzone.classList.remove('drag-over');
+  const cardId = ev.dataTransfer.getData('text/plain');
+  const card = document.querySelector(`.fkan-card[data-id="${cardId}"]`);
+  if(!card) return;
+  dropzone.appendChild(card);
+  // Show toast
+  const toast = document.getElementById('fkan-toast');
+  toast.style.display = 'block';
+  setTimeout(()=>{toast.style.display='none'},3000);
+}
+
+// ══════════════════════════════════════════════
+// FICHA TAB 3: SALAS CHAT COMPARTIDAS
+// ══════════════════════════════════════════════
+let fichaSalasCache = null;
+let fichaActiveSala = null;
+let fichaChatPoll = null;
+
+async function loadFichaSalas(){
+  if(!fichaActiveTecnico) return;
+  if(fichaSalasCache && fichaSalasCache._tid === fichaActiveTecnico){
+    renderFichaSalas(fichaSalasCache); return;
+  }
+  document.getElementById('ftab-3').innerHTML='<div style="padding:30px;text-align:center;color:var(--tx2)">Cargando salas...</div>';
+  try {
+    const d = await apiFetch(`/api/pm/team/tecnico/${encodeURIComponent(fichaActiveTecnico)}/salas-compartidas?pm_id=${encodeURIComponent(PM_ID)}`);
+    if(!d){document.getElementById('ftab-3').innerHTML='<div style="color:var(--acc-rd);padding:20px">Error</div>';return;}
+    d._tid = fichaActiveTecnico;
+    fichaSalasCache = d;
+    renderFichaSalas(d);
+  } catch(e){document.getElementById('ftab-3').innerHTML='<div style="color:var(--acc-rd);padding:20px">Error de conexión</div>';}
+}
+
+function renderFichaSalas(d){
+  const salas = d.salas || [];
+  if(!salas.length){
+    document.getElementById('ftab-3').innerHTML=`<div style="text-align:center;padding:60px;color:var(--tx2)">
+      <svg width="40" height="40" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" style="opacity:.3;margin-bottom:8px"><path d="M2 3h12v8H6l-3 2.5V11H2z"/></svg>
+      <div style="font-size:13px;font-weight:600">Sin proyectos compartidos</div>
+      <div style="font-size:11px;margin-top:4px;color:var(--tx3)">Cuando el técnico colabore en alguno de tus proyectos,<br>las conversaciones aparecerán aquí.</div>
+    </div>`; return;
+  }
+
+  let sidebar = salas.map(s => {
+    const isActive = fichaActiveSala === s.id_sala;
+    const tipoBg = s.tipo==='build'?'rgba(63,185,80,.12)':'rgba(248,81,73,.12)';
+    const tipoCol = s.tipo==='build'?'var(--acc-gn)':'var(--acc-rd)';
+    return `<div class="ficha-sala-card ${isActive?'active':''}" onclick="openFichaSala(${s.id_sala})">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+        <span style="font-size:8px;padding:1px 5px;border-radius:3px;background:${tipoBg};color:${tipoCol};font-weight:700">${s.tipo.toUpperCase()}</span>
+        <span style="font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc((s.titulo_referencia||'').substring(0,35))}</span>
+      </div>
+      ${s.ultimo_mensaje_preview?`<div style="font-size:10px;color:var(--tx3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">"${esc(s.ultimo_mensaje_preview)}"</div>`:''}
+      <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--tx3);margin-top:3px">
+        <span>${s.ultimo_mensaje_at?timeAgo(s.ultimo_mensaje_at):''} · ${s.num_mensajes} msgs</span>
+      </div>
+      <div style="font-size:8px;color:var(--tx3);margin-top:2px;font-style:italic">${esc(s.compartido_porque)}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('ftab-3').innerHTML = `<div class="ficha-chat-wrap">
+    <div class="ficha-chat-sidebar">${sidebar}</div>
+    <div class="ficha-chat-main">
+      <div id="ficha-chat-hdr" style="padding:10px 16px;border-bottom:1px solid var(--border);background:var(--bg2);font-size:12px;color:var(--tx2)">Selecciona una conversación</div>
+      <div id="ficha-chat-msgs" style="flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:6px"></div>
+      <div id="ficha-chat-input" style="padding:10px 16px;border-top:1px solid var(--border);background:var(--bg2);display:none">
+        <div style="display:flex;gap:8px">
+          <textarea id="ficha-chat-text" rows="2" placeholder="Mensaje... (Cmd+Enter)" style="flex:1;background:var(--bg-el);color:var(--tx);border:1px solid var(--border);padding:8px 10px;border-radius:8px;font-size:12px;font-family:inherit;resize:none" onkeydown="if((event.metaKey||event.ctrlKey)&&event.key==='Enter'){event.preventDefault();sendFichaChat();}"></textarea>
+          <button onclick="sendFichaChat()" style="background:var(--acc-bl);color:#fff;border:none;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;align-self:flex-end">Enviar</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function openFichaSala(salaId){
+  fichaActiveSala = salaId;
+  // Re-render sidebar to update active state
+  if(fichaSalasCache) renderFichaSalas(fichaSalasCache);
+
+  const sala = (fichaSalasCache?.salas||[]).find(s=>s.id_sala===salaId);
+  const hdr = document.getElementById('ficha-chat-hdr');
+  if(hdr && sala){
+    const tipoBg = sala.tipo==='build'?'rgba(63,185,80,.12)':'rgba(248,81,73,.12)';
+    const tipoCol = sala.tipo==='build'?'var(--acc-gn)':'var(--acc-rd)';
+    hdr.innerHTML=`<span style="font-size:8px;padding:1px 5px;border-radius:3px;background:${tipoBg};color:${tipoCol};font-weight:700;margin-right:6px">${sala.tipo.toUpperCase()}</span><span style="font-weight:700">${esc(sala.titulo_referencia||sala.id_referencia)}</span><span style="margin-left:auto;font-size:10px;color:var(--tx3)">${sala.num_mensajes} mensajes</span>`;
+  }
+  document.getElementById('ficha-chat-input').style.display='block';
+  await refreshFichaChat();
+  // Start polling
+  stopFichaChatPoll();
+  fichaChatPoll = setInterval(()=>{ if(document.hasFocus()&&fichaActiveSala===salaId) refreshFichaChat(); }, 5000);
+}
+
+async function refreshFichaChat(){
+  if(!fichaActiveSala) return;
+  const msgs = await apiFetch(`/api/pm/chat/room/${fichaActiveSala}/messages?limit=100`);
+  if(!msgs) return;
+  const container = document.getElementById('ficha-chat-msgs');
+  if(!container) return;
+  const wasBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 50;
+  container.innerHTML = msgs.map(m => {
+    const isMine = m.autor_id === PM_ID;
+    const rolCls = `role-${m.autor_rol}`;
+    const rolLabel = m.autor_rol==='pm'?'PM':m.autor_rol==='tecnico'?'TÉC':m.autor_rol==='gobernador'?'STK':'AG';
+    const time = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}) : '';
+    const dateStr = m.timestamp ? new Date(m.timestamp).toLocaleDateString('es-ES',{day:'numeric',month:'short'}) : '';
+    return `<div style="display:flex;flex-direction:column;align-items:${isMine?'flex-end':'flex-start'}">
+      <div class="chat-bubble ${isMine?'mine':'other'}">
+        ${!isMine?`<div class="chat-bubble-author"><span class="chat-role-badge ${rolCls}">${rolLabel}</span> ${esc(m.autor_nombre)}</div>`:''}
+        <div>${esc(m.texto)}</div>
+        <div class="chat-bubble-time">${dateStr} ${time}</div>
+      </div>
+    </div>`;
+  }).join('');
+  if(wasBottom) container.scrollTop = container.scrollHeight;
+}
+
+async function sendFichaChat(){
+  const input = document.getElementById('ficha-chat-text');
+  const texto = input.value.trim();
+  if(!texto||!fichaActiveSala) return;
+  input.value = '';
+  try {
+    await fetch(API+`/api/pm/chat/room/${fichaActiveSala}/send`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({autor_id: PM_ID, texto: texto})
+    });
+    await refreshFichaChat();
+    const c = document.getElementById('ficha-chat-msgs');
+    if(c) c.scrollTop = 999999;
+  } catch(e){ console.warn('sendFichaChat error:',e); input.value = texto; }
+}
+
+function stopFichaChatPoll(){ if(fichaChatPoll){clearInterval(fichaChatPoll);fichaChatPoll=null;} }
+
+// ══════════════════════════════════════════════
+// FICHA TAB 4: SKILLS
+// ══════════════════════════════════════════════
+function renderFichaSkills(d){
+  const skills = (d.skills || []).map(s => typeof s === 'string' ? s : (s.nombre || JSON.stringify(s)));
+  const panel = document.getElementById('ftab-4');
+
+  if(!skills.length){
+    panel.innerHTML='<div style="text-align:center;padding:60px;color:var(--tx2)"><div style="font-size:13px;font-weight:600">Sin skills registrados</div></div>';
+    return;
+  }
+
+  // Categories by prefix before ":"
+  const cats = {};
+  skills.forEach(s => {
+    const parts = s.split(':');
+    const cat = parts.length > 1 ? parts[0].trim() : 'Otros';
+    if(!cats[cat]) cats[cat] = [];
+    cats[cat].push(s);
+  });
+  const catEntries = Object.entries(cats).sort((a,b) => b[1].length - a[1].length);
+  const maxCat = catEntries.length > 0 ? catEntries[0][1].length : 1;
+
+  // Category colors
+  const catColors = ['var(--acc-bl)','var(--acc-gn)','var(--acc-or)','var(--acc-pu)','var(--acc-cy)','var(--acc-rd)'];
+
+  panel.innerHTML = `
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px">
+      <div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;margin-bottom:8px">Skill principal</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="font-size:18px;font-weight:700;color:var(--acc-bl)">${esc(d.skill_principal || '—')}</div>
+        <span style="font-size:11px;color:var(--tx2)">Silo: ${esc(d.silo)} · Nivel: ${esc(d.nivel)}</span>
+      </div>
+    </div>
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px">
+      <div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;margin-bottom:8px">Skills secundarios (${skills.length})</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px">
+        ${skills.map(s => {
+          const cat = s.split(':')[0].trim();
+          const ci = catEntries.findIndex(e => e[0] === cat);
+          const col = catColors[ci % catColors.length] || 'var(--tx2)';
+          return `<span style="font-size:10px;padding:3px 8px;border-radius:5px;background:var(--bg-el);border:1px solid var(--border);color:var(--tx2)" title="${esc(s)}"><span style="color:${col};font-weight:700">${esc(cat)}:</span> ${esc(s.includes(':')?s.split(':').slice(1).join(':').trim():s)}</span>`;
+        }).join('')}
+      </div>
+    </div>
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px">
+      <div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;margin-bottom:10px">Distribución por categoría</div>
+      ${catEntries.map((e,i) => {
+        const [cat, items] = e;
+        const w = Math.round(items.length / maxCat * 100);
+        const col = catColors[i % catColors.length];
+        return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <span style="width:70px;font-size:10px;text-align:right;font-weight:600;color:${col};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(cat)}</span>
+          <div style="flex:1;height:12px;background:var(--bg-el);border-radius:6px;overflow:hidden"><div style="height:100%;width:${w}%;background:${col};border-radius:6px;opacity:.7"></div></div>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;width:20px">${items.length}</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+// ══════════════════════════════════════════════
+// TAB 2: GANTT CHART
+// ══════════════════════════════════════════════
+let ganttData = null;
+let ganttZoom = 'mes';
+const GANTT_DAY_W = {dia:16, semana:8, mes:4};
+const ROW_H = 28;
+const HDR_H = 36;
+
+function setGanttZoom(z){
+  ganttZoom = z;
+  document.querySelectorAll('.gantt-zoom-btn').forEach(b=>b.classList.remove('active'));
+  const btn = document.querySelector(`.gantt-zoom-btn[data-gz="${z}"]`);
+  if(btn) btn.classList.add('active');
+  if(ganttData) renderGantt();
+}
+
+async function loadGantt(){
+  if(ganttData) { renderGantt(); return; }
+  document.getElementById('gantt-tree').innerHTML='<div style="padding:20px;text-align:center;color:var(--tx3)">Cargando...</div>';
+  const d = await apiFetch('/api/pm/gantt?pm_id=' + encodeURIComponent(PM_ID));
+  if(!d){ document.getElementById('gantt-tree').innerHTML='<div style="color:var(--acc-rd);padding:20px">Error</div>'; return; }
+  ganttData = d;
+  // Populate filter
+  const sel = document.getElementById('gantt-prj-filter');
+  sel.innerHTML = '<option value="">Todos los proyectos</option>' +
+    d.proyectos.map(p=>`<option value="${p.id}">${esc(p.id.split(' ')[0])} — ${esc(p.nombre).substring(0,30)}</option>`).join('');
+  renderGantt();
+}
+
+function renderGantt(){
+  if(!ganttData) return;
+  const filter = document.getElementById('gantt-prj-filter').value;
+  const dayW = GANTT_DAY_W[ganttZoom];
+
+  // Filter tasks
+  let tareas = ganttData.tareas;
+  let proyectos = ganttData.proyectos;
+  if(filter){
+    tareas = tareas.filter(t=>t.id_proyecto===filter);
+    proyectos = proyectos.filter(p=>p.id===filter);
+  }
+
+  // Date range
+  const allDates = tareas.flatMap(t=>[t.inicio, t.fin]);
+  if(!allDates.length){ document.getElementById('gantt-tree').innerHTML='<div style="padding:20px;color:var(--tx3)">Sin tareas</div>'; return; }
+  const minD = new Date(Math.min(...allDates.map(d=>new Date(d).getTime())) - 7*864e5);
+  const maxD = new Date(Math.max(...allDates.map(d=>new Date(d).getTime())) + 14*864e5);
+  const totalDays = Math.ceil((maxD - minD) / 864e5);
+  const totalW = totalDays * dayW;
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  const dayOf = d => Math.floor((new Date(d) - minD) / 864e5);
+
+  // Stats
+  document.getElementById('gantt-stats').textContent = `${tareas.length} tareas · ${proyectos.length} proyectos`;
+
+  // Build ordered rows: project headers + tasks
+  const rows = [];
+  const prjMap = {};
+  proyectos.forEach(p=>{ prjMap[p.id] = p; });
+  const prjOrder = proyectos.map(p=>p.id);
+  prjOrder.forEach(pid => {
+    const prjTasks = tareas.filter(t=>t.id_proyecto===pid);
+    if(!prjTasks.length) return;
+    rows.push({type:'project', id:pid, data:prjMap[pid], n:prjTasks.length});
+    prjTasks.forEach(t=>rows.push({type:'task', data:t, color:prjMap[pid]?.color||'#58a6ff'}));
+  });
+
+  // ── Left panel: tree ──
+  let treeHtml = '';
+  rows.forEach(r => {
+    if(r.type==='project'){
+      treeHtml += `<div class="gantt-tree-prj"><div class="gantt-color-dot" style="background:${r.data.color}"></div>${esc(r.data.nombre).substring(0,28)} <span style="color:var(--tx3);font-weight:400;font-size:9px">(${r.n})</span></div>`;
+    } else {
+      const t = r.data;
+      treeHtml += `<div class="gantt-tree-task"><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.titulo).substring(0,30)}</span><span style="font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--tx3);flex-shrink:0">${t.horas_estimadas}h</span></div>`;
+    }
+  });
+  document.getElementById('gantt-tree').innerHTML = treeHtml;
+
+  // ── Right panel: header + SVG ──
+  // Header: months
+  let hdrHtml = '';
+  const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  let curMonth = -1;
+  for(let d=0; d<totalDays; d++){
+    const dt = new Date(minD.getTime() + d*864e5);
+    const m = dt.getMonth();
+    if(m !== curMonth){
+      // Calculate width of this month
+      let mDays = 0;
+      for(let d2=d; d2<totalDays; d2++){
+        if(new Date(minD.getTime()+d2*864e5).getMonth()!==m) break;
+        mDays++;
+      }
+      hdrHtml += `<div style="width:${mDays*dayW}px;padding:0 4px;font-size:9px;font-weight:700;color:var(--tx2);border-right:1px solid var(--border);display:flex;align-items:center;flex-shrink:0">${months[m]} ${dt.getFullYear()}</div>`;
+      curMonth = m;
+    }
+  }
+  document.getElementById('gantt-hdr').innerHTML = hdrHtml;
+  document.getElementById('gantt-hdr').style.width = totalW + 'px';
+
+  // SVG canvas
+  const svgH = rows.length * ROW_H;
+  let svg = `<svg width="${totalW}" height="${svgH}" style="display:block">`;
+
+  // Row backgrounds (alternating)
+  let rowIdx = 0;
+  rows.forEach(r => {
+    const y = rowIdx * ROW_H;
+    if(r.type==='project'){
+      svg += `<rect x="0" y="${y}" width="${totalW}" height="${ROW_H}" fill="var(--bg-el)" opacity="0.5"/>`;
+    } else if(rowIdx % 2 === 0){
+      svg += `<rect x="0" y="${y}" width="${totalW}" height="${ROW_H}" fill="rgba(255,255,255,0.01)"/>`;
+    }
+    // Row border
+    svg += `<line x1="0" y1="${y+ROW_H}" x2="${totalW}" y2="${y+ROW_H}" stroke="var(--border)" stroke-width="0.3"/>`;
+    rowIdx++;
+  });
+
+  // Month grid lines
+  curMonth = -1;
+  for(let d=0; d<totalDays; d++){
+    const dt = new Date(minD.getTime() + d*864e5);
+    if(dt.getMonth() !== curMonth){ curMonth=dt.getMonth(); if(d>0) svg+=`<line x1="${d*dayW}" y1="0" x2="${d*dayW}" y2="${svgH}" stroke="var(--border)" stroke-width="0.5"/>`; }
+    // Weekend shading (Sat/Sun)
+    if(dt.getDay()===0||dt.getDay()===6) svg+=`<rect x="${d*dayW}" y="0" width="${dayW}" height="${svgH}" fill="rgba(255,255,255,0.015)"/>`;
+  }
+
+  // Task bars
+  rowIdx = 0;
+  rows.forEach(r => {
+    if(r.type==='task'){
+      const t = r.data;
+      const x = dayOf(t.inicio) * dayW;
+      const w = Math.max((dayOf(t.fin) - dayOf(t.inicio)) * dayW, dayW);
+      const y = rowIdx * ROW_H + 6;
+      const h = ROW_H - 12;
+      const pctW = w * t.pct_completado / 100;
+
+      // Draggable bar group
+      svg += `<g class="gantt-bar" data-tid="${t.id}" data-inicio="${t.inicio}" data-fin="${t.fin}" data-origx="${x}" data-w="${w}" data-color="${r.color}" style="cursor:grab"
+        onmousedown="ganttDragStart(evt,this)"
+        onmouseover="showGanttTip(evt,'${esc(t.titulo).replace(/'/g,"\\'")}','${esc(t.tecnico_nombre)}','${t.inicio}','${t.fin}',${t.pct_completado})"
+        onmouseout="hideGanttTip()">`;
+      svg += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="${r.color}" opacity="0.2" class="gantt-bar-bg"/>`;
+      if(pctW > 0) svg += `<rect x="${x}" y="${y}" width="${pctW}" height="${h}" rx="3" fill="${r.color}" opacity="0.8" class="gantt-bar-fill"/>`;
+      if(w > 30) svg += `<text x="${x+4}" y="${y+h-3}" fill="#fff" font-size="8" font-weight="700" opacity="0.9">${t.pct_completado}%</text>`;
+      svg += `</g>`;
+    }
+    rowIdx++;
+  });
+
+  // Today line
+  const todayX = dayOf(today.toISOString().slice(0,10)) * dayW;
+  if(todayX > 0 && todayX < totalW){
+    svg += `<line x1="${todayX}" y1="0" x2="${todayX}" y2="${svgH}" stroke="var(--acc-rd)" stroke-width="2" stroke-dasharray="6,4"/>`;
+    svg += `<text x="${todayX+4}" y="12" fill="var(--acc-rd)" font-size="8" font-weight="700">HOY</text>`;
+  }
+
+  svg += '</svg>';
+  document.getElementById('gantt-canvas').innerHTML = svg;
+  document.getElementById('gantt-canvas').style.width = totalW + 'px';
+
+  // Sync scroll left↔right
+  const left = document.getElementById('gantt-left');
+  const right = document.getElementById('gantt-right');
+  right.onscroll = ()=>{ left.scrollTop = right.scrollTop; };
+  left.onscroll = ()=>{ right.scrollTop = left.scrollTop; };
+}
+
+function ganttScroll(dx){ document.getElementById('gantt-right').scrollLeft += dx; }
+function ganttScrollToday(){
+  if(!ganttData) return;
+  const dayW = GANTT_DAY_W[ganttZoom];
+  const allDates = ganttData.tareas.map(t=>t.inicio);
+  if(!allDates.length) return;
+  const minD = new Date(Math.min(...allDates.map(d=>new Date(d).getTime())) - 7*864e5);
+  const today = new Date();
+  const todayX = Math.floor((today - minD) / 864e5) * dayW;
+  document.getElementById('gantt-right').scrollLeft = Math.max(0, todayX - 200);
+}
+
+function showGanttTip(evt, titulo, tecnico, inicio, fin, pct){
+  const tip = document.getElementById('gantt-tooltip');
+  tip.innerHTML = `<div style="font-weight:700;margin-bottom:3px">${titulo}</div>
+    <div style="color:var(--tx2)">${tecnico}</div>
+    <div style="margin-top:4px;font-family:'JetBrains Mono',monospace">${inicio} → ${fin}</div>
+    <div style="margin-top:2px">Completado: <strong style="color:${pct>=75?'var(--acc-gn)':pct>=25?'var(--acc-or)':'var(--tx2)'}">${pct}%</strong></div>`;
+  tip.style.display = 'block';
+  tip.style.left = (evt.clientX + 12) + 'px';
+  tip.style.top = (evt.clientY - 20) + 'px';
+}
+function hideGanttTip(){ document.getElementById('gantt-tooltip').style.display='none'; }
+
+// ── Gantt drag ──
+let ganttDragState = null;
+
+function ganttDragStart(evt, gEl){
+  evt.preventDefault();
+  hideGanttTip();
+  const dayW = GANTT_DAY_W[ganttZoom];
+  const tid = gEl.getAttribute('data-tid');
+  const origX = parseFloat(gEl.getAttribute('data-origx'));
+  const w = parseFloat(gEl.getAttribute('data-w'));
+  const color = gEl.getAttribute('data-color');
+  const inicio = gEl.getAttribute('data-inicio');
+  const fin = gEl.getAttribute('data-fin');
+
+  // Add highlight stroke
+  const bg = gEl.querySelector('.gantt-bar-bg');
+  if(bg){ bg.setAttribute('stroke', color); bg.setAttribute('stroke-width','2'); }
+  gEl.style.cursor = 'grabbing';
+  document.body.style.cursor = 'grabbing';
+
+  ganttDragState = { gEl, tid, origX, w, color, inicio, fin, startClientX: evt.clientX, dayW, deltaDays: 0 };
+
+  document.addEventListener('mousemove', ganttDragMove);
+  document.addEventListener('mouseup', ganttDragEnd);
+}
+
+function ganttDragMove(evt){
+  if(!ganttDragState) return;
+  const s = ganttDragState;
+  const dx = evt.clientX - s.startClientX;
+  s.deltaDays = Math.round(dx / s.dayW);
+  const newX = s.origX + s.deltaDays * s.dayW;
+
+  // Move all child rects/text
+  const bg = s.gEl.querySelector('.gantt-bar-bg');
+  const fill = s.gEl.querySelector('.gantt-bar-fill');
+  const txt = s.gEl.querySelector('text');
+  if(bg) bg.setAttribute('x', newX);
+  if(fill) fill.setAttribute('x', newX);
+  if(txt) txt.setAttribute('x', newX + 4);
+}
+
+async function ganttDragEnd(evt){
+  document.removeEventListener('mousemove', ganttDragMove);
+  document.removeEventListener('mouseup', ganttDragEnd);
+  document.body.style.cursor = '';
+  if(!ganttDragState) return;
+  const s = ganttDragState;
+
+  // Remove highlight
+  const bg = s.gEl.querySelector('.gantt-bar-bg');
+  if(bg){ bg.removeAttribute('stroke'); bg.removeAttribute('stroke-width'); }
+  s.gEl.style.cursor = 'grab';
+
+  // Click threshold: if moved < 5px, treat as click → open edit modal
+  if(Math.abs(evt.clientX - s.startClientX) < 5){
+    ganttDragState = null;
+    openGanttEdit(s.tid);
+    return;
+  }
+
+  if(s.deltaDays === 0){ ganttDragState = null; return; }
+
+  // Calculate new dates
+  const addDays = (ds, n) => { const d = new Date(ds); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); };
+  const newInicio = addDays(s.inicio, s.deltaDays);
+  const newFin = addDays(s.fin, s.deltaDays);
+
+  // PATCH backend
+  try {
+    const resp = await fetch(API + `/api/pm/gantt/tarea/${encodeURIComponent(s.tid)}`, {
+      method: 'PATCH', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({gantt: {start: newInicio, end: newFin}})
+    });
+    if(resp.ok){
+      // Update local data
+      const task = ganttData.tareas.find(t=>t.id===s.tid);
+      if(task){ task.inicio = newInicio; task.fin = newFin; task.fuente_fechas = 'stored'; }
+      renderGantt();
+    }
+  } catch(e){ console.warn('Gantt drag save error:', e); renderGantt(); }
+  ganttDragState = null;
+}
+
+// ── Init ──
+document.addEventListener('DOMContentLoaded', async ()=>{
+  // F4: boot gate — requiere login + PM activo, si no redirige por rol
+  const ok = await bootPmDashboard();
+  if(!ok) return;
+  // Migration: tabs reindexed (Gantt inserted at 2, PMBOK 2→3, Chat 3→4)
+  if(!localStorage.getItem('pm-tabs-migrated-v3')){
+    const old = parseInt(localStorage.getItem('pm-active-tab')||'0');
+    if(old >= 2) localStorage.setItem('pm-active-tab', String(old+1));
+    localStorage.setItem('pm-tabs-migrated-v3','true');
+  }
+  const savedTab = localStorage.getItem('pm-active-tab');
+  if(savedTab) switchTab(parseInt(savedTab));
+  setView(currentView);
+  loadProjects();
+});
+</script>
+</body>
+</html>
