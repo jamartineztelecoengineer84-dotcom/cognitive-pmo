@@ -517,8 +517,10 @@ class OllamaProvider(LLMProvider):
         "claude-haiku-4-5-20251001": "gemma3:1b",
     }
 
-    def __init__(self, base_url: str = "http://localhost:11434"):
-        self.base_url = base_url
+    def __init__(self, base_url: Optional[str] = None):
+        self.base_url = base_url or os.environ.get(
+            "OLLAMA_BASE_URL", "http://host.docker.internal:11434"
+        )
 
     def _map_model(self, model: str) -> str:
         return self.MODEL_MAP.get(model, model)
