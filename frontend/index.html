@@ -1610,6 +1610,15 @@ footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;disp
 .llm-oauth-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;background:rgba(16,163,127,0.1);border:1px solid rgba(16,163,127,0.3);border-radius:8px;color:#10a37f;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s;margin-bottom:12px;}
 .llm-oauth-btn:hover{background:rgba(16,163,127,0.18);}
 .llm-oauth-btn svg{width:16px;height:16px;}
+/* ── Botón SUPERADMIN (ancho completo sobre CEO/CTO) ── */
+.quick-access-superadmin{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:14px 20px;background:linear-gradient(135deg,rgba(245,158,11,0.08),rgba(217,119,87,0.06));border:1px solid rgba(245,158,11,0.3);border-radius:10px;cursor:pointer;transition:all 0.25s ease;position:relative;overflow:hidden;}
+.quick-access-superadmin:hover{border-color:rgba(245,158,11,0.5);background:linear-gradient(135deg,rgba(245,158,11,0.12),rgba(217,119,87,0.08));transform:translateY(-1px);box-shadow:0 4px 20px rgba(245,158,11,0.15);}
+.quick-access-superadmin .sa-icon{width:36px;height:36px;border-radius:8px;background:rgba(245,158,11,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.quick-access-superadmin .sa-icon svg{width:20px;height:20px;}
+.quick-access-superadmin .sa-info{flex:1;}
+.quick-access-superadmin .sa-title{font-size:13px;font-weight:700;color:#f59e0b;letter-spacing:1.5px;text-transform:uppercase;}
+.quick-access-superadmin .sa-subtitle{font-size:11px;color:#94a3b8;margin-top:2px;}
+.quick-access-superadmin .sa-badge{font-size:9px;font-weight:700;padding:3px 8px;border-radius:4px;background:rgba(245,158,11,0.15);color:#f59e0b;text-transform:uppercase;letter-spacing:0.5px;}
 /* ═══ END F5 SELECTOR LLM ═══ */
 
 </style>
@@ -1887,6 +1896,11 @@ footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;disp
         <div class="demo-group">
           <div class="demo-group-title">Ejecutivo</div>
           <div class="demo-grid">
+            <div class="quick-access-superadmin" onclick="demoLoginSuperadmin()" title="Acceso SUPERADMIN — Control total">
+              <div class="sa-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="#f59e0b" opacity="0.9"/></svg></div>
+              <div class="sa-info"><div class="sa-title">SUPERADMIN</div><div class="sa-subtitle">Jose Antonio Mart&iacute;nez Victoria &middot; Acceso completo</div></div>
+              <div class="sa-badge">Full Access</div>
+            </div>
             <div class="demo-card" onclick="demoLogin('alejandro.vidal@cognitivepmo.com','index')" style="--dc-color:rgba(234,179,8,.15);">
               <div class="demo-avatar" style="background:rgba(234,179,8,.15);color:#eab308;border-color:rgba(234,179,8,.3);">AV</div>
               <div class="demo-info"><div class="demo-name">Alejandro Vidal</div><div class="demo-role">CEO</div><div class="demo-dest">&rarr; /p96/</div></div>
@@ -5026,6 +5040,24 @@ async function doLogin() {
 }
 
 // ── Demo Login (quick access for tribunal) ──
+async function demoLoginSuperadmin() {
+  /* SUPERADMIN usa email='admin', password='admin' */
+  var card = event.currentTarget;
+  card.style.opacity = '0.6';
+  try {
+    var res = await fetch(API_BASE + '/auth/login', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email: 'admin', password: 'admin'}),
+    });
+    var data = await res.json();
+    if (!res.ok) { alert('Error: ' + (data.detail || 'Login fallido')); card.style.opacity = '1'; return; }
+    AUTH_TOKEN = data.token; AUTH_USER = data.usuario; AUTH_PERMISOS = data.permisos || []; AUTH_ROLE = data.role;
+    localStorage.setItem('pmo_token', data.token); localStorage.setItem('pmo_role', JSON.stringify(data.role));
+    document.getElementById('login-screen').style.display = 'none';
+    if (typeof initDashboard === 'function') initDashboard();
+  } catch(e) { alert('Error de conexión'); card.style.opacity = '1'; }
+}
+
 async function demoLogin(email, target) {
   const card = event.currentTarget;
   card.classList.add('loading');
@@ -19245,7 +19277,7 @@ function kg_init(){
 // ══════════════════════════════════════════════════════
 (function(){
 'use strict';
-var LLM_PASS='joseanto',llmAttempts=0,LLM_MAX_ATTEMPTS=5,llmPendingProvider=null,llmUnlocked=new Set();
+var llmAttempts=0,LLM_MAX_ATTEMPTS=5,llmPendingProvider=null,llmUnlocked=new Set(),llmUnlockTokens={};
 var PROVIDER_CONFIG={
 chatgpt:{protected:false,logo:'logo-openai',bg:'bg-openai',badgeClass:'llm-badge-oauth',badgeText:'PLUS'},
 anthropic:{protected:'password',logo:'logo-anthropic',bg:'bg-claude',badgeClass:'llm-badge-api',badgeText:'API',cost:'~$0.05/invocación · facturación directa API',reason:'Este proveedor genera costes directos por cada invocación a la API de Anthropic (~$0.05/llamada). Un pipeline completo de 15 agentes con tool_use puede superar $3.00 por ejecución. El acceso está restringido para evitar consumo no autorizado de créditos durante la fase de evaluación por terceros.'},
@@ -19304,8 +19336,13 @@ if(prot==='ollama-warn'){llmPendingProvider=item;dd.classList.remove('open');doc
 }
 
 async function activateProvider(item){
-var id=item.dataset.id;
-try{await fetch('/api/llm/providers/'+id+'/activate',{method:'PUT'});}catch(e){console.error('F5: Error activando provider',e);}
+var id=item.dataset.id,provider=item.dataset.provider;
+var hdrs={};
+if(llmUnlockTokens[provider])hdrs['X-LLM-Unlock-Token']=llmUnlockTokens[provider];
+try{
+var resp=await fetch('/api/llm/providers/'+id+'/activate',{method:'PUT',headers:hdrs});
+if(!resp.ok){var err=await resp.json();llmShowToast('⛔ '+(err.error||'Error activando provider'));return;}
+}catch(e){console.error('F5: Error activando provider',e);}
 dd.querySelectorAll('.llm-dd-item').forEach(function(i){i.classList.remove('active')});
 item.classList.add('active');
 document.getElementById('llmBadgeName').textContent=item.dataset.name;
@@ -19337,9 +19374,13 @@ setTimeout(function(){document.getElementById('llmPassInput').focus()},200);
 }
 
 window.llmClosePass=function(){document.getElementById('llmPassOverlay').classList.remove('open');llmPendingProvider=null;};
-window.llmTryUnlock=function(){
+window.llmTryUnlock=async function(){
 var input=document.getElementById('llmPassInput');
-if(input.value===LLM_PASS){llmUnlocked.add(llmPendingProvider.dataset.provider);llmClosePass();activateProvider(llmPendingProvider);llmAttempts=0;return;}
+var provider=llmPendingProvider.dataset.provider;
+try{
+var resp=await fetch('/api/llm/auth/unlock',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:input.value,provider:provider})});
+if(resp.ok){var data=await resp.json();llmUnlockTokens[provider]=data.token;llmUnlocked.add(provider);llmClosePass();activateProvider(llmPendingProvider);llmShowToast('✓ '+llmPendingProvider.dataset.name+' desbloqueado');llmAttempts=0;return;}
+}catch(e){document.getElementById('llmPassErrorText').textContent='Error de conexión con el servidor';document.getElementById('llmPassError').classList.add('visible');return;}
 llmAttempts++;input.classList.add('error');llmUpdateAttemptDots();
 if(llmAttempts>=LLM_MAX_ATTEMPTS){
 document.getElementById('llmPassErrorText').textContent='Máximo de intentos alcanzado. Inténtalo más tarde.';

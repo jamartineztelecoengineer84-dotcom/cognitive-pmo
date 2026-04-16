@@ -5,6 +5,8 @@ import uuid
 import logging
 from datetime import datetime, date, timedelta
 import hashlib
+import secrets
+import time as _time
 from typing import Any, Dict, List, Optional
 
 import psycopg2
@@ -6110,9 +6112,30 @@ async def pm_chat_send(id_proyecto: str, body: PMChatMessage):
 
 # ── ARQ-04: LLM Provider Config API ───────────────────────────────────────
 
+# Seguridad F5b: hash de contraseña de autor (NUNCA texto plano)
+_LLM_AUTHOR_HASH = "9b8d684facf0905d6ed2dd439f9bc23d9c9e758124ba1413218763a0ea8f8371"
+_LLM_PROTECTED = {"anthropic", "openai"}
+_llm_unlock_tokens: Dict[str, dict] = {}
+_SENSITIVE_KEYS = {"api_key", "oauth_token", "access_token", "refresh_token", "secret"}
+
+
+@app.post("/api/llm/auth/unlock")
+async def llm_auth_unlock(request: Request):
+    """Valida contraseña de autor server-side. Devuelve token temporal."""
+    body = await request.json()
+    password = body.get("password", "")
+    provider = body.get("provider", "")
+    pwd_hash = hashlib.sha256(password.encode()).hexdigest()
+    if pwd_hash != _LLM_AUTHOR_HASH:
+        return JSONResponse(status_code=403, content={"error": "Contraseña incorrecta"})
+    token = secrets.token_hex(32)
+    _llm_unlock_tokens[provider] = {"token": token, "expires": _time.time() + 3600}
+    return {"ok": True, "token": token, "provider": provider, "expires_in": 3600}
+
+
 @app.get("/api/llm/providers")
 async def list_llm_providers():
-    """Lista providers LLM configurados."""
+    """Lista providers LLM configurados (keys ocultas)."""
     pool = get_pool()
     if not pool:
         raise HTTPException(status_code=503, detail="DB no disponible")
@@ -6124,7 +6147,19 @@ async def list_llm_providers():
             FROM primitiva.llm_provider_config
             ORDER BY is_default DESC, provider_name
         """)
-        return [dict(r) for r in rows]
+        result = []
+        for r in rows:
+            d = dict(r)
+            # Ocultar campos sensibles del config_json
+            if d.get("config_json"):
+                cfg = json.loads(d["config_json"]) if isinstance(d["config_json"], str) else dict(d["config_json"])
+                for key in _SENSITIVE_KEYS:
+                    if key in cfg:
+                        val = str(cfg[key])
+                        cfg[key] = "••••••" + val[-4:] if len(val) > 4 else "••••••"
+                d["config_json"] = cfg
+            result.append(d)
+        return result
 
 
 @app.post("/api/llm/providers")
@@ -6157,16 +6192,25 @@ async def upsert_llm_provider(data: dict):
 
 
 @app.put("/api/llm/providers/{provider_id}/activate")
-async def activate_llm_provider(provider_id: int):
-    """Marcar un provider como default (desactiva los demás)."""
+async def activate_llm_provider(provider_id: int, request: Request):
+    """Marcar un provider como default. Providers protegidos requieren token."""
     pool = get_pool()
     if not pool:
         raise HTTPException(status_code=503, detail="DB no disponible")
     async with pool.acquire() as conn:
-        exists = await conn.fetchval(
-            "SELECT id FROM primitiva.llm_provider_config WHERE id = $1", provider_id)
-        if not exists:
+        row = await conn.fetchrow(
+            "SELECT id, provider_name FROM primitiva.llm_provider_config WHERE id = $1", provider_id)
+        if not row:
             raise HTTPException(status_code=404, detail="Provider no encontrado")
+        provider_name = row["provider_name"]
+        # Verificar token para providers protegidos
+        if provider_name in _LLM_PROTECTED:
+            auth_token = request.headers.get("X-LLM-Unlock-Token", "")
+            unlock = _llm_unlock_tokens.get(provider_name, {})
+            if not unlock or unlock["token"] != auth_token or _time.time() > unlock.get("expires", 0):
+                return JSONResponse(status_code=403, content={
+                    "error": "Restricción de autor: Jose Antonio Martínez Victoria — Este proveedor requiere autorización"
+                })
         await conn.execute("""
             UPDATE primitiva.llm_provider_config SET is_default = FALSE, updated_at = NOW()
         """)
@@ -6175,10 +6219,10 @@ async def activate_llm_provider(provider_id: int):
             SET is_default = TRUE, is_active = TRUE, updated_at = NOW()
             WHERE id = $1
         """, provider_id)
-        row = await conn.fetchrow(
+        result = await conn.fetchrow(
             "SELECT id, provider_name, display_name, is_default FROM primitiva.llm_provider_config WHERE id = $1",
             provider_id)
-        return dict(row)
+        return dict(result)
 
 
 # ── War Room Cognitivo (Sub-App) ───────────────────────────────────────────
