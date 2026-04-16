@@ -1455,6 +1455,165 @@ footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;disp
 #kg-root .kg-kk-bar-fill {height:100%;border-radius:2px;transition:.3s}
 /* ═══ END P95 FASE 8 ═══ */
 
+/* ══════════════════════════════════════════════════════ */
+/* ── F5: SELECTOR LLM — PROTECCIONES DE AUTOR ──────── */
+/* ══════════════════════════════════════════════════════ */
+.provider-badge{position:fixed;top:16px;right:24px;z-index:50;display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 14px;cursor:pointer;transition:all 0.2s;}
+.provider-badge:hover{background:rgba(255,255,255,0.1);border-color:#60a5fa;}
+.provider-badge .dot{width:8px;height:8px;border-radius:50%;background:#34d399;flex-shrink:0;}
+.provider-badge .badge-logo{width:22px;height:22px;flex-shrink:0;}
+.provider-badge .badge-logo svg{width:100%;height:100%;}
+.provider-badge .info{display:flex;flex-direction:column;gap:2px;}
+.provider-badge .info .name{font-size:13px;font-weight:600;color:#e2e8f0;}
+.provider-badge .info .model{font-size:11px;color:#94a3b8;}
+.provider-badge .chevron{font-size:12px;color:#94a3b8;margin-left:4px;}
+.llm-dropdown{position:absolute;top:calc(100% + 8px);right:0;width:380px;background:rgba(15,20,35,0.97);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.5);padding:8px;z-index:100;display:none;}
+.llm-dropdown.open{display:block;animation:llmDdIn 0.2s ease;}
+@keyframes llmDdIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.llm-dd-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;cursor:pointer;transition:background 0.15s;}
+.llm-dd-item:hover{background:rgba(255,255,255,0.06);}
+.llm-dd-item.active{background:rgba(96,165,250,0.1);border:1px solid rgba(96,165,250,0.3);}
+.llm-dd-item .icon-wrap{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.llm-dd-item .icon-wrap svg{width:22px;height:22px;}
+.llm-dd-item .icon-wrap.bg-claude{background:rgba(217,119,87,0.15);}
+.llm-dd-item .icon-wrap.bg-openai{background:rgba(16,163,127,0.15);}
+.llm-dd-item .icon-wrap.bg-ollama{background:rgba(167,139,250,0.15);}
+.llm-dd-item .details{flex:1;}
+.llm-dd-item .details .pname{font-size:13px;font-weight:600;color:#e2e8f0;}
+.llm-dd-item .details .pmodel{font-size:11px;color:#94a3b8;}
+.llm-dd-item .llm-badge{font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:0.5px;}
+.llm-badge-api{background:rgba(96,165,250,0.15);color:#60a5fa;}
+.llm-badge-oauth{background:rgba(52,211,153,0.15);color:#34d399;}
+.llm-badge-local{background:rgba(167,139,250,0.15);color:#a78bfa;}
+.lock-icon{width:14px;height:14px;opacity:0.5;flex-shrink:0;margin-left:4px;}
+.lock-icon svg{width:100%;height:100%;}
+.warn-icon{width:14px;height:14px;flex-shrink:0;margin-left:4px;}
+.warn-icon svg{width:100%;height:100%;}
+.llm-dd-divider{height:1px;background:rgba(255,255,255,0.1);margin:6px 4px;}
+.llm-dd-add{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;color:#60a5fa;font-size:13px;font-weight:500;transition:background 0.15s;}
+.llm-dd-add:hover{background:rgba(96,165,250,0.08);}
+.free-pulse{position:relative;}
+.free-pulse::after{content:'';position:absolute;inset:-2px;border-radius:6px;background:rgba(52,211,153,0.15);animation:freePulse 2s ease-in-out infinite;z-index:-1;}
+@keyframes freePulse{0%,100%{opacity:0}50%{opacity:1}}
+.llm-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:200;}
+.llm-modal-overlay.open{display:flex;animation:llmFadeIn 0.25s ease;}
+@keyframes llmFadeIn{from{opacity:0}to{opacity:1}}
+.pass-modal{width:420px;background:rgba(12,16,28,0.97);backdrop-filter:blur(30px);border:1px solid rgba(245,158,11,0.25);border-radius:16px;box-shadow:0 30px 80px rgba(0,0,0,0.6),0 0 40px rgba(245,158,11,0.05);overflow:hidden;animation:llmModalIn 0.3s ease;}
+@keyframes llmModalIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}
+.pass-header{background:linear-gradient(135deg,rgba(245,158,11,0.08),rgba(217,119,87,0.08));padding:24px 28px 20px;border-bottom:1px solid rgba(245,158,11,0.15);text-align:center;}
+.pass-header .shield-icon{margin-bottom:12px;}
+.pass-header .shield-icon svg{width:48px;height:48px;filter:drop-shadow(0 0 12px rgba(245,158,11,0.3));}
+.pass-header h2{font-size:16px;font-weight:700;color:#f59e0b;margin-bottom:8px;}
+.pass-header .author-line{font-size:11px;color:#94a3b8;padding:8px 14px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.1);border-radius:8px;line-height:1.5;margin-top:10px;}
+.pass-header .author-line .author-name{color:#f59e0b;font-weight:600;}
+.pass-header .author-line .reason{color:#e2e8f0;font-weight:500;}
+.pass-body{padding:24px 28px;}
+.pass-body .provider-preview{display:flex;align-items:center;gap:12px;padding:12px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:10px;margin-bottom:18px;}
+.pass-body .provider-preview .pp-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;}
+.pass-body .provider-preview .pp-icon svg{width:22px;height:22px;}
+.pass-body .provider-preview .pp-info{flex:1;}
+.pass-body .provider-preview .pp-name{font-size:13px;font-weight:600;color:#e2e8f0;}
+.pass-body .provider-preview .pp-cost{font-size:11px;color:#f87171;font-weight:500;}
+.pass-body .cost-warning{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:rgba(248,113,113,0.06);border:1px solid rgba(248,113,113,0.15);border-radius:8px;margin-bottom:18px;font-size:11px;line-height:1.5;color:#94a3b8;}
+.pass-body .cost-warning svg{width:16px;height:16px;flex-shrink:0;margin-top:1px;}
+.pass-body .cost-warning strong{color:#f87171;}
+.pass-input-group{position:relative;margin-bottom:16px;}
+.pass-input-group label{display:block;font-size:11px;font-weight:600;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;}
+.pass-input-group input{width:100%;padding:12px 44px 12px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#e2e8f0;font-size:14px;outline:none;transition:all 0.2s;font-family:inherit;letter-spacing:2px;}
+.pass-input-group input:focus{border-color:#f59e0b;box-shadow:0 0 0 3px rgba(245,158,11,0.1);}
+.pass-input-group input.error{border-color:#f87171;animation:llmShake 0.4s ease;}
+@keyframes llmShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.pass-input-group .eye-btn{position:absolute;right:10px;top:30px;background:none;border:none;color:#94a3b8;cursor:pointer;padding:4px;}
+.pass-input-group .eye-btn:hover{color:#e2e8f0;}
+.pass-error{font-size:11px;color:#f87171;margin-top:6px;display:none;align-items:center;gap:6px;}
+.pass-error.visible{display:flex;}
+.pass-footer{display:flex;gap:10px;justify-content:flex-end;padding:0 28px 24px;}
+.llm-btn{padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s;border:none;}
+.llm-btn-cancel{background:rgba(255,255,255,0.04);color:#94a3b8;border:1px solid rgba(255,255,255,0.1);}
+.llm-btn-cancel:hover{color:#e2e8f0;border-color:rgba(255,255,255,0.2);}
+.llm-btn-unlock{background:linear-gradient(135deg,#f59e0b,#d97706);color:#0a0e1a;}
+.llm-btn-unlock:hover{filter:brightness(1.1);transform:translateY(-1px);}
+.llm-btn-unlock:active{transform:translateY(0);}
+.attempts-bar{display:flex;gap:4px;margin-top:8px;justify-content:center;}
+.attempt-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.15);transition:all 0.3s;}
+.attempt-dot.used{background:#f87171;}
+.llm-toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:rgba(52,211,153,0.15);border:1px solid rgba(52,211,153,0.3);color:#34d399;font-size:13px;font-weight:600;padding:12px 24px;border-radius:10px;backdrop-filter:blur(10px);z-index:300;display:none;animation:llmSlideDown 0.3s ease;}
+@keyframes llmSlideDown{from{opacity:0;transform:translate(-50%,-20px)}to{opacity:1;transform:translate(-50%,0)}}
+.ollama-modal{width:460px;background:rgba(12,16,28,0.97);backdrop-filter:blur(30px);border:1px solid rgba(167,139,250,0.25);border-radius:16px;box-shadow:0 30px 80px rgba(0,0,0,0.6),0 0 40px rgba(167,139,250,0.05);overflow:hidden;animation:llmModalIn 0.3s ease;}
+.ollama-header{background:linear-gradient(135deg,rgba(167,139,250,0.08),rgba(96,165,250,0.05));padding:28px 28px 22px;border-bottom:1px solid rgba(167,139,250,0.15);text-align:center;}
+.ollama-header .ollama-big-icon{margin-bottom:14px;}
+.ollama-header .ollama-big-icon svg{width:56px;height:56px;filter:drop-shadow(0 0 16px rgba(167,139,250,0.3));}
+.ollama-header h2{font-size:17px;font-weight:700;color:#a78bfa;margin-bottom:6px;}
+.ollama-header .sub{font-size:12px;color:#94a3b8;}
+.ollama-body{padding:24px 28px;}
+.ollama-author-line{font-size:11px;color:#94a3b8;padding:10px 14px;background:rgba(167,139,250,0.06);border:1px solid rgba(167,139,250,0.12);border-radius:8px;line-height:1.6;margin-bottom:18px;text-align:center;}
+.ollama-author-line .author-name{color:#a78bfa;font-weight:600;}
+.ollama-author-line .reason{color:#e2e8f0;font-weight:500;}
+.specs-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px;}
+.spec-card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:10px 12px;}
+.spec-card .spec-label{font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;}
+.spec-card .spec-value{font-size:14px;font-weight:600;color:#e2e8f0;}
+.spec-card .spec-value.warn{color:#fbbf24;}
+.spec-card .spec-value.ok{color:#34d399;}
+.spec-card .spec-value.bad{color:#f87171;}
+.risk-section{margin-bottom:18px;}
+.risk-label{font-size:11px;font-weight:600;color:#94a3b8;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;}
+.risk-meter{height:8px;background:rgba(255,255,255,0.04);border-radius:4px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);}
+.risk-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#34d399,#fbbf24,#f87171);transition:width 0.8s ease;}
+.risk-labels{display:flex;justify-content:space-between;font-size:9px;color:#94a3b8;margin-top:4px;}
+.collision-list{margin-bottom:18px;}
+.collision-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:8px;margin-bottom:6px;font-size:12px;line-height:1.5;color:#94a3b8;}
+.collision-item .ci-icon{flex-shrink:0;font-size:16px;margin-top:1px;}
+.collision-item .ci-text{flex:1;}
+.collision-item .ci-text strong{color:#e2e8f0;}
+.collision-item.danger{border-color:rgba(248,113,113,0.2);background:rgba(248,113,113,0.04);}
+.collision-item.warning{border-color:rgba(251,191,36,0.2);background:rgba(251,191,36,0.04);}
+.collision-item.info{border-color:rgba(96,165,250,0.2);background:rgba(96,165,250,0.04);}
+.ollama-footer{display:flex;gap:10px;justify-content:center;padding:0 28px 24px;}
+.llm-btn-ollama-ok{background:linear-gradient(135deg,#a78bfa,#7c3aed);color:white;flex:1;}
+.llm-btn-ollama-ok:hover{filter:brightness(1.15);transform:translateY(-1px);}
+.llm-btn-ollama-cancel{flex:1;}
+.add-modal{width:480px;max-height:85vh;overflow-y:auto;background:rgba(15,20,35,0.95);backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,0.1);border-radius:16px;box-shadow:0 30px 80px rgba(0,0,0,0.6);}
+.add-modal .modal-header{display:flex;justify-content:space-between;align-items:center;padding:20px 24px 16px;border-bottom:1px solid rgba(255,255,255,0.1);}
+.add-modal .modal-header h2{font-size:16px;font-weight:600;color:#e2e8f0;}
+.add-modal .modal-close{background:none;border:none;color:#94a3b8;font-size:20px;cursor:pointer;padding:4px 8px;border-radius:6px;}
+.add-modal .modal-close:hover{background:rgba(255,255,255,0.06);color:#e2e8f0;}
+.add-modal .modal-body{padding:20px 24px;}
+.llm-type-selector{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px;}
+.llm-type-btn{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:14px 8px;text-align:center;cursor:pointer;transition:all 0.2s;color:#e2e8f0;}
+.llm-type-btn:hover{border-color:#60a5fa;background:rgba(96,165,250,0.05);}
+.llm-type-btn.selected{border-color:#60a5fa;background:rgba(96,165,250,0.1);}
+.llm-type-btn .type-icon{margin-bottom:6px;display:flex;justify-content:center;}
+.llm-type-btn .type-icon svg{width:28px;height:28px;}
+.llm-type-btn .type-label{font-size:12px;font-weight:600;}
+.llm-type-btn .type-desc{font-size:10px;color:#94a3b8;margin-top:2px;}
+.llm-form-group{margin-bottom:16px;}
+.llm-form-group label{display:block;font-size:12px;font-weight:600;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;}
+.llm-form-group input,.llm-form-group select{width:100%;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#e2e8f0;font-size:13px;outline:none;transition:border-color 0.2s;}
+.llm-form-group input:focus,.llm-form-group select:focus{border-color:#60a5fa;}
+.llm-form-group input::placeholder{color:rgba(148,163,184,0.5);}
+.llm-form-group .hint{font-size:11px;color:#94a3b8;margin-top:4px;}
+.llm-form-group select option{background:#1a1f2e;color:#e2e8f0;}
+.llm-form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.llm-tab-content{display:none;}
+.llm-tab-content.active{display:block;}
+.llm-test-bar{display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:10px;margin-bottom:16px;}
+.llm-test-bar .test-status{width:10px;height:10px;border-radius:50%;background:#94a3b8;flex-shrink:0;}
+.llm-test-bar .test-status.ok{background:#34d399;box-shadow:0 0 8px rgba(52,211,153,0.4);}
+.llm-test-bar .test-status.loading{background:#fbbf24;animation:llmPulse 1s infinite;}
+@keyframes llmPulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.llm-test-bar .test-text{font-size:12px;flex:1;color:#94a3b8;}
+.llm-test-btn{background:rgba(96,165,250,0.15);border:1px solid rgba(96,165,250,0.3);color:#60a5fa;font-size:12px;font-weight:600;padding:6px 14px;border-radius:6px;cursor:pointer;}
+.llm-test-btn:hover{background:rgba(96,165,250,0.25);}
+.add-modal .modal-footer{display:flex;justify-content:flex-end;gap:10px;padding:16px 24px 20px;border-top:1px solid rgba(255,255,255,0.1);}
+.llm-btn-save{background:#60a5fa;color:#0a0e1a;}
+.llm-btn-save:hover{background:#93c5fd;}
+.llm-btn-save:disabled{opacity:0.4;cursor:not-allowed;}
+.llm-oauth-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;background:rgba(16,163,127,0.1);border:1px solid rgba(16,163,127,0.3);border-radius:8px;color:#10a37f;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s;margin-bottom:12px;}
+.llm-oauth-btn:hover{background:rgba(16,163,127,0.18);}
+.llm-oauth-btn svg{width:16px;height:16px;}
+/* ═══ END F5 SELECTOR LLM ═══ */
+
 </style>
 <!-- ═══ P99 MULTI-ESCENARIO ═══ -->
 <script src="/js/scenario-bridge.js"></script>
@@ -1506,6 +1665,20 @@ footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;disp
 <!-- ═══ END P99 MULTI-ESCENARIO ═══ -->
 </head>
 <body>
+<!-- ═══ F5: SVG Symbols ═══ -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+<symbol id="logo-anthropic" viewBox="0 0 24 24"><path d="M13.827 3.52l5.51 16.96H15.23l-1.137-3.602H9.676L14.69 3.52h-0.863zm-1.024 3.96l-2.4 7.418h4.882l-2.4-7.418h-.082z" fill="#d97757"/><path d="M8.045 3.52L2.534 20.48h4.108l1.137-3.602h4.384L8.045 3.52z" fill="#d97757"/></symbol>
+<symbol id="logo-openai" viewBox="0 0 24 24"><path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.998 5.998 0 0 0-3.998 2.9 6.042 6.042 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.911 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073zM13.26 22.43a4.476 4.476 0 0 1-2.876-1.04l.141-.081 4.779-2.758a.795.795 0 0 0 .392-.681v-6.737l2.02 1.168a.071.071 0 0 1 .038.052v5.583a4.504 4.504 0 0 1-4.494 4.494zM3.6 18.304a4.47 4.47 0 0 1-.535-3.014l.142.085 4.783 2.759a.771.771 0 0 0 .78 0l5.843-3.369v2.332a.08.08 0 0 1-.033.062L9.74 19.95a4.5 4.5 0 0 1-6.14-1.646zM2.34 7.896a4.485 4.485 0 0 1 2.366-1.973V11.6a.766.766 0 0 0 .388.676l5.815 3.355-2.02 1.168a.076.076 0 0 1-.071 0l-4.83-2.786A4.504 4.504 0 0 1 2.34 7.872zm16.597 3.855l-5.833-3.387L15.119 7.2a.076.076 0 0 1 .071 0l4.83 2.791a4.494 4.494 0 0 1-.676 8.105v-5.678a.79.79 0 0 0-.407-.667zm2.01-3.023l-.141-.085-4.774-2.782a.776.776 0 0 0-.785 0L9.409 9.23V6.897a.066.066 0 0 1 .028-.061l4.83-2.787a4.5 4.5 0 0 1 6.68 4.66zm-12.64 4.135l-2.02-1.164a.08.08 0 0 1-.038-.057V6.075a4.5 4.5 0 0 1 7.375-3.453l-.142.08L8.704 5.46a.795.795 0 0 0-.393.681zm1.097-2.365l2.602-1.5 2.607 1.5v2.999l-2.597 1.5-2.607-1.5z" fill="#10a37f"/></symbol>
+<symbol id="logo-ollama" viewBox="0 0 24 24"><path d="M12 2C8.5 2 6.5 4.5 6 6.5C5.2 9.5 6 11 6 13C6 15 4.5 16.5 4 18C3.5 19.5 4 21 6 22H8C8 22 7 20 8 18.5C9 17 10 17 10 15.5C10 14 9 13.5 9 12C9 10.5 10 9 12 9C14 9 15 10.5 15 12C15 13.5 14 14 14 15.5C14 17 15 17 16 18.5C17 20 16 22 16 22H18C20 21 20.5 19.5 20 18C19.5 16.5 18 15 18 13C18 11 18.8 9.5 18 6.5C17.5 4.5 15.5 2 12 2Z" fill="#a78bfa"/><circle cx="9.5" cy="7" r="1" fill="#1a1f2e"/><circle cx="14.5" cy="7" r="1" fill="#1a1f2e"/></symbol>
+<symbol id="logo-custom" viewBox="0 0 24 24"><path d="M12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97s-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1s.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.08.73 1.69.98l.38 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.98l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64L19.43 12.97z" fill="#fbbf24"/></symbol>
+<symbol id="icon-key" viewBox="0 0 24 24"><path d="M12.65 10A6 6 0 0 0 2 12a6 6 0 0 0 6 6 5.98 5.98 0 0 0 4.65-2.22H17v3h3v-3h2v-3h-9.35zM8 14a2 2 0 1 1 0-4 2 2 0 0 1 0 4z" fill="#60a5fa"/></symbol>
+<symbol id="icon-oauth" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="#34d399" stroke-width="2" stroke-linecap="round" fill="none"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="#34d399" stroke-width="2" stroke-linecap="round" fill="none"/></symbol>
+<symbol id="icon-server" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="8" rx="2" stroke="#fbbf24" stroke-width="2" fill="none"/><rect x="2" y="14" width="20" height="8" rx="2" stroke="#fbbf24" stroke-width="2" fill="none"/><circle cx="6" cy="6" r="1" fill="#fbbf24"/><circle cx="6" cy="18" r="1" fill="#fbbf24"/></symbol>
+<symbol id="icon-shield" viewBox="0 0 48 48"><path d="M24 4L8 12v10c0 11.1 6.8 21.4 16 24 9.2-2.6 16-12.9 16-24V12L24 4z" fill="none" stroke="#f59e0b" stroke-width="2.5"/><path d="M24 8l-12 6v8c0 9 5.5 17.4 12 19.5 6.5-2.1 12-10.5 12-19.5v-8L24 8z" fill="rgba(245,158,11,0.1)"/><path d="M20 24l3 3 6-6" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></symbol>
+<symbol id="icon-lock" viewBox="0 0 16 16"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="#f59e0b" opacity="0.8"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" stroke="#f59e0b" stroke-width="1.5" fill="none" opacity="0.8"/></symbol>
+<symbol id="icon-warn-triangle" viewBox="0 0 16 16"><path d="M8 1.5L1 14h14L8 1.5z" fill="none" stroke="#a78bfa" stroke-width="1.2"/><line x1="8" y1="6" x2="8" y2="10" stroke="#a78bfa" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="12" r="0.8" fill="#a78bfa"/></symbol>
+</svg>
+<!-- ═══ END F5 SVG ═══ -->
 <!-- FIX flash: aplicar shell-kanban-only ANTES de pintar los tabs.
      Sin esto, VP_OPS/VP_ENG que entran con #kanban veían los 12 tabs y
      luego el handler legacy (diferido 500ms) escondía 11. -->
@@ -18999,5 +19172,204 @@ function kg_init(){
     <div style="display:flex;align-items:center;gap:8px;margin-top:14px;padding-top:10px;border-top:1px dashed #1e293b"><svg width="22" height="22" viewBox="0 0 40 40" style="opacity:.6"><polygon points="20,4 36,12 36,28 20,36 4,28 4,12" fill="none" stroke="#4ade80" stroke-width="1.5"/></svg><span style="font-size:11px"><span style="color:#4ade80;font-weight:500">AG-018 Governance Advisor</span> <span style="color:#475569">&middot; Disponible en las 4 pausas &middot; Proyectos similares, postmortems, directorio</span></span></div>
   </div>
 </div>
+
+<!-- ═══ F5: LLM SELECTOR COMPONENTS ═══ -->
+<div class="llm-toast" id="llmToast"></div>
+<div class="provider-badge" id="llmBadgeBtn">
+<span class="dot" id="llmBadgeDot"></span>
+<div class="badge-logo" id="llmBadgeLogo"><svg><use href="#logo-openai"/></svg></div>
+<div class="info"><span class="name" id="llmBadgeName">ChatGPT Plus</span><span class="model" id="llmBadgeModel">gpt-5.4 · $0/llamada</span></div>
+<span class="chevron">&#9660;</span>
+<div class="llm-dropdown" id="llmDropdown"></div>
+</div>
+
+<!-- PASSWORD MODAL -->
+<div class="llm-modal-overlay" id="llmPassOverlay">
+<div class="pass-modal">
+<div class="pass-header">
+<div class="shield-icon"><svg><use href="#icon-shield"/></svg></div>
+<h2>Proveedor protegido</h2>
+<div class="author-line">Restricci&oacute;n de autor: <span class="author-name">Jose Antonio Mart&iacute;nez Victoria</span><br><span class="reason" id="llmPassReason"></span></div>
+</div>
+<div class="pass-body">
+<div class="provider-preview"><div class="pp-icon" id="llmPassIcon"><svg><use href="#logo-anthropic"/></svg></div><div class="pp-info"><div class="pp-name" id="llmPassProvName"></div><div class="pp-cost" id="llmPassProvCost"></div></div></div>
+<div class="cost-warning"><svg viewBox="0 0 16 16" fill="none"><path d="M8 1.5L1 14h14L8 1.5z" stroke="#f87171" stroke-width="1.2"/><line x1="8" y1="6" x2="8" y2="10" stroke="#f87171" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="12" r="0.8" fill="#f87171"/></svg><span>Cada agente del pipeline ejecuta <strong>m&uacute;ltiples invocaciones</strong> con tool_use. Un ciclo completo AG-001&rarr;AG-015 puede superar <strong>$3.00 en una sola ejecuci&oacute;n</strong>. El autor ha habilitado ChatGPT Plus ($0) como alternativa libre.</span></div>
+<div class="pass-input-group"><label>Contrase&ntilde;a de autor</label><input type="password" id="llmPassInput" placeholder="Introducir contrase&ntilde;a..." autocomplete="off"><button class="eye-btn" onclick="llmToggleEye()" id="llmEyeBtn">&#128065;</button></div>
+<div class="pass-error" id="llmPassError"><svg viewBox="0 0 16 16" width="12" height="12"><circle cx="8" cy="8" r="7" fill="none" stroke="#f87171" stroke-width="1.5"/><line x1="5" y1="5" x2="11" y2="11" stroke="#f87171" stroke-width="1.5"/><line x1="11" y1="5" x2="5" y2="11" stroke="#f87171" stroke-width="1.5"/></svg><span id="llmPassErrorText"></span></div>
+<div class="attempts-bar"><div class="attempt-dot" id="llmAtt1"></div><div class="attempt-dot" id="llmAtt2"></div><div class="attempt-dot" id="llmAtt3"></div><div class="attempt-dot" id="llmAtt4"></div><div class="attempt-dot" id="llmAtt5"></div></div>
+</div>
+<div class="pass-footer"><button class="llm-btn llm-btn-cancel" onclick="llmClosePass()">Cancelar</button><button class="llm-btn llm-btn-unlock" onclick="llmTryUnlock()" id="llmUnlockBtn">&#128275; Desbloquear</button></div>
+</div>
+</div>
+
+<!-- OLLAMA WARNING MODAL -->
+<div class="llm-modal-overlay" id="llmOllamaOverlay">
+<div class="ollama-modal">
+<div class="ollama-header"><div class="ollama-big-icon"><svg><use href="#logo-ollama"/></svg></div><h2>Ollama &middot; gemma3:1b</h2><div class="sub">Modelo local de lenguaje &mdash; Zero Data Exposure</div></div>
+<div class="ollama-body">
+<div class="ollama-author-line">Restricci&oacute;n de autor: <span class="author-name">Jose Antonio Mart&iacute;nez Victoria</span><br><span class="reason">Advertencia informativa sobre las limitaciones de un LLM compacto (1B par&aacute;metros) ejecut&aacute;ndose en hardware compartido. Este aviso existe para evitar expectativas incorrectas y saturaci&oacute;n del servicio VPS.</span></div>
+<div class="specs-grid"><div class="spec-card"><div class="spec-label">Modelo</div><div class="spec-value">gemma3:1b</div></div><div class="spec-card"><div class="spec-label">Tama&ntilde;o</div><div class="spec-value warn">815 MB</div></div><div class="spec-card"><div class="spec-label">Tool Use</div><div class="spec-value bad">No soportado</div></div><div class="spec-card"><div class="spec-label">Uso v&aacute;lido</div><div class="spec-value ok">Copiloto / Advisor</div></div></div>
+<div class="risk-section"><div class="risk-label">Riesgo de colisi&oacute;n por modelo compacto</div><div class="risk-meter"><div class="risk-fill" style="width:70%"></div></div><div class="risk-labels"><span>Bajo</span><span>Medio</span><span style="color:#fbbf24;font-weight:600">&#9668; Alto</span><span>Cr&iacute;tico</span></div></div>
+<div class="collision-list">
+<div class="collision-item danger"><span class="ci-icon">&#128683;</span><div class="ci-text"><strong>Pipeline de agentes (AG-001&rarr;AG-015):</strong> Imposible. gemma3:1b no soporta tool_use, que es esencial para el bucle de herramientas del engine. Intentar ejecutar un agente pipeline con este modelo provocar&aacute; error inmediato.</div></div>
+<div class="collision-item warning"><span class="ci-icon">&#9889;</span><div class="ci-text"><strong>Saturaci&oacute;n de recursos:</strong> El VPS tiene 2 cores / 8 GB RAM compartidos con PostgreSQL, Frontend, y la API. Consultas concurrentes a Ollama pueden degradar el rendimiento de todo el sistema.</div></div>
+<div class="collision-item warning"><span class="ci-icon">&#127919;</span><div class="ci-text"><strong>Calidad de respuestas:</strong> Con solo 1B par&aacute;metros, las respuestas del copiloto t&eacute;cnico y Build Advisor ser&aacute;n significativamente menos precisas que con Claude o GPT-5.4. Apto para pruebas, no para decisiones cr&iacute;ticas.</div></div>
+<div class="collision-item info"><span class="ci-icon">&#128274;</span><div class="ci-text"><strong>Ventaja: Zero Data Exposure</strong> &mdash; Los datos nunca salen del servidor. Ideal para entornos donde la confidencialidad prima sobre la calidad de respuesta. Ning&uacute;n tercero accede a las consultas.</div></div>
+</div>
+</div>
+<div class="ollama-footer"><button class="llm-btn llm-btn-cancel llm-btn-ollama-cancel" onclick="llmCloseOllama()">Volver a ChatGPT ($0)</button><button class="llm-btn llm-btn-ollama-ok" onclick="llmConfirmOllama()">Entendido, activar Ollama</button></div>
+</div>
+</div>
+
+<!-- ADD PROVIDER MODAL -->
+<div class="llm-modal-overlay" id="llmAddOverlay">
+<div class="add-modal">
+<div class="modal-header"><h2>+ A&ntilde;adir proveedor LLM</h2><button class="modal-close" onclick="llmCloseAdd()">&#10005;</button></div>
+<div class="modal-body">
+<div class="llm-form-group"><label>Tipo de conexi&oacute;n</label></div>
+<div class="llm-type-selector">
+<div class="llm-type-btn selected" data-type="apikey" onclick="llmSelectType(this)"><div class="type-icon"><svg><use href="#icon-key"/></svg></div><div class="type-label">API Key</div><div class="type-desc">OpenAI, Anthropic, Mistral...</div></div>
+<div class="llm-type-btn" data-type="oauth" onclick="llmSelectType(this)"><div class="type-icon"><svg><use href="#icon-oauth"/></svg></div><div class="type-label">OAuth</div><div class="type-desc">ChatGPT Plus, Azure AD...</div></div>
+<div class="llm-type-btn" data-type="custom" onclick="llmSelectType(this)"><div class="type-icon"><svg><use href="#icon-server"/></svg></div><div class="type-label">Propietario</div><div class="type-desc">Endpoint propio, LLM local...</div></div>
+</div>
+<div class="llm-tab-content active" id="llm-tab-apikey"><div class="llm-form-group"><label>Nombre del proveedor</label><input type="text" placeholder="ej: anthropic, openai, mistral"></div><div class="llm-form-group"><label>Display name</label><input type="text" placeholder="ej: Claude (Anthropic)"></div><div class="llm-form-row"><div class="llm-form-group"><label>Modelo por defecto</label><input type="text" placeholder="ej: claude-sonnet-4-20250514"></div><div class="llm-form-group"><label>Base URL</label><input type="text" value="https://api.anthropic.com"></div></div><div class="llm-form-group"><label>API Key</label><input type="password" placeholder="sk-ant-api03-..."><div class="hint">Se almacena cifrada en config_json</div></div></div>
+<div class="llm-tab-content" id="llm-tab-oauth"><div class="llm-form-group"><label>Nombre del proveedor</label><input type="text" value="chatgpt"></div><div class="llm-form-group"><label>Display name</label><input type="text" value="ChatGPT Plus"></div><div class="llm-oauth-btn" onclick="alert('Redirige a auth0.openai.com/authorize...')"><svg><use href="#logo-openai"/></svg> Conectar con OpenAI (OAuth)</div><div class="llm-form-row"><div class="llm-form-group"><label>Modelo</label><input type="text" value="gpt-5.4"></div><div class="llm-form-group"><label>Endpoint</label><input type="text" value="chatgpt.com/backend-api/codex/responses"></div></div><div class="llm-form-group"><label>Token source</label><select><option>OpenClaw (auto-refresh)</option><option>Manual</option><option>OAuth flow propio</option></select></div></div>
+<div class="llm-tab-content" id="llm-tab-custom"><div class="llm-form-group"><label>Nombre del proveedor</label><input type="text" placeholder="ej: ollama, llm-interno"></div><div class="llm-form-group"><label>Display name</label><input type="text" placeholder="ej: Ollama Local"></div><div class="llm-form-row"><div class="llm-form-group"><label>Endpoint base</label><input type="text" placeholder="http://localhost:11434/v1"></div><div class="llm-form-group"><label>Modelo</label><input type="text" placeholder="ej: gemma3:1b"></div></div><div class="llm-form-row"><div class="llm-form-group"><label>Formato API</label><select><option>OpenAI-compatible</option><option>Ollama nativo</option><option>Custom</option></select></div><div class="llm-form-group"><label>Autenticaci&oacute;n</label><select><option>Ninguna (local)</option><option>Bearer token</option><option>API Key header</option></select></div></div><div class="llm-form-group"><label>Soporta tool_use</label><select><option>Autodetectar</option><option>S&iacute;</option><option>No &mdash; solo texto</option></select></div></div>
+<div class="llm-test-bar"><span class="test-status" id="llmTestDot"></span><span class="test-text" id="llmTestText">Test de conexi&oacute;n pendiente</span><button class="llm-test-btn" onclick="llmSimulateTest()">Probar</button></div>
+</div>
+<div class="modal-footer"><button class="llm-btn llm-btn-cancel" onclick="llmCloseAdd()">Cancelar</button><button class="llm-btn llm-btn-save" id="llmSaveBtn" disabled>Guardar proveedor</button></div>
+</div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// F5: SELECTOR LLM — LÓGICA COMPLETA
+// ══════════════════════════════════════════════════════
+(function(){
+'use strict';
+var LLM_PASS='joseanto',llmAttempts=0,LLM_MAX_ATTEMPTS=5,llmPendingProvider=null,llmUnlocked=new Set();
+var PROVIDER_CONFIG={
+chatgpt:{protected:false,logo:'logo-openai',bg:'bg-openai',badgeClass:'llm-badge-oauth',badgeText:'$0 FREE',free:true},
+anthropic:{protected:'password',logo:'logo-anthropic',bg:'bg-claude',badgeClass:'llm-badge-api',badgeText:'API',cost:'~$0.05/invocación · facturación directa API',reason:'Este proveedor genera costes directos por cada invocación a la API de Anthropic (~$0.05/llamada). Un pipeline completo de 15 agentes con tool_use puede superar $3.00 por ejecución. El acceso está restringido para evitar consumo no autorizado de créditos durante la fase de evaluación por terceros.'},
+openai:{protected:'password',logo:'logo-openai',bg:'bg-openai',badgeClass:'llm-badge-api',badgeText:'API',cost:'~$0.03/invocación · requiere billing OpenAI',reason:'Este proveedor requiere una cuenta de facturación activa en OpenAI (api.openai.com). A diferencia de ChatGPT Plus, cada llamada API tiene coste directo por tokens consumidos. El acceso está restringido para evitar cargos inesperados durante la fase de evaluación por terceros.'},
+ollama:{protected:'ollama-warn',logo:'logo-ollama',bg:'bg-ollama',badgeClass:'llm-badge-local',badgeText:'Local'}
+};
+var badge=document.getElementById('llmBadgeBtn'),dd=document.getElementById('llmDropdown');
+
+async function loadProviders(){
+try{var resp=await fetch('/api/llm/providers');var providers=await resp.json();renderDropdown(providers);}
+catch(e){console.error('F5: Error cargando providers',e);}
+}
+
+function renderDropdown(providers){
+var html='';
+var defaultProv=providers.find(function(p){return p.is_default})||providers.find(function(p){return p.provider_name==='chatgpt'});
+providers.forEach(function(p){
+var cfg=PROVIDER_CONFIG[p.provider_name]||{protected:false,logo:'logo-custom',bg:'',badgeClass:'llm-badge-api',badgeText:p.auth_type};
+var isActive=defaultProv&&p.id===defaultProv.id;
+var config=typeof p.config_json==='string'?JSON.parse(p.config_json):p.config_json||{};
+var models=config.models||[];
+var model=models[0]||p.provider_name;
+html+='<div class="llm-dd-item '+(isActive?'active':'')+'" data-id="'+p.id+'" data-provider="'+p.provider_name+'" data-name="'+p.display_name+'" data-model="'+model+'" data-protected="'+(cfg.protected||false)+'">';
+html+='<div class="icon-wrap '+cfg.bg+'"><svg><use href="#'+cfg.logo+'"/></svg></div>';
+html+='<div class="details"><div class="pname">'+p.display_name+'</div><div class="pmodel">'+model+(cfg.free?' · $0/llamada':'')+'</div></div>';
+html+='<span class="llm-badge '+cfg.badgeClass+(cfg.free?' free-pulse':'')+'">'+cfg.badgeText+'</span>';
+if(cfg.protected==='password')html+='<div class="lock-icon"><svg><use href="#icon-lock"/></svg></div>';
+if(cfg.protected==='ollama-warn')html+='<div class="warn-icon"><svg><use href="#icon-warn-triangle"/></svg></div>';
+html+='</div>';
+});
+html+='<div class="llm-dd-divider"></div>';
+html+='<div class="llm-dd-add" id="llmAddBtn"><span style="font-size:18px;font-weight:300">+</span> Añadir proveedor LLM</div>';
+dd.innerHTML=html;
+if(defaultProv){
+var cfg=PROVIDER_CONFIG[defaultProv.provider_name]||{};
+var config=typeof defaultProv.config_json==='string'?JSON.parse(defaultProv.config_json):defaultProv.config_json||{};
+var models=config.models||[];
+document.getElementById('llmBadgeName').textContent=defaultProv.display_name;
+document.getElementById('llmBadgeModel').textContent=(models[0]||defaultProv.provider_name)+(cfg.free?' · $0/llamada':'');
+if(cfg.logo)document.getElementById('llmBadgeLogo').innerHTML='<svg><use href="#'+cfg.logo+'"/></svg>';
+}
+dd.querySelectorAll('.llm-dd-item').forEach(function(item){item.addEventListener('click',function(){handleProviderClick(item)});});
+var addBtn=document.getElementById('llmAddBtn');
+if(addBtn)addBtn.addEventListener('click',function(){dd.classList.remove('open');document.getElementById('llmAddOverlay').classList.add('open');});
+}
+
+function handleProviderClick(item){
+var prot=item.dataset.protected,provider=item.dataset.provider;
+if(item.classList.contains('active'))return;
+if(prot==='false'){activateProvider(item);return;}
+if(prot==='password'){
+if(llmUnlocked.has(provider)){activateProvider(item);return;}
+llmPendingProvider=item;openPassModal(item);dd.classList.remove('open');return;
+}
+if(prot==='ollama-warn'){llmPendingProvider=item;dd.classList.remove('open');document.getElementById('llmOllamaOverlay').classList.add('open');return;}
+}
+
+async function activateProvider(item){
+var id=item.dataset.id;
+try{await fetch('/api/llm/providers/'+id+'/activate',{method:'PUT'});}catch(e){console.error('F5: Error activando provider',e);}
+dd.querySelectorAll('.llm-dd-item').forEach(function(i){i.classList.remove('active')});
+item.classList.add('active');
+document.getElementById('llmBadgeName').textContent=item.dataset.name;
+document.getElementById('llmBadgeModel').textContent=item.dataset.model;
+var cfg=PROVIDER_CONFIG[item.dataset.provider];
+if(cfg&&cfg.logo)document.getElementById('llmBadgeLogo').innerHTML='<svg><use href="#'+cfg.logo+'"/></svg>';
+dd.classList.remove('open');
+llmShowToast('✓ '+item.dataset.name+' activado');
+}
+
+badge.addEventListener('click',function(e){e.stopPropagation();dd.classList.toggle('open');});
+document.addEventListener('click',function(){dd.classList.remove('open')});
+dd.addEventListener('click',function(e){e.stopPropagation()});
+
+function openPassModal(item){
+var provider=item.dataset.provider,cfg=PROVIDER_CONFIG[provider]||{};
+document.getElementById('llmPassProvName').textContent=item.dataset.name;
+document.getElementById('llmPassProvCost').textContent=cfg.cost||'';
+document.getElementById('llmPassReason').textContent=cfg.reason||'';
+var iconEl=document.getElementById('llmPassIcon');
+iconEl.style.background=provider==='anthropic'?'rgba(217,119,87,0.15)':'rgba(16,163,127,0.15)';
+iconEl.innerHTML='<svg><use href="#'+cfg.logo+'"/></svg>';
+document.getElementById('llmPassInput').value='';
+document.getElementById('llmPassInput').classList.remove('error');
+document.getElementById('llmPassError').classList.remove('visible');
+document.getElementById('llmPassOverlay').classList.add('open');
+llmUpdateAttemptDots();
+setTimeout(function(){document.getElementById('llmPassInput').focus()},200);
+}
+
+window.llmClosePass=function(){document.getElementById('llmPassOverlay').classList.remove('open');llmPendingProvider=null;};
+window.llmTryUnlock=function(){
+var input=document.getElementById('llmPassInput');
+if(input.value===LLM_PASS){llmUnlocked.add(llmPendingProvider.dataset.provider);llmClosePass();activateProvider(llmPendingProvider);llmAttempts=0;return;}
+llmAttempts++;input.classList.add('error');llmUpdateAttemptDots();
+if(llmAttempts>=LLM_MAX_ATTEMPTS){
+document.getElementById('llmPassErrorText').textContent='Máximo de intentos alcanzado. Inténtalo más tarde.';
+document.getElementById('llmPassError').classList.add('visible');
+document.getElementById('llmUnlockBtn').disabled=true;input.disabled=true;
+setTimeout(function(){llmClosePass();llmAttempts=0;document.getElementById('llmUnlockBtn').disabled=false;input.disabled=false;},5000);
+}else{
+document.getElementById('llmPassErrorText').textContent='Contraseña incorrecta — '+(LLM_MAX_ATTEMPTS-llmAttempts)+' intentos restantes';
+document.getElementById('llmPassError').classList.add('visible');
+}
+setTimeout(function(){input.classList.remove('error')},400);
+};
+document.getElementById('llmPassInput').addEventListener('keydown',function(e){if(e.key==='Enter')llmTryUnlock()});
+function llmUpdateAttemptDots(){for(var i=1;i<=5;i++){var dot=document.getElementById('llmAtt'+i);if(dot)dot.classList.toggle('used',i<=llmAttempts);}}
+window.llmToggleEye=function(){var inp=document.getElementById('llmPassInput');inp.type=inp.type==='password'?'text':'password';};
+
+window.llmCloseOllama=function(){document.getElementById('llmOllamaOverlay').classList.remove('open');llmPendingProvider=null;};
+window.llmConfirmOllama=function(){document.getElementById('llmOllamaOverlay').classList.remove('open');if(llmPendingProvider){activateProvider(llmPendingProvider);}};
+window.llmCloseAdd=function(){document.getElementById('llmAddOverlay').classList.remove('open');};
+document.getElementById('llmAddOverlay').addEventListener('click',function(e){if(e.target===e.currentTarget)llmCloseAdd()});
+window.llmSelectType=function(el){document.querySelectorAll('.llm-type-btn').forEach(function(b){b.classList.remove('selected')});el.classList.add('selected');document.querySelectorAll('.llm-tab-content').forEach(function(t){t.classList.remove('active')});document.getElementById('llm-tab-'+el.dataset.type).classList.add('active');document.getElementById('llmTestDot').className='test-status';document.getElementById('llmTestText').textContent='Test de conexión pendiente';document.getElementById('llmSaveBtn').disabled=true;};
+window.llmSimulateTest=function(){var dot=document.getElementById('llmTestDot'),text=document.getElementById('llmTestText');dot.className='test-status loading';text.textContent='Probando conexión...';setTimeout(function(){dot.className='test-status ok';text.textContent='✓ Conexión OK — modelo responde';document.getElementById('llmSaveBtn').disabled=false;},1800);};
+
+function llmShowToast(msg){var t=document.getElementById('llmToast');t.textContent=msg;t.style.display='block';setTimeout(function(){t.style.display='none'},3000);}
+loadProviders();
+})();
+</script>
+<!-- ═══ END F5 SELECTOR LLM ═══ -->
+
 </body>
 </html>
