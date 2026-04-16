@@ -204,8 +204,9 @@ async def _call_claude(pregunta: str, contexto_json: str, nombre_tecnico: str, i
         return "⚠️ API key de Anthropic no configurada. Configura ANTHROPIC_API_KEY en las variables de entorno."
 
     try:
-        import anthropic
-        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        from llm_provider import get_provider
+
+        provider = get_provider("anthropic")
 
         user_msg = f"""Pregunta del técnico {nombre_tecnico} ({id_recurso}):
 {pregunta}
@@ -213,13 +214,13 @@ async def _call_claude(pregunta: str, contexto_json: str, nombre_tecnico: str, i
 Datos de la BD de Cognitive PMO:
 {contexto_json}"""
 
-        response = client.messages.create(
+        resp = await provider.create_message(
             model=CLAUDE_MODEL,
             max_tokens=800,
             system=SYSTEM_PROMPT,
             messages=[{"role": "user", "content": user_msg}],
         )
-        return response.content[0].text
+        return resp.text
 
     except Exception as e:
         logger.error(f"Copiloto Claude API error: {e}")
