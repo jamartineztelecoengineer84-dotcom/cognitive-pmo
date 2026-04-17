@@ -137,6 +137,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ── Rate Limiting ──────────────────────────────────────────────────────────
+try:
+    from slowapi import Limiter
+    from slowapi.util import get_remote_address
+    from slowapi.errors import RateLimitExceeded
+    _limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"], storage_uri="memory://")
+    app.state.limiter = _limiter
+
+    async def _rate_limit_handler(request, exc):
+        return JSONResponse(status_code=429, content={
+            "error": "rate_limit_exceeded",
+            "message": "Demasiadas peticiones. Espera un momento e inténtalo de nuevo.",
+        })
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)
+    logger.info("Rate limiting activo: 200/min general")
+except ImportError:
+    _limiter = None
+    logger.warning("slowapi no instalado — rate limiting desactivado")
 
 # ── F5 · role_gate (defensa en profundidad /api/pm /api/tech /api/p96) ──
 from authz import role_gate_middleware
@@ -6239,6 +6257,54 @@ async def activate_llm_provider(provider_id: int, request: Request):
             "SELECT id, provider_name, display_name, is_default FROM primitiva.llm_provider_config WHERE id = $1",
             provider_id)
         return dict(result)
+
+
+# ── Status page pública ───────────────────────────────────────────────────
+
+@app.get("/api/status")
+async def system_status():
+    """Estado en tiempo real de todos los servicios. Público."""
+    import subprocess, glob
+    inicio = _time.time()
+    checks = {}
+
+    checks["backend"] = {"status": "ok", "detail": "FastAPI respondiendo"}
+
+    try:
+        pool = get_pool()
+        async with pool.acquire() as conn:
+            await conn.fetchval("SELECT 1")
+        checks["database"] = {"status": "ok", "detail": "PostgreSQL conectado"}
+    except Exception as e:
+        checks["database"] = {"status": "error", "detail": str(e)[:100]}
+
+    try:
+        result = subprocess.run(["df", "-h", "/"], capture_output=True, text=True, timeout=5)
+        parts = result.stdout.strip().split("\n")[1].split()
+        uso = parts[4]
+        pct = int(uso.replace("%", ""))
+        checks["disk"] = {"status": "ok" if pct < 85 else "warning", "detail": f"{uso} usado, {parts[3]} disponible"}
+    except Exception as e:
+        checks["disk"] = {"status": "error", "detail": str(e)[:100]}
+
+    # SSL via httpx (available inside container)
+    try:
+        import httpx as _httpx
+        async with _httpx.AsyncClient(timeout=10, verify=False) as _c:
+            r = await _c.get("https://cognitive-pmo.es")
+            checks["ssl"] = {"status": "ok" if r.status_code == 200 else "error", "detail": f"HTTP {r.status_code}"}
+    except Exception as e:
+        checks["ssl"] = {"status": "unknown", "detail": str(e)[:80]}
+
+    all_ok = all(c["status"] == "ok" for c in checks.values())
+    has_error = any(c["status"] == "error" for c in checks.values())
+
+    return {
+        "status": "ok" if all_ok else ("error" if has_error else "degraded"),
+        "timestamp": datetime.now().isoformat(),
+        "response_ms": int((_time.time() - inicio) * 1000),
+        "services": checks,
+    }
 
 
 # ── Monitorización: audit page-view ───────────────────────────────────────

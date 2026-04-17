@@ -112,6 +112,21 @@ def health_check_diario():
     except Exception as e:
         checks.append(("SSL", False, str(e)))
 
+    # Último backup
+    try:
+        import glob
+        backups = sorted(glob.glob("/root/cognitive-pmo/backups/cognitive_pmo_*.sql.gz"))
+        if backups:
+            ultimo = backups[-1]
+            mod_time = datetime.fromtimestamp(os.path.getmtime(ultimo))
+            horas = (datetime.now() - mod_time).total_seconds() / 3600
+            tamano = os.path.getsize(ultimo) / (1024 * 1024)
+            checks.append(("Backup BD", horas < 25, f"Último: {mod_time.strftime('%d/%m %H:%M')} ({tamano:.1f} MB)"))
+        else:
+            checks.append(("Backup BD", False, "Sin backups"))
+    except Exception as e:
+        checks.append(("Backup BD", False, str(e)))
+
     total_ok = sum(1 for _, ok, _ in checks if ok)
     total = len(checks)
     all_ok = total_ok == total
