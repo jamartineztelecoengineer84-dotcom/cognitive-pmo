@@ -25,5 +25,10 @@ if [ "$SIZE" -gt 1000 ]; then
     echo "  Limpieza: $BORRADOS antiguos eliminados"
     echo "BACKUP_OK"
 else
-    echo "ERROR: Backup vacío"; exit 1
+    echo "ERROR: Backup vacío"
+    docker exec cognitive-pmo-api-1 python -c "
+from monitor import notificar_error
+notificar_error('database', 'backup_fail', 'Backup diario falló o fichero vacío. Revisar manualmente.', endpoint='cron/backup')
+" 2>/dev/null || true
+    exit 1
 fi

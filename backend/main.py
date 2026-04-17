@@ -146,6 +146,14 @@ try:
     app.state.limiter = _limiter
 
     async def _rate_limit_handler(request, exc):
+        try:
+            ip = request.headers.get("X-Forwarded-For", "").split(",")[0].strip() or (request.client.host if request.client else "?")
+            from monitor import notificar_error
+            notificar_error("backend", "rate_limit",
+                f"IP {ip} bloqueada en {request.url.path}\n{exc.detail}",
+                endpoint=str(request.url.path))
+        except Exception:
+            pass
         return JSONResponse(status_code=429, content={
             "error": "rate_limit_exceeded",
             "message": "Demasiadas peticiones. Espera un momento e inténtalo de nuevo.",
@@ -6148,6 +6156,7 @@ async def pm_chat_send(id_proyecto: str, body: PMChatMessage):
 
 # Seguridad F5b: hash de contraseña de autor (NUNCA texto plano)
 _LLM_AUTHOR_HASH = "9b8d684facf0905d6ed2dd439f9bc23d9c9e758124ba1413218763a0ea8f8371"
+_last_status_alert = None  # Cooldown para alertas de /api/status
 _LLM_PROTECTED = {"anthropic", "openai"}
 _llm_unlock_tokens: Dict[str, dict] = {}
 _SENSITIVE_KEYS = {"api_key", "oauth_token", "access_token", "refresh_token", "secret"}
@@ -6298,6 +6307,20 @@ async def system_status():
 
     all_ok = all(c["status"] == "ok" for c in checks.values())
     has_error = any(c["status"] == "error" for c in checks.values())
+
+    # Alertar si hay servicios caídos (cooldown 10 min)
+    if has_error:
+        ahora = _time.time()
+        global _last_status_alert
+        if _last_status_alert is None or (ahora - _last_status_alert) > 600:
+            _last_status_alert = ahora
+            try:
+                from monitor import notificar_error
+                caidos = [k for k, v in checks.items() if v["status"] == "error"]
+                notificar_error("backend", "service_down",
+                    f"Servicios caídos: {', '.join(caidos)}", endpoint="/api/status")
+            except Exception:
+                pass
 
     return {
         "status": "ok" if all_ok else ("error" if has_error else "degraded"),
