@@ -686,53 +686,53 @@ WHERE r.code = 'READONLY' AND p.code IN (
 
 -- C-LEVEL
 INSERT INTO directorio_corporativo (id_directivo, nombre_completo, cargo, nivel_organizativo, area, reporta_a, email, telefono, ubicacion, bio) VALUES
-('DIR-001', 'Alejandro Vidal Montero',     'CEO - Chief Executive Officer',              'C-LEVEL', 'Dirección General',       NULL,      'alejandro.vidal@cognitivepmo.com',    '+34 691 001 001', 'Madrid HQ',       'MBA por IE Business School. 25 años liderando transformación digital en banca.'),
-('DIR-002', 'Carmen Delgado Ríos',          'CTO - Chief Technology Officer',             'C-LEVEL', 'Tecnología',              'DIR-001', 'carmen.delgado@cognitivepmo.com',      '+34 691 001 002', 'Madrid HQ',       'PhD en Computer Science. Ex-CTO de Indra. Arquitecta de la plataforma Cognitive PMO.'),
-('DIR-003', 'Roberto Navarro Sáenz',        'CIO - Chief Information Officer',            'C-LEVEL', 'Sistemas de Información', 'DIR-001', 'roberto.navarro@cognitivepmo.com',     '+34 691 001 003', 'Madrid HQ',       'CISM, CGEIT. Especialista en gobernanza TI y transformación digital bancaria.'),
-('DIR-004', 'Elena Marquez Aguirre',        'CISO - Chief Information Security Officer',  'C-LEVEL', 'Ciberseguridad',          'DIR-001', 'elena.marquez@cognitivepmo.com',       '+34 691 001 004', 'Madrid HQ',       'CISSP, CEH. Ex-directora de seguridad en BBVA. Experta en Zero Trust.'),
-('DIR-005', 'Francisco Herrera Luna',       'CFO - Chief Financial Officer',              'C-LEVEL', 'Finanzas',                'DIR-001', 'francisco.herrera@cognitivepmo.com',   '+34 691 001 005', 'Madrid HQ',       'CPA, CFA. 20 años en control financiero de empresas tecnológicas.')
+('DIR-001', 'Alejandro Vidal Montero',     'CEO - Chief Executive Officer',              'C-LEVEL', 'Dirección General',       NULL,      'alejandro.vidal@cognitive-pmo.es',    '+34 691 001 001', 'Madrid HQ',       'MBA por IE Business School. 25 años liderando transformación digital en banca.'),
+('DIR-002', 'Carmen Delgado Ríos',          'CTO - Chief Technology Officer',             'C-LEVEL', 'Tecnología',              'DIR-001', 'carmen.delgado@cognitive-pmo.es',      '+34 691 001 002', 'Madrid HQ',       'PhD en Computer Science. Ex-CTO de Indra. Arquitecta de la plataforma Cognitive PMO.'),
+('DIR-003', 'Roberto Navarro Sáenz',        'CIO - Chief Information Officer',            'C-LEVEL', 'Sistemas de Información', 'DIR-001', 'roberto.navarro@cognitive-pmo.es',     '+34 691 001 003', 'Madrid HQ',       'CISM, CGEIT. Especialista en gobernanza TI y transformación digital bancaria.'),
+('DIR-004', 'Elena Marquez Aguirre',        'CISO - Chief Information Security Officer',  'C-LEVEL', 'Ciberseguridad',          'DIR-001', 'elena.marquez@cognitive-pmo.es',       '+34 691 001 004', 'Madrid HQ',       'CISSP, CEH. Ex-directora de seguridad en BBVA. Experta en Zero Trust.'),
+('DIR-005', 'Francisco Herrera Luna',       'CFO - Chief Financial Officer',              'C-LEVEL', 'Finanzas',                'DIR-001', 'francisco.herrera@cognitive-pmo.es',   '+34 691 001 005', 'Madrid HQ',       'CPA, CFA. 20 años en control financiero de empresas tecnológicas.')
 ON CONFLICT (id_directivo) DO NOTHING;
 
 -- VP (Vice Presidents)
 INSERT INTO directorio_corporativo (id_directivo, nombre_completo, cargo, nivel_organizativo, area, reporta_a, email, telefono, ubicacion, bio) VALUES
-('DIR-010', 'Miguel Ángel Ruiz Portillo',   'VP of Engineering',                          'VP', 'Ingeniería de Software',      'DIR-002', 'miguelangel.ruiz@cognitivepmo.com',   '+34 691 002 001', 'Madrid HQ',       'MSc en Software Engineering. Lidera 80+ ingenieros en 4 equipos de desarrollo.'),
-('DIR-011', 'Patricia López de la Fuente',  'VP of Operations (IT Ops)',                  'VP', 'Operaciones IT',              'DIR-002', 'patricia.lopez@cognitivepmo.com',      '+34 691 002 002', 'Barcelona Hub',   'ITIL Master, SRE. Responsable de SLA 99.95% en producción bancaria.'),
-('DIR-012', 'Gonzalo Fernández-Vega',       'VP of PMO',                                  'VP', 'PMO Corporativa',             'DIR-003', 'gonzalo.fernandez@cognitivepmo.com',   '+34 691 002 003', 'Madrid HQ',       'PMP, PgMP, SAFe SPC. Gestión del portfolio de 46+ proyectos estratégicos.')
+('DIR-010', 'Miguel Ángel Ruiz Portillo',   'VP of Engineering',                          'VP', 'Ingeniería de Software',      'DIR-002', 'miguelangel.ruiz@cognitive-pmo.es',   '+34 691 002 001', 'Madrid HQ',       'MSc en Software Engineering. Lidera 80+ ingenieros en 4 equipos de desarrollo.'),
+('DIR-011', 'Patricia López de la Fuente',  'VP of Operations (IT Ops)',                  'VP', 'Operaciones IT',              'DIR-002', 'patricia.lopez@cognitive-pmo.es',      '+34 691 002 002', 'Barcelona Hub',   'ITIL Master, SRE. Responsable de SLA 99.95% en producción bancaria.'),
+('DIR-012', 'Gonzalo Fernández-Vega',       'VP of PMO',                                  'VP', 'PMO Corporativa',             'DIR-003', 'gonzalo.fernandez@cognitive-pmo.es',   '+34 691 002 003', 'Madrid HQ',       'PMP, PgMP, SAFe SPC. Gestión del portfolio de 46+ proyectos estratégicos.')
 ON CONFLICT (id_directivo) DO NOTHING;
 
 -- DIRECTORES
 INSERT INTO directorio_corporativo (id_directivo, nombre_completo, cargo, nivel_organizativo, area, reporta_a, email, telefono, ubicacion, bio) VALUES
-('DIR-020', 'Laura Sanz Bermejo',           'Directora de Desarrollo Backend',            'DIRECTOR', 'Backend Engineering',     'DIR-010', 'laura.sanz@cognitivepmo.com',          '+34 691 003 001', 'Madrid HQ',       'Arquitecta principal. Java, Python, microservicios. 15 años en banca digital.'),
-('DIR-021', 'Sergio Morales Pinto',         'Director de Desarrollo Frontend',            'DIRECTOR', 'Frontend Engineering',    'DIR-010', 'sergio.morales@cognitivepmo.com',      '+34 691 003 002', 'Madrid HQ',       'Líder de UX Engineering. React, Angular, design systems.'),
-('DIR-022', 'Natalia Campos Rivero',        'Directora de QA & Testing',                  'DIRECTOR', 'Quality Assurance',       'DIR-010', 'natalia.campos@cognitivepmo.com',      '+34 691 003 003', 'Barcelona Hub',   'ISTQB Advanced. Automatización de pruebas y CI/CD quality gates.'),
-('DIR-023', 'Javier Iglesias Roca',         'Director de Infraestructura & Redes',        'DIRECTOR', 'Infraestructura',         'DIR-011', 'javier.iglesias@cognitivepmo.com',     '+34 691 003 004', 'Madrid CPD',      'CCIE, CCDA. Arquitecto de red de los Data Centers Madrid y Barcelona.'),
-('DIR-024', 'Marta Fuentes Escobar',        'Directora de Seguridad Operativa',           'DIRECTOR', 'Seguridad IT',            'DIR-004', 'marta.fuentes@cognitivepmo.com',       '+34 691 003 005', 'Madrid HQ',       'OSCP, GIAC. Gestión de SOC 24/7 y respuesta a incidentes.'),
-('DIR-025', 'Óscar Blanco Heredia',         'Director de Datos & BBDD',                   'DIRECTOR', 'Data Engineering',        'DIR-011', 'oscar.blanco@cognitivepmo.com',        '+34 691 003 006', 'Madrid CPD',      'Oracle ACE. DBA senior con expertise en PostgreSQL, Oracle, MongoDB.'),
-('DIR-026', 'Ana Belén Gutiérrez Palacios', 'Directora de DevOps & SRE',                  'DIRECTOR', 'DevOps',                  'DIR-010', 'anabelen.gutierrez@cognitivepmo.com',  '+34 691 003 007', 'Barcelona Hub',   'CKA, AWS SA Pro. Kubernetes, Terraform, GitOps.'),
-('DIR-027', 'Ricardo Soto Mendoza',         'Director de Soporte & Service Desk',         'DIRECTOR', 'Soporte IT',              'DIR-011', 'ricardo.soto@cognitivepmo.com',        '+34 691 003 008', 'Madrid HQ',       'HDI Support Center Director. Gestión de 40+ técnicos N1-N2.'),
-('DIR-028', 'Beatriz Castaño Villar',       'Directora de Windows & Sistemas',            'DIRECTOR', 'Sistemas Windows',        'DIR-011', 'beatriz.castano@cognitivepmo.com',     '+34 691 003 009', 'Madrid HQ',       'MCSE, Azure Expert. Active Directory y ecosistema Microsoft corporativo.')
+('DIR-020', 'Laura Sanz Bermejo',           'Directora de Desarrollo Backend',            'DIRECTOR', 'Backend Engineering',     'DIR-010', 'laura.sanz@cognitive-pmo.es',          '+34 691 003 001', 'Madrid HQ',       'Arquitecta principal. Java, Python, microservicios. 15 años en banca digital.'),
+('DIR-021', 'Sergio Morales Pinto',         'Director de Desarrollo Frontend',            'DIRECTOR', 'Frontend Engineering',    'DIR-010', 'sergio.morales@cognitive-pmo.es',      '+34 691 003 002', 'Madrid HQ',       'Líder de UX Engineering. React, Angular, design systems.'),
+('DIR-022', 'Natalia Campos Rivero',        'Directora de QA & Testing',                  'DIRECTOR', 'Quality Assurance',       'DIR-010', 'natalia.campos@cognitive-pmo.es',      '+34 691 003 003', 'Barcelona Hub',   'ISTQB Advanced. Automatización de pruebas y CI/CD quality gates.'),
+('DIR-023', 'Javier Iglesias Roca',         'Director de Infraestructura & Redes',        'DIRECTOR', 'Infraestructura',         'DIR-011', 'javier.iglesias@cognitive-pmo.es',     '+34 691 003 004', 'Madrid CPD',      'CCIE, CCDA. Arquitecto de red de los Data Centers Madrid y Barcelona.'),
+('DIR-024', 'Marta Fuentes Escobar',        'Directora de Seguridad Operativa',           'DIRECTOR', 'Seguridad IT',            'DIR-004', 'marta.fuentes@cognitive-pmo.es',       '+34 691 003 005', 'Madrid HQ',       'OSCP, GIAC. Gestión de SOC 24/7 y respuesta a incidentes.'),
+('DIR-025', 'Óscar Blanco Heredia',         'Director de Datos & BBDD',                   'DIRECTOR', 'Data Engineering',        'DIR-011', 'oscar.blanco@cognitive-pmo.es',        '+34 691 003 006', 'Madrid CPD',      'Oracle ACE. DBA senior con expertise en PostgreSQL, Oracle, MongoDB.'),
+('DIR-026', 'Ana Belén Gutiérrez Palacios', 'Directora de DevOps & SRE',                  'DIRECTOR', 'DevOps',                  'DIR-010', 'anabelen.gutierrez@cognitive-pmo.es',  '+34 691 003 007', 'Barcelona Hub',   'CKA, AWS SA Pro. Kubernetes, Terraform, GitOps.'),
+('DIR-027', 'Ricardo Soto Mendoza',         'Director de Soporte & Service Desk',         'DIRECTOR', 'Soporte IT',              'DIR-011', 'ricardo.soto@cognitive-pmo.es',        '+34 691 003 008', 'Madrid HQ',       'HDI Support Center Director. Gestión de 40+ técnicos N1-N2.'),
+('DIR-028', 'Beatriz Castaño Villar',       'Directora de Windows & Sistemas',            'DIRECTOR', 'Sistemas Windows',        'DIR-011', 'beatriz.castano@cognitive-pmo.es',     '+34 691 003 009', 'Madrid HQ',       'MCSE, Azure Expert. Active Directory y ecosistema Microsoft corporativo.')
 ON CONFLICT (id_directivo) DO NOTHING;
 
 -- SUBDIRECTORES / GERENTES
 INSERT INTO directorio_corporativo (id_directivo, nombre_completo, cargo, nivel_organizativo, area, reporta_a, email, telefono, ubicacion, bio) VALUES
-('DIR-030', 'Pablo Rivas Camacho',          'Gerente de Proyecto - Infraestructura',      'GERENTE', 'PMO - Infraestructura',   'DIR-012', 'pablo.rivas@cognitivepmo.com',         '+34 691 004 001', 'Madrid HQ',       'PMP. Gestión de proyectos de red y Data Center.'),
-('DIR-031', 'Cristina Vega Salinas',        'Gerente de Proyecto - Aplicaciones',         'GERENTE', 'PMO - Aplicaciones',      'DIR-012', 'cristina.vega@cognitivepmo.com',       '+34 691 004 002', 'Madrid HQ',       'PMP, CSM. Proyectos de desarrollo de aplicaciones core banking.'),
-('DIR-032', 'Daniel Prieto Gallardo',       'Gerente de Proyecto - Seguridad',            'GERENTE', 'PMO - Seguridad',         'DIR-012', 'daniel.prieto@cognitivepmo.com',       '+34 691 004 003', 'Madrid HQ',       'PMP, CISSP. Proyectos de compliance y ciberseguridad.'),
-('DIR-033', 'Lucía Romero Ibarra',          'Gerente de Proyecto - Digital',              'GERENTE', 'PMO - Digital',           'DIR-012', 'lucia.romero@cognitivepmo.com',        '+34 691 004 004', 'Barcelona Hub',   'PMP, SAFe. Transformación digital y proyectos de IA.'),
-('DIR-034', 'Alberto Lozano Mejía',         'Subdirector de NOC',                         'SUBDIRECTOR', 'NOC',                 'DIR-023', 'alberto.lozano@cognitivepmo.com',      '+34 691 004 005', 'Madrid CPD',      'NOC Manager. Monitorización 24/7 y gestión de alertas.'),
-('DIR-035', 'Inés García-Cano Duarte',      'Subdirectora de SOC',                        'SUBDIRECTOR', 'SOC',                 'DIR-024', 'ines.garciacano@cognitivepmo.com',     '+34 691 004 006', 'Madrid HQ',       'SOC Manager. Threat hunting y análisis de incidentes de seguridad.')
+('DIR-030', 'Pablo Rivas Camacho',          'Gerente de Proyecto - Infraestructura',      'GERENTE', 'PMO - Infraestructura',   'DIR-012', 'pablo.rivas@cognitive-pmo.es',         '+34 691 004 001', 'Madrid HQ',       'PMP. Gestión de proyectos de red y Data Center.'),
+('DIR-031', 'Cristina Vega Salinas',        'Gerente de Proyecto - Aplicaciones',         'GERENTE', 'PMO - Aplicaciones',      'DIR-012', 'cristina.vega@cognitive-pmo.es',       '+34 691 004 002', 'Madrid HQ',       'PMP, CSM. Proyectos de desarrollo de aplicaciones core banking.'),
+('DIR-032', 'Daniel Prieto Gallardo',       'Gerente de Proyecto - Seguridad',            'GERENTE', 'PMO - Seguridad',         'DIR-012', 'daniel.prieto@cognitive-pmo.es',       '+34 691 004 003', 'Madrid HQ',       'PMP, CISSP. Proyectos de compliance y ciberseguridad.'),
+('DIR-033', 'Lucía Romero Ibarra',          'Gerente de Proyecto - Digital',              'GERENTE', 'PMO - Digital',           'DIR-012', 'lucia.romero@cognitive-pmo.es',        '+34 691 004 004', 'Barcelona Hub',   'PMP, SAFe. Transformación digital y proyectos de IA.'),
+('DIR-034', 'Alberto Lozano Mejía',         'Subdirector de NOC',                         'SUBDIRECTOR', 'NOC',                 'DIR-023', 'alberto.lozano@cognitive-pmo.es',      '+34 691 004 005', 'Madrid CPD',      'NOC Manager. Monitorización 24/7 y gestión de alertas.'),
+('DIR-035', 'Inés García-Cano Duarte',      'Subdirectora de SOC',                        'SUBDIRECTOR', 'SOC',                 'DIR-024', 'ines.garciacano@cognitive-pmo.es',     '+34 691 004 006', 'Madrid HQ',       'SOC Manager. Threat hunting y análisis de incidentes de seguridad.')
 ON CONFLICT (id_directivo) DO NOTHING;
 
 -- COORDINADORES / JEFES DE EQUIPO (conectan con los FTEs)
 INSERT INTO directorio_corporativo (id_directivo, nombre_completo, cargo, nivel_organizativo, area, reporta_a, email, telefono, ubicacion, bio) VALUES
-('DIR-040', 'Marcos Morales Guerrero',      'Jefe de Equipo - Soporte N1/N2',             'JEFE_EQUIPO', 'Soporte IT',          'DIR-027', 'marcos.morales@cognitivepmo.com',      '+34 691 005 001', 'Madrid HQ',       'Coordina equipo de soporte de primer y segundo nivel.'),
-('DIR-041', 'Isabel Álvarez Calvo',         'Jefa de Equipo - Redes',                     'JEFE_EQUIPO', 'Redes',               'DIR-023', 'isabel.alvarez@cognitivepmo.com',      '+34 691 005 002', 'Madrid CPD',      'Coordinadora del equipo de ingeniería de redes.'),
-('DIR-042', 'Olga Méndez Ramos',            'Jefa de Equipo - DevOps',                    'JEFE_EQUIPO', 'DevOps',              'DIR-026', 'olga.mendez@cognitivepmo.com',         '+34 691 005 003', 'Barcelona Hub',   'Tech Lead DevOps. Kubernetes, CI/CD, IaC.'),
-('DIR-043', 'Marina Nieto Calvo',           'Jefa de Equipo - Backend',                   'JEFE_EQUIPO', 'Backend Engineering', 'DIR-020', 'marina.nieto@cognitivepmo.com',        '+34 691 005 004', 'Madrid HQ',       'Tech Lead Backend. APIs, microservicios, Python/Java.'),
-('DIR-044', 'Raquel Sánchez Blanco',        'Jefa de Equipo - Backend Senior',            'JEFE_EQUIPO', 'Backend Engineering', 'DIR-020', 'raquel.sanchez@cognitivepmo.com',      '+34 691 005 005', 'Madrid HQ',       'Arquitecta de software senior. Patrones de diseño y DDD.'),
-('DIR-045', 'Felipe Ortiz Cruz',            'Jefe de Equipo - Soporte N3/N4',             'JEFE_EQUIPO', 'Soporte IT',          'DIR-027', 'felipe.ortiz@cognitivepmo.com',        '+34 691 005 006', 'Madrid HQ',       'Coordinador de soporte avanzado y escalaciones.'),
-('DIR-046', 'Tomás Soler Ortega',           'Jefe de Equipo - Soporte Especializado',     'JEFE_EQUIPO', 'Soporte IT',          'DIR-027', 'tomas.soler@cognitivepmo.com',         '+34 691 005 007', 'Madrid HQ',       'Especialista en soporte de aplicaciones críticas bancarias.'),
-('DIR-047', 'Diana Sánchez Alonso',         'Jefa de Equipo - Seguridad',                 'JEFE_EQUIPO', 'Seguridad IT',        'DIR-024', 'diana.sanchez@cognitivepmo.com',       '+34 691 005 008', 'Madrid HQ',       'Pentesting y gestión de vulnerabilidades.')
+('DIR-040', 'Marcos Morales Guerrero',      'Jefe de Equipo - Soporte N1/N2',             'JEFE_EQUIPO', 'Soporte IT',          'DIR-027', 'marcos.morales@cognitive-pmo.es',      '+34 691 005 001', 'Madrid HQ',       'Coordina equipo de soporte de primer y segundo nivel.'),
+('DIR-041', 'Isabel Álvarez Calvo',         'Jefa de Equipo - Redes',                     'JEFE_EQUIPO', 'Redes',               'DIR-023', 'isabel.alvarez@cognitive-pmo.es',      '+34 691 005 002', 'Madrid CPD',      'Coordinadora del equipo de ingeniería de redes.'),
+('DIR-042', 'Olga Méndez Ramos',            'Jefa de Equipo - DevOps',                    'JEFE_EQUIPO', 'DevOps',              'DIR-026', 'olga.mendez@cognitive-pmo.es',         '+34 691 005 003', 'Barcelona Hub',   'Tech Lead DevOps. Kubernetes, CI/CD, IaC.'),
+('DIR-043', 'Marina Nieto Calvo',           'Jefa de Equipo - Backend',                   'JEFE_EQUIPO', 'Backend Engineering', 'DIR-020', 'marina.nieto@cognitive-pmo.es',        '+34 691 005 004', 'Madrid HQ',       'Tech Lead Backend. APIs, microservicios, Python/Java.'),
+('DIR-044', 'Raquel Sánchez Blanco',        'Jefa de Equipo - Backend Senior',            'JEFE_EQUIPO', 'Backend Engineering', 'DIR-020', 'raquel.sanchez@cognitive-pmo.es',      '+34 691 005 005', 'Madrid HQ',       'Arquitecta de software senior. Patrones de diseño y DDD.'),
+('DIR-045', 'Felipe Ortiz Cruz',            'Jefe de Equipo - Soporte N3/N4',             'JEFE_EQUIPO', 'Soporte IT',          'DIR-027', 'felipe.ortiz@cognitive-pmo.es',        '+34 691 005 006', 'Madrid HQ',       'Coordinador de soporte avanzado y escalaciones.'),
+('DIR-046', 'Tomás Soler Ortega',           'Jefe de Equipo - Soporte Especializado',     'JEFE_EQUIPO', 'Soporte IT',          'DIR-027', 'tomas.soler@cognitive-pmo.es',         '+34 691 005 007', 'Madrid HQ',       'Especialista en soporte de aplicaciones críticas bancarias.'),
+('DIR-047', 'Diana Sánchez Alonso',         'Jefa de Equipo - Seguridad',                 'JEFE_EQUIPO', 'Seguridad IT',        'DIR-024', 'diana.sanchez@cognitive-pmo.es',       '+34 691 005 008', 'Madrid HQ',       'Pentesting y gestión de vulnerabilidades.')
 ON CONFLICT (id_directivo) DO NOTHING;
 
 
@@ -889,12 +889,12 @@ ON CONFLICT (email) DO NOTHING;
 
 -- ============================================================
 -- USUARIOS FTE: Técnicos (150 personas)
--- Email generado como: nombre.apellido@cognitivepmo.com
+-- Email generado como: nombre.apellido@cognitive-pmo.es
 -- Rol basado en nivel: N3-N4 = TECH_SENIOR, N1-N2 = TECH_JUNIOR
 -- Los que son jefes de equipo ya se insertaron arriba
 -- ============================================================
 
--- Formato email: nombre.apellido1@cognitivepmo.com (acentos normalizados con TRANSLATE)
+-- Formato email: nombre.apellido1@cognitive-pmo.es (acentos normalizados con TRANSLATE)
 
 -- N3-N4 = TECH_SENIOR (que no son ya TEAM_LEAD)
 INSERT INTO rbac_usuarios (email, password_hash, nombre_completo, id_role, id_recurso, departamento, cargo, activo)
@@ -902,7 +902,7 @@ SELECT
   LOWER(TRANSLATE(
     SPLIT_PART(s.nombre, ' ', 1) || '.' || SPLIT_PART(s.nombre, ' ', 2),
     'áéíóúÁÉÍÓÚñÑüÜ', 'aeiouAEIOUnNuU'
-  )) || '@cognitivepmo.com',
+  )) || '@cognitive-pmo.es',
   '5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5',
   s.nombre,
   r.id_role,
@@ -923,7 +923,7 @@ SELECT
   LOWER(TRANSLATE(
     SPLIT_PART(s.nombre, ' ', 1) || '.' || SPLIT_PART(s.nombre, ' ', 2),
     'áéíóúÁÉÍÓÚñÑüÜ', 'aeiouAEIOUnNuU'
-  )) || '@cognitivepmo.com',
+  )) || '@cognitive-pmo.es',
   '5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5',
   s.nombre,
   r.id_role,
@@ -940,7 +940,7 @@ ON CONFLICT (email) DO NOTHING;
 
 -- Auditor externo
 INSERT INTO rbac_usuarios (email, password_hash, nombre_completo, id_role, departamento, cargo, activo)
-SELECT 'auditor.externo@cognitivepmo.com', '5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5',
+SELECT 'auditor.externo@cognitive-pmo.es', '5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5',
        'Auditor Externo - Deloitte',
        r.id_role, 'Auditoría Externa', 'Auditor de Sistemas', TRUE
 FROM rbac_roles r WHERE r.code = 'AUDITOR'
@@ -948,7 +948,7 @@ ON CONFLICT (email) DO NOTHING;
 
 -- Observador / Stakeholder
 INSERT INTO rbac_usuarios (email, password_hash, nombre_completo, id_role, departamento, cargo, activo)
-SELECT 'stakeholder@cognitivepmo.com', '5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5',
+SELECT 'stakeholder@cognitive-pmo.es', '5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5',
        'Comité de Dirección',
        r.id_role, 'Dirección General', 'Stakeholder Ejecutivo', TRUE
 FROM rbac_roles r WHERE r.code = 'OBSERVADOR'

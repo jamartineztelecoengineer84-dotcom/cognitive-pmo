@@ -16,7 +16,7 @@ import httpx
 API_URL     = "http://localhost:8088"
 ADMIN_EMAIL = "admin"
 ADMIN_PASS  = "admin"
-PM_EMAIL    = "pablo.rivas@cognitivepmo.com"   # PM-016 (id_usuario=19)
+PM_EMAIL    = "pablo.rivas@cognitive-pmo.es"   # PM-016 (id_usuario=19)
 PM_PASS     = "12345"
 
 DB_HOST = os.getenv("DB_HOST", "postgres")

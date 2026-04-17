@@ -21,12 +21,12 @@
 INSERT INTO rbac_usuarios
   (email, password_hash, nombre_completo, id_role, departamento, cargo, activo, requiere_cambio_password)
 VALUES
-  ('ines.carmona@cognitivepmo.com',  '5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5', 'Inés Carmona Ruiz',    15, 'PMO', 'Project Manager Junior', TRUE, FALSE),
-  ('marta.nunez@cognitivepmo.com',   '5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5', 'Marta Núñez Herrera',  15, 'PMO', 'Project Manager Junior', TRUE, FALSE),
-  ('sergio.mateos@cognitivepmo.com', '5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5', 'Sergio Mateos Lara',   15, 'PMO', 'Project Manager Junior', TRUE, FALSE),
-  ('nuria.beltran@cognitivepmo.com', '5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5', 'Nuria Beltrán Ortega', 15, 'PMO', 'Project Manager Junior', TRUE, FALSE),
-  ('hugo.ramos@cognitivepmo.com',    '5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5', 'Hugo Ramos Castillo',  15, 'PMO', 'Project Manager Junior', TRUE, FALSE),
-  ('ruben.ortiz@cognitivepmo.com',   '5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5', 'Rubén Ortiz Delgado',  15, 'PMO', 'Project Manager Junior', TRUE, FALSE)
+  ('ines.carmona@cognitive-pmo.es',  '5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5', 'Inés Carmona Ruiz',    15, 'PMO', 'Project Manager Junior', TRUE, FALSE),
+  ('marta.nunez@cognitive-pmo.es',   '5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5', 'Marta Núñez Herrera',  15, 'PMO', 'Project Manager Junior', TRUE, FALSE),
+  ('sergio.mateos@cognitive-pmo.es', '5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5', 'Sergio Mateos Lara',   15, 'PMO', 'Project Manager Junior', TRUE, FALSE),
+  ('nuria.beltran@cognitive-pmo.es', '5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5', 'Nuria Beltrán Ortega', 15, 'PMO', 'Project Manager Junior', TRUE, FALSE),
+  ('hugo.ramos@cognitive-pmo.es',    '5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5', 'Hugo Ramos Castillo',  15, 'PMO', 'Project Manager Junior', TRUE, FALSE),
+  ('ruben.ortiz@cognitive-pmo.es',   '5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5', 'Rubén Ortiz Delgado',  15, 'PMO', 'Project Manager Junior', TRUE, FALSE)
 ON CONFLICT (email) DO NOTHING;
 
 -- ─────────────────────────────────────────────────────────────────────
@@ -53,12 +53,12 @@ mapping AS (
       ELSE
         (SELECT id_usuario FROM rbac_usuarios WHERE email = (
           ARRAY[
-            'ines.carmona@cognitivepmo.com',
-            'marta.nunez@cognitivepmo.com',
-            'sergio.mateos@cognitivepmo.com',
-            'nuria.beltran@cognitivepmo.com',
-            'hugo.ramos@cognitivepmo.com',
-            'ruben.ortiz@cognitivepmo.com'
+            'ines.carmona@cognitive-pmo.es',
+            'marta.nunez@cognitive-pmo.es',
+            'sergio.mateos@cognitive-pmo.es',
+            'nuria.beltran@cognitive-pmo.es',
+            'hugo.ramos@cognitive-pmo.es',
+            'ruben.ortiz@cognitive-pmo.es'
           ])[((o.rn - 32) % 6) + 1]
         ))
     END AS uid_pm

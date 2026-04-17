@@ -8,7 +8,7 @@ import urllib.request
 from datetime import date
 
 API = "http://localhost:8088"
-TECH_EMAIL = "sandra.ortega@cognitivepmo.com"
+TECH_EMAIL = "sandra.ortega@cognitive-pmo.es"
 TECH_PASS = "12345"
 
 

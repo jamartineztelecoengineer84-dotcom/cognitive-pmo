@@ -16,10 +16,10 @@ import pytest
 
 API = "http://localhost:8088"
 
-CEO_EMAIL  = "alejandro.vidal@cognitivepmo.com"
-CFO_EMAIL  = "francisco.herrera@cognitivepmo.com"   # ver_salario_ind=True
-CIO_EMAIL  = "roberto.navarro@cognitivepmo.com"     # ver_salario_ind=False
-TECH_EMAIL = "adriana.suarez@cognitivepmo.com"      # TECH_JUNIOR
+CEO_EMAIL  = "alejandro.vidal@cognitive-pmo.es"
+CFO_EMAIL  = "francisco.herrera@cognitive-pmo.es"   # ver_salario_ind=True
+CIO_EMAIL  = "roberto.navarro@cognitive-pmo.es"     # ver_salario_ind=False
+TECH_EMAIL = "adriana.suarez@cognitive-pmo.es"      # TECH_JUNIOR
 PASS = "12345"
 
 
