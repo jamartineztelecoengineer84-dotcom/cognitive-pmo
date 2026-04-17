@@ -85,6 +85,13 @@ class AgentEngine:
                     except Exception as e:
                         result = {"error": str(e)}
                         log.error(f"Tool {tc.name} failed: {e}")
+                        try:
+                            from monitor import notificar_error
+                            notificar_error("agente_ia", "tool_error",
+                                f"Agent {self.config.agent_id} tool {tc.name} failed: {e}",
+                                endpoint=f"agents/{self.config.agent_id}/invoke")
+                        except Exception:
+                            pass
                 tool_results.append(self.provider.format_tool_result(
                     tc.id, json.dumps(result, default=str, ensure_ascii=False)
                 ))

@@ -7,6 +7,7 @@ from datetime import datetime, date, timedelta
 import hashlib
 import secrets
 import time as _time
+import asyncio as _asyncio
 from typing import Any, Dict, List, Optional
 
 import psycopg2
@@ -107,7 +108,22 @@ def run_init_sql():
 async def lifespan(app: FastAPI):
     run_init_sql()
     await init_pool()
+    # Scheduler de monitorización (Pilares 1 y 4)
+    _scheduler = None
+    try:
+        from apscheduler.schedulers.asyncio import AsyncIOScheduler
+        from apscheduler.triggers.cron import CronTrigger
+        from monitor import health_check_diario, resumen_diario_actividad
+        _scheduler = AsyncIOScheduler(timezone="Europe/Madrid")
+        _scheduler.add_job(health_check_diario, CronTrigger(hour=8, minute=0), id="health_08")
+        _scheduler.add_job(resumen_diario_actividad, CronTrigger(hour=21, minute=0), id="resumen_21")
+        _scheduler.start()
+        logger.info("Monitor scheduler: health 08:00, resumen 21:00 (Europe/Madrid)")
+    except Exception as e:
+        logger.warning(f"Monitor scheduler no iniciado: {e}")
     yield
+    if _scheduler:
+        _scheduler.shutdown(wait=False)
     await close_pool()
 
 
@@ -6223,6 +6239,48 @@ async def activate_llm_provider(provider_id: int, request: Request):
             "SELECT id, provider_name, display_name, is_default FROM primitiva.llm_provider_config WHERE id = $1",
             provider_id)
         return dict(result)
+
+
+# ── Monitorización: audit page-view ───────────────────────────────────────
+
+@app.post("/api/audit/page-view")
+async def audit_page_view(request: Request):
+    """Recibe pings de navegación del frontend para el resumen diario."""
+    try:
+        body = await request.json()
+        seccion = body.get("seccion", "desconocido")
+        ip = request.headers.get("X-Forwarded-For", "").split(",")[0].strip() \
+             or (request.client.host if request.client else "")
+        pool = get_pool()
+        if pool:
+            async with pool.acquire() as conn:
+                await conn.execute("""
+                    INSERT INTO primitiva.audit_log
+                    (evento, ip_address, seccion, endpoint, metodo)
+                    VALUES ('page_view', $1, $2, '/api/audit/page-view', 'POST')
+                """, ip, seccion)
+    except Exception:
+        pass
+    return {"ok": True}
+
+
+@app.post("/api/audit/login")
+async def audit_login_event(request: Request):
+    """Registra login en audit_log (llamado desde auth.py indirectamente)."""
+    try:
+        body = await request.json()
+        pool = get_pool()
+        if pool:
+            async with pool.acquire() as conn:
+                await conn.execute("""
+                    INSERT INTO primitiva.audit_log
+                    (evento, usuario_id, usuario_nombre, ip_address, user_agent, seccion)
+                    VALUES ('login', $1, $2, $3, $4, 'login')
+                """, body.get("usuario_id"), body.get("usuario_nombre"),
+                     body.get("ip"), body.get("user_agent"))
+    except Exception:
+        pass
+    return {"ok": True}
 
 
 # ── War Room Cognitivo (Sub-App) ───────────────────────────────────────────

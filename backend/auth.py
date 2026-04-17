@@ -268,6 +268,29 @@ async def authenticate_user(email: str, password: str, request: Request) -> Logi
             """, row['id_usuario'], token_hash, ip, user_agent,
                 datetime.utcnow() + timedelta(hours=JWT_EXPIRY_HOURS))
 
+            # PILAR 3: Notificar login + registrar en audit_log
+            try:
+                from monitor import notificar_login as _notify_login
+                _notify_login(
+                    usuario_id=row['id_usuario'],
+                    usuario_nombre=row['nombre_completo'],
+                    email=row['email'],
+                    ip=ip or 'desconocido',
+                    user_agent=user_agent,
+                    role=row['role_code'],
+                )
+            except Exception:
+                pass  # Fail-safe: no romper login por notificación
+            # Audit log
+            try:
+                await conn.execute("""
+                    INSERT INTO primitiva.audit_log
+                    (evento, usuario_id, usuario_nombre, ip_address, user_agent, seccion)
+                    VALUES ('login', $1, $2, $3, $4, 'login')
+                """, row['id_usuario'], row['nombre_completo'], ip, user_agent)
+            except Exception:
+                pass
+
             return LoginResponse(
                 token=token,
                 usuario={

@@ -5419,6 +5419,8 @@ function showPage(id, el) {
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
   el.classList.add('active');
+  // Audit: registrar navegación
+  fetch('/api/audit/page-view',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({seccion:id})}).catch(function(){});
   if (id === 'team' && ALL_TEAM.length === 0) loadTeam();
   if (id === 'projects' && ALL_PROJECTS.length === 0) loadProjects();
   if (id === 'kanban') { if (typeof kg_init === 'function') kg_init(); /* LEGACY P95-F8: loadKanban() reemplazado por kg_init() */ }
