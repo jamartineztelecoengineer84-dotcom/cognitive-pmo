@@ -1,0 +1,1609 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Cognitive PMO · Portfolio Prioritization Wizard v3</title>
+<style>
+/* ═══════════════ TOKENS (CEO Dashboard theme) ═══════════════ */
+:root{
+  --bg:#0d1117;--bg2:#161b22;--bg-card:#1c2128;--bg-el:#22272e;--bg-l3:#2d333b;
+  --border:#30363d;--border-hi:#484f58;
+  --tx:#e6edf3;--tx2:#8b949e;--tx3:#6e7681;
+  --acc-bl:#58a6ff;--acc-gn:#3fb950;--acc-rd:#f85149;--acc-or:#d29922;
+  --acc-cy:#39d2c0;--acc-pu:#bc8cff;--acc-pk:#f778ba;--acc-ye:#eab308;
+  --shd:rgba(0,0,0,.3);--shd-lg:rgba(0,0,0,.5);
+  --font:'DM Sans',-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;
+  --mono:'JetBrains Mono',Consolas,monospace;
+}
+/* ═══════════════ LIGHT THEME ═══════════════ */
+[data-theme="light"]{
+  --bg:#f6f8fa;--bg2:#ffffff;--bg-card:#ffffff;--bg-el:#f0f2f5;--bg-l3:#e4e7eb;
+  --border:#d0d7de;--border-hi:#afb8c1;
+  --tx:#1f2328;--tx2:#656d76;--tx3:#8b949e;
+  --shd:rgba(0,0,0,.08);--shd-lg:rgba(0,0,0,.15);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--tx);font-family:var(--font);font-size:12px;line-height:1.5;min-height:100vh;display:flex;flex-direction:column}
+
+/* Nota: el toggle claro/oscuro lo gestiona el shell del CEO Dashboard global.
+   El wizard solo declara los tokens [data-theme="light"] para ser compatible. */
+
+/* ═══════════════ TOPBAR ═══════════════ */
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 18px;display:flex;align-items:center;gap:14px;flex-shrink:0}
+.tb-brand{display:flex;align-items:center;gap:10px}
+.tb-logo{width:34px;height:34px;background:radial-gradient(circle at 30% 25%,#1f1505,#0a0600 75%);border:1px solid #6b4a00;border-radius:9px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 1px rgba(245,196,67,.15),0 4px 14px rgba(245,196,67,.22),inset 0 1px 0 rgba(255,239,168,.18)}
+.tb-logo svg{width:24px;height:24px;filter:drop-shadow(0 1px 2px rgba(255,224,138,.4))}
+.tb-title{font-size:14px;font-weight:700}
+.tb-sub{font-size:10px;color:var(--tx2);margin-top:-2px}
+.tb-divider{width:1px;height:22px;background:var(--border)}
+.tb-breadcrumb{font-size:11px;color:var(--tx2)}
+.tb-breadcrumb strong{color:var(--tx)}
+.tb-spacer{flex:1}
+.bg-session-pill{display:flex;align-items:center;gap:8px;background:var(--bg-el);border:1px solid var(--border);padding:5px 8px 5px 5px;border-radius:8px}
+.bg-session-avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--acc-bl),var(--acc-cy));display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#0d1117}
+.bg-session-info{display:flex;flex-direction:column;line-height:1.15}
+.bg-session-name{font-size:11px;font-weight:700}
+.bg-session-role{font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:.3px;font-weight:600}
+
+/* ═══════════════ LAYOUT ═══════════════ */
+.main{flex:1;padding:16px 18px;overflow-y:auto}
+.wizard-header{display:flex;align-items:center;gap:14px;margin-bottom:16px;flex-wrap:wrap}
+.wizard-title{font-size:18px;font-weight:800}
+.wizard-badge{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;background:var(--acc-pu);color:#0d1117;padding:2px 8px;border-radius:4px}
+
+/* ═══════════════ STEPPER ═══════════════ */
+.stepper{display:flex;gap:4px;margin-bottom:20px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:6px}
+.step-btn{flex:1;padding:8px 12px;border:none;background:transparent;color:var(--tx3);font-family:var(--font);font-size:11px;font-weight:600;border-radius:7px;cursor:pointer;transition:.2s;display:flex;align-items:center;gap:6px}
+.step-btn:hover{color:var(--tx2);background:var(--bg-el)}
+.step-btn.active{background:var(--acc-pu);color:#0d1117}
+.step-btn.done{background:rgba(63,185,80,.15);color:var(--acc-gn)}
+.step-num{width:20px;height:20px;border-radius:50%;background:var(--bg-l3);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0}
+.step-btn.active .step-num{background:rgba(0,0,0,.2)}
+.step-btn.done .step-num{background:rgba(63,185,80,.25)}
+
+/* ═══════════════ PANELS ═══════════════ */
+.panel{display:none;animation:fadeIn .25s}
+.panel.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px}
+.card-title{font-size:13px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.card-title .icon{font-size:14px}
+.card-sub{font-size:11px;color:var(--tx2);margin-bottom:12px}
+
+/* ═══════════════ SOURCE BADGE (trazabilidad) ═══════════════ */
+.src-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px 3px 7px;border-radius:5px;font-size:9px;font-weight:700;letter-spacing:.2px;border:1px dashed;margin-bottom:8px;cursor:default}
+.src-badge .src-icon{font-size:11px}
+.src-pulse{background:rgba(247,120,186,.08);border-color:rgba(247,120,186,.3);color:var(--acc-pk)}
+.src-okr{background:rgba(247,120,186,.08);border-color:rgba(247,120,186,.3);color:var(--acc-pk)}
+.src-cartera{background:rgba(88,166,255,.08);border-color:rgba(88,166,255,.3);color:var(--acc-bl)}
+.src-rbac{background:rgba(188,140,255,.08);border-color:rgba(188,140,255,.3);color:var(--acc-pu)}
+.src-staff{background:rgba(57,210,192,.08);border-color:rgba(57,210,192,.3);color:var(--acc-cy)}
+.src-kpi{background:rgba(210,153,34,.08);border-color:rgba(210,153,34,.3);color:var(--acc-or)}
+.src-calc{background:rgba(63,185,80,.08);border-color:rgba(63,185,80,.3);color:var(--acc-gn)}
+.src-new{background:rgba(248,81,73,.08);border-color:rgba(248,81,73,.3);color:var(--acc-rd)}
+.src-manual{background:rgba(139,148,158,.08);border-color:rgba(139,148,158,.3);color:var(--tx2)}
+/* Inline version for inside tables */
+.src-inline{display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:3px;font-size:8px;font-weight:600;letter-spacing:.2px;border:1px dashed;white-space:nowrap}
+
+/* ═══════════════ SOURCE LEGEND ═══════════════ */
+.src-legend{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;margin-bottom:14px}
+.src-legend-title{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--tx3);width:100%;margin-bottom:2px}
+
+/* ═══════════════ FORMS ═══════════════ */
+input[type="text"],input[type="number"],select,textarea{
+  background:var(--bg-el);border:1px solid var(--border);color:var(--tx);
+  font-family:var(--font);font-size:11px;padding:6px 10px;border-radius:6px;
+  outline:none;transition:.15s;width:100%
+}
+input:focus,select:focus{border-color:var(--acc-bl);box-shadow:0 0 0 2px rgba(88,166,255,.15)}
+select{cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238b949e'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:24px}
+
+/* ═══════════════ TABLE ═══════════════ */
+.tbl{width:100%;border-collapse:collapse;font-size:11px}
+.tbl th{background:var(--bg-l3);color:var(--tx2);font-weight:700;text-transform:uppercase;letter-spacing:.3px;font-size:9px;padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:1}
+.tbl td{padding:5px 8px;border-bottom:1px solid var(--border);vertical-align:middle}
+.tbl tr:hover td{background:rgba(88,166,255,.04)}
+.tbl input[type="number"]{width:60px;text-align:center;padding:4px 6px}
+
+/* ═══════════════ GRID ═══════════════ */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.grid-4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px}
+
+/* ═══════════════ BUTTONS ═══════════════ */
+.btn{padding:8px 18px;border:none;border-radius:7px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:6px}
+.btn-pri{background:var(--acc-pu);color:#0d1117}
+.btn-pri:hover{filter:brightness(1.1)}
+.btn-sec{background:var(--bg-el);border:1px solid var(--border);color:var(--tx)}
+.btn-sec:hover{border-color:var(--border-hi)}
+.btn-gn{background:var(--acc-gn);color:#0d1117}
+.btn-gn:hover{filter:brightness(1.1)}
+.btn-rd{background:rgba(248,81,73,.15);border:1px solid var(--acc-rd);color:var(--acc-rd)}
+.btn-sm{padding:4px 10px;font-size:10px}
+.nav-bar{display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+
+/* ═══════════════ BADGES & TAGS ═══════════════ */
+.tag{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+.tag-gn{background:rgba(63,185,80,.12);color:var(--acc-gn);border:1px solid rgba(63,185,80,.2)}
+.tag-or{background:rgba(210,153,34,.12);color:var(--acc-or);border:1px solid rgba(210,153,34,.2)}
+.tag-rd{background:rgba(248,81,73,.12);color:var(--acc-rd);border:1px solid rgba(248,81,73,.2)}
+.tag-bl{background:rgba(88,166,255,.12);color:var(--acc-bl);border:1px solid rgba(88,166,255,.2)}
+.tag-pu{background:rgba(188,140,255,.12);color:var(--acc-pu);border:1px solid rgba(188,140,255,.2)}
+.tag-pk{background:rgba(247,120,186,.12);color:var(--acc-pk);border:1px solid rgba(247,120,186,.2)}
+
+/* ═══════════════ AHP MATRIX ═══════════════ */
+.ahp-matrix{overflow-x:auto}
+.ahp-matrix .tbl th,.ahp-matrix .tbl td{text-align:center;min-width:55px}
+.ahp-matrix .tbl td.diagonal{background:var(--bg-l3);color:var(--tx3);font-weight:700}
+.ahp-matrix .tbl td.complement{background:rgba(88,166,255,.06);color:var(--acc-bl);font-family:var(--mono);font-size:10px}
+.ahp-matrix .tbl td.pct{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--acc-cy)}
+
+/* ═══════════════ KT SCORE ═══════════════ */
+.kt-scale{display:flex;gap:2px}
+.kt-scale button{width:28px;height:24px;border:1px solid var(--border);background:var(--bg-el);color:var(--tx2);font-family:var(--mono);font-size:9px;border-radius:4px;cursor:pointer;transition:.15s}
+.kt-scale button.sel{background:var(--acc-bl);color:#0d1117;border-color:var(--acc-bl)}
+.kt-scale button:hover:not(.sel){background:var(--bg-l3)}
+
+/* ═══════════════ SOLVER ═══════════════ */
+.solver-toggle{width:36px;height:20px;border-radius:10px;border:1px solid var(--border);background:var(--bg-l3);position:relative;cursor:pointer;transition:.2s}
+.solver-toggle.on{background:var(--acc-gn);border-color:var(--acc-gn)}
+.solver-toggle::after{content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:var(--tx);top:2px;left:2px;transition:.2s}
+.solver-toggle.on::after{left:18px}
+
+.result-bar{height:6px;border-radius:3px;background:var(--bg-l3);overflow:hidden;margin-top:4px}
+.result-bar-fill{height:100%;border-radius:3px;transition:.4s}
+
+/* ═══════════════ SUMMARY CARDS ═══════════════ */
+.summary-big{font-size:28px;font-weight:800;font-family:var(--mono);line-height:1}
+.summary-label{font-size:10px;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px;font-weight:600;margin-top:4px}
+
+/* ═══════════════ VOTER PILL ═══════════════ */
+.voter-pill{display:flex;align-items:center;gap:8px;background:var(--bg-el);border:1px solid var(--border);border-radius:8px;padding:6px 10px;cursor:pointer;transition:.15s}
+.voter-pill:hover{border-color:var(--border-hi)}
+.voter-pill.selected{border-color:var(--acc-pu);background:rgba(188,140,255,.08)}
+.voter-avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#0d1117;flex-shrink:0}
+.voter-name{font-size:11px;font-weight:700}
+.voter-role{font-size:9px;color:var(--tx3)}
+
+/* ═══════════════ OKR CARD ═══════════════ */
+.okr-card{background:var(--bg-el);border:1px solid var(--border);border-left:3px solid var(--acc-pk);border-radius:8px;padding:10px 12px;margin-bottom:8px;position:relative}
+.okr-card.selected{border-color:var(--acc-pk);background:rgba(247,120,186,.06)}
+.okr-code{font-family:var(--mono);font-size:10px;font-weight:800;color:var(--acc-pk)}
+.okr-title{font-size:11px;font-weight:600;margin:2px 0 4px}
+.okr-kr{font-size:10px;color:var(--tx2);display:flex;align-items:center;gap:6px;margin-bottom:2px}
+.okr-kr-bar{width:50px;height:4px;background:var(--bg-l3);border-radius:2px;overflow:hidden;flex-shrink:0}
+.okr-kr-fill{height:100%;border-radius:2px}
+.okr-check{position:absolute;top:10px;right:10px;width:20px;height:20px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;transition:.15s}
+.okr-card.selected .okr-check{border-color:var(--acc-pk);background:var(--acc-pk);color:#0d1117}
+
+/* ═══════════════ CHART ═══════════════ */
+.chart-container{background:var(--bg-el);border:1px solid var(--border);border-radius:8px;padding:16px;min-height:200px}
+
+/* ═══════════════ PROJECT DETAIL MODAL ═══════════════ */
+.proj-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px;animation:fadeIn .2s}
+.proj-modal{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;max-width:820px;width:100%;max-height:90vh;overflow-y:auto;padding:0}
+.proj-modal-head{display:flex;align-items:center;gap:12px;padding:18px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg-card);z-index:1;border-radius:14px 14px 0 0}
+.proj-modal-head .pm-id{font-family:var(--mono);font-size:13px;font-weight:800;color:var(--acc-bl)}
+.proj-modal-head .pm-name{font-size:15px;font-weight:800;flex:1}
+.proj-modal-close{width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--bg-el);color:var(--tx2);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.proj-modal-close:hover{background:var(--acc-rd);color:#fff;border-color:var(--acc-rd)}
+.proj-modal-body{padding:16px 20px}
+.pm-section{margin-bottom:16px}
+.pm-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--tx3);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.pm-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.pm-metric{background:var(--bg-el);border:1px solid var(--border);border-radius:8px;padding:10px}
+.pm-metric-val{font-size:18px;font-weight:800;font-family:var(--mono);line-height:1}
+.pm-metric-lbl{font-size:9px;color:var(--tx2);text-transform:uppercase;letter-spacing:.3px;margin-top:3px}
+.pm-gate-timeline{display:flex;align-items:center;gap:0;margin-top:6px}
+.pm-gate-dot{width:24px;height:24px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:var(--tx3);position:relative;z-index:1}
+.pm-gate-dot.passed{border-color:var(--acc-gn);background:rgba(63,185,80,.15);color:var(--acc-gn)}
+.pm-gate-dot.current{border-color:var(--acc-bl);background:rgba(88,166,255,.15);color:var(--acc-bl);box-shadow:0 0 0 3px rgba(88,166,255,.2)}
+.pm-gate-line{height:2px;flex:1;background:var(--border);margin:0 -2px}
+.pm-gate-line.passed{background:var(--acc-gn)}
+.proj-clickable{cursor:pointer;transition:color .15s}
+.proj-clickable:hover{color:var(--acc-bl);text-decoration:underline}
+
+/* ═══════════════ HISTORY PANEL ═══════════════ */
+.history-panel{background:var(--bg2);border:1px solid var(--border);border-radius:8px;margin-bottom:14px;overflow:hidden}
+.history-toggle{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;user-select:none;font-size:11px;font-weight:700;color:var(--tx2);transition:.15s}
+.history-toggle:hover{color:var(--tx);background:var(--bg-el)}
+.history-toggle .ht-arrow{transition:transform .2s;font-size:10px}
+.history-toggle .ht-arrow.open{transform:rotate(90deg)}
+.history-content{max-height:0;overflow:hidden;transition:max-height .3s ease}
+.history-content.open{max-height:600px;overflow-y:auto}
+.history-list{padding:8px 12px;display:flex;flex-direction:column;gap:6px}
+.history-item{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;cursor:pointer;transition:.15s;display:flex;align-items:center;gap:12px}
+.history-item:hover{border-color:var(--acc-pu);background:rgba(188,140,255,.04)}
+.hi-version{font-family:var(--mono);font-size:13px;font-weight:800;color:var(--acc-pu);width:36px;text-align:center}
+.hi-body{flex:1;min-width:0}
+.hi-name{font-size:11px;font-weight:700}
+.hi-meta{font-size:9px;color:var(--tx3);display:flex;gap:10px;margin-top:2px}
+.hi-score{font-family:var(--mono);font-size:14px;font-weight:800;color:var(--acc-gn);text-align:right}
+.hi-changelog{margin-top:4px;padding-top:4px;border-top:1px dashed var(--border);font-size:9px;color:var(--acc-or)}
+.history-empty{padding:12px;text-align:center;font-size:11px;color:var(--tx3)}
+
+/* ═══════════════ FLOW ARROW ═══════════════ */
+.flow-arrow{display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;margin-bottom:14px;font-size:10px;color:var(--tx2)}
+.flow-arrow .arrow{color:var(--acc-cy);font-size:14px;font-weight:800}
+.flow-arrow strong{color:var(--tx)}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ TOPBAR ═══════════════ -->
+<div class="topbar">
+  <div class="tb-brand">
+    <div class="tb-logo">
+      <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#f5c443" stroke-width="1.5"/><path d="M12 6v6l4 2" stroke="#f5c443" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </div>
+    <div><div class="tb-title">Cognitive PMO</div><div class="tb-sub">CEO Dashboard · Pulso Estratégico</div></div>
+  </div>
+  <div class="tb-divider"></div>
+  <div class="tb-breadcrumb">Pulso Estratégico › <strong>Portfolio Prioritization Wizard</strong></div>
+  <div class="tb-spacer"></div>
+  <div class="bg-session-pill">
+    <div class="bg-session-avatar">GF</div>
+    <div class="bg-session-info"><span class="bg-session-name">Gonzalo Fernández-Vega</span><span class="bg-session-role">VP_PMO</span></div>
+  </div>
+</div>
+
+<!-- ═══════════════ MAIN ═══════════════ -->
+<div class="main">
+  <div class="wizard-header">
+    <div class="wizard-title">Portfolio Prioritization Wizard</div>
+    <span class="wizard-badge">AHP + Kepner-Tregoe + Solver</span>
+    <span class="tag tag-pu">ISO 21504</span>
+    <span class="tag tag-bl">PM² Portfolio</span>
+  </div>
+
+  <!-- ═══════════════ HISTORY PANEL (colapsado por defecto) ═══════════════ -->
+  <div class="history-panel" id="history-panel">
+    <div class="history-toggle" onclick="toggleHistory()">
+      <span class="ht-arrow" id="ht-arrow">▶</span>
+      <span>📂 Histórico de evaluaciones de priorización</span>
+      <span style="font-size:9px;color:var(--tx3);margin-left:auto" id="history-count">0 evaluaciones guardadas</span>
+    </div>
+    <div class="history-content" id="history-content">
+      <div class="history-list" id="history-list">
+        <div class="history-empty">No hay evaluaciones guardadas. Completa el wizard y pulsa "Guardar evaluación" en el paso 6.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ STEPPER ═══════════════ -->
+  <div class="stepper" id="stepper">
+    <button class="step-btn active" data-step="1" onclick="goStep(1)"><span class="step-num">1</span>Objetivos y Criterios</button>
+    <button class="step-btn" data-step="2" onclick="goStep(2)"><span class="step-num">2</span>Votación AHP</button>
+    <button class="step-btn" data-step="3" onclick="goStep(3)"><span class="step-num">3</span>Pesos Calculados</button>
+    <button class="step-btn" data-step="4" onclick="goStep(4)"><span class="step-num">4</span>Proyectos Candidatos</button>
+    <button class="step-btn" data-step="5" onclick="goStep(5)"><span class="step-num">5</span>Scoring K-T</button>
+    <button class="step-btn" data-step="6" onclick="goStep(6)"><span class="step-num">6</span>Optimización Solver</button>
+  </div>
+
+  <!-- ═══════════════ STEP 1: OBJETIVOS Y CRITERIOS ═══════════════ -->
+  <div class="panel active" id="panel-1">
+
+    <!-- FLOW EXPLANATION -->
+    <div class="flow-arrow">
+      <span class="arrow">→</span>
+      <span>Los <strong>objetivos estratégicos</strong> se cargan automáticamente desde los <strong>OKRs Q2 2026</strong> definidos en el Pulso Estratégico (pestaña Marco Estratégico → OKR). Los <strong>Key Results</strong> de cada OKR se convierten en los <strong>criterios</strong> de evaluación. El comité puede añadir objetivos manuales adicionales.</span>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title"><span class="icon">🎯</span> Objetivos Estratégicos</div>
+        <span class="src-badge src-okr"><span class="src-icon">🎯</span> ORIGEN: Pulso Estratégico → Marco Estratégico → OKR Q2 2026 · bgStratData.okr.objs[]</span>
+        <div class="card-sub">Estos objetivos vienen del módulo OKR del Pulso Estratégico. Se pueden activar/desactivar para este ejercicio o añadir objetivos manuales.</div>
+        <div id="obj-list"></div>
+        <div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--border)">
+          <span class="src-badge src-manual"><span class="src-icon">✏️</span> Objetivos adicionales (no vinculados a OKR)</span>
+          <button class="btn btn-sec btn-sm" onclick="addObjective()">+ Añadir objetivo manual</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="icon">📋</span> Criterios por Objetivo</div>
+        <span class="src-badge src-okr"><span class="src-icon">🎯</span> ORIGEN: Cada Key Result del OKR se convierte en un criterio evaluable</span>
+        <div class="card-sub">Los Key Results (KR) de cada OKR se usan como criterios. El progreso actual de cada KR se muestra como referencia.</div>
+        <div id="criteria-list"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="icon">👥</span> Comité de Priorización</div>
+      <span class="src-badge src-rbac"><span class="src-icon">🔐</span> ORIGEN: rbac_usuarios JOIN rbac_roles WHERE nivel_jerarquico ≤ 2 (C-suite + VPs)</span>
+      <div class="card-sub">Miembros con rol de nivel jerárquico ≤ 2 en el RBAC. Cada uno vota las comparaciones pareadas AHP desde su perspectiva. Mínimo 3 votantes.</div>
+      <div class="grid-3" id="voter-grid"></div>
+      <div style="margin-top:8px">
+        <span class="src-badge src-kpi"><span class="src-icon">📊</span> KPI asignado a cada responsable desde: Pulso Estratégico → Responsables por Departamento · bgPulseResps[]</span>
+      </div>
+    </div>
+
+    <div class="nav-bar">
+      <div></div>
+      <button class="btn btn-pri" onclick="goStep(2)">Siguiente: Votación AHP →</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════ STEP 2: VOTACIÓN AHP ═══════════════ -->
+  <div class="panel" id="panel-2">
+    <div class="flow-arrow">
+      <span class="arrow">→</span>
+      <span>Cada <strong>votante del comité</strong> <span class="src-inline src-rbac">rbac_usuarios</span> asigna votos en comparaciones pareadas entre objetivos <span class="src-inline src-okr">OKR</span>. El <strong>complemento</strong> se calcula automáticamente <span class="src-inline src-calc">N - voto</span>. Fórmula Saaty: pares = (n²-n)/2.</span>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="icon">⚖️</span> Comparación Pareada — Votación AHP</div>
+      <span class="src-badge src-manual"><span class="src-icon">✏️</span> INPUT: Cada votante introduce sus votos (0 a N) · Las celdas azules son el complemento calculado automáticamente</span>
+      <div class="card-sub">
+        Votante actual: <select id="voter-select" onchange="renderAHPMatrix()" style="width:200px;display:inline-block"></select>
+        <span class="src-inline src-rbac">rbac_usuarios</span>
+        &nbsp;·&nbsp; Total votos por par: <strong id="ahp-total-votes">4</strong> (N votantes = <span id="ahp-n-voters">4</span>)
+        &nbsp;·&nbsp; Fórmula pares: <code style="font-family:var(--mono);color:var(--acc-cy)">(n²-n)/2 × N</code> = <strong id="ahp-total-pairs">0</strong> celdas
+      </div>
+      <div class="ahp-matrix" id="ahp-matrix"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="icon">📊</span> Resumen de votos consolidados</div>
+      <span class="src-badge src-calc"><span class="src-icon">🧮</span> CALCULADO: Suma ponderada de todos los votantes · % = votos_obj / total_votos_global</span>
+      <div id="ahp-summary"></div>
+    </div>
+    <div class="nav-bar">
+      <button class="btn btn-sec" onclick="goStep(1)">← Objetivos</button>
+      <button class="btn btn-pri" onclick="calculateAHP();goStep(3)">Calcular Pesos →</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════ STEP 3: PESOS CALCULADOS ═══════════════ -->
+  <div class="panel" id="panel-3">
+    <div class="flow-arrow">
+      <span class="arrow">→</span>
+      <span><strong>Peso objetivo</strong> <span class="src-inline src-calc">AHP consolidado</span> × <strong>peso criterio</strong> <span class="src-inline src-calc">1/n criterios</span> = <strong>peso global</strong> que se usa en el Scoring Kepner-Tregoe del paso 5.</span>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title"><span class="icon">🏋️</span> Pesos de Objetivos (AHP)</div>
+        <span class="src-badge src-calc"><span class="src-icon">🧮</span> CALCULADO: votos_consolidados_por_objetivo / suma_total_votos · Resultado del Paso 2</span>
+        <div id="obj-weights"></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="icon">📐</span> Pesos Globales de Criterios</div>
+        <span class="src-badge src-calc"><span class="src-icon">🧮</span> CALCULADO: W_global = W_objetivo(AHP) × W_criterio(1/n) · Fórmula del Excel Hoja 3</span>
+        <div id="global-weights"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="icon">📈</span> Distribución visual de pesos</div>
+      <span class="src-badge src-calc"><span class="src-icon">🧮</span> VISUALIZACIÓN: Ranking de criterios por peso global descendente</span>
+      <div class="chart-container" id="weights-chart"></div>
+    </div>
+    <div class="nav-bar">
+      <button class="btn btn-sec" onclick="goStep(2)">← Votación AHP</button>
+      <button class="btn btn-pri" onclick="goStep(4)">Siguiente: Proyectos →</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════ STEP 4: PROYECTOS CANDIDATOS ═══════════════ -->
+  <div class="panel" id="panel-4">
+    <div class="flow-arrow">
+      <span class="arrow">→</span>
+      <span>Los proyectos se cargan desde <span class="src-inline src-cartera">cartera_build</span> (60 proyectos). Los campos financieros (BAC, CPI, SPI) vienen de <span class="src-inline src-cartera">bgPortfolio[]</span> en la pestaña Cartera BUILD. El portfolio se asigna automáticamente por el silo CMDB del proyecto. El campo <strong>Beneficio</strong> es el único input nuevo <span class="src-inline src-new">campo nuevo</span>.</span>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="icon">🏗️</span> Proyectos Candidatos</div>
+      <span class="src-badge src-cartera"><span class="src-icon">🏗️</span> ORIGEN: SELECT * FROM cartera_build → bgPortfolio[id, name, silo, pm, bac, gate, cpi, spi, prio, risk, prog, ai]</span>
+      <div class="card-sub">Filtros por portfolio (5 portfolios existentes: Infra, Apps, Seguridad, Digital, Transversal) y gate PMI (G0→G5).</div>
+      <div style="margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:10px;color:var(--tx2)">Filtrar por portfolio:</span>
+        <select id="filter-portfolio" onchange="renderProjects()" style="width:160px">
+          <option value="">Todos</option>
+          <option value="Infraestructura">Infraestructura</option>
+          <option value="Aplicaciones">Aplicaciones</option>
+          <option value="Seguridad">Seguridad</option>
+          <option value="Digital">Digital / Data</option>
+          <option value="Transversal">Transversal</option>
+        </select>
+        <span style="font-size:10px;color:var(--tx2);margin-left:8px">Gate:</span>
+        <select id="filter-gate" onchange="renderProjects()" style="width:100px">
+          <option value="">Todos</option>
+          <option value="G0">G0</option><option value="G1">G1</option><option value="G2">G2</option>
+          <option value="G3">G3</option><option value="G4">G4</option><option value="G5">G5</option>
+        </select>
+        <div class="tb-spacer"></div>
+        <span style="font-size:10px;color:var(--tx3)" id="proj-count">0 seleccionados</span>
+      </div>
+      <div style="max-height:420px;overflow-y:auto;border-radius:8px;border:1px solid var(--border)">
+        <table class="tbl" id="proj-table">
+          <thead>
+            <tr>
+              <th style="width:30px">✓</th>
+              <th>ID <span class="src-inline src-cartera">cartera_build.id_proyecto</span></th>
+              <th>Proyecto <span class="src-inline src-cartera">nombre_proyecto</span></th>
+              <th>Portfolio <span class="src-inline src-cartera">silo → portfolio_map</span></th>
+              <th>PM <span class="src-inline src-cartera">responsable_asignado</span></th>
+              <th>Gate <span class="src-inline src-cartera">bgPortfolio[5]</span></th>
+              <th style="text-align:right">Inversión (k€) <span class="src-inline src-cartera">BAC</span></th>
+              <th style="text-align:right">Beneficio (k€) <span class="src-inline src-new">nuevo</span></th>
+              <th style="text-align:right">ROI <span class="src-inline src-calc">calc</span></th>
+              <th style="text-align:right">RRHH (h) <span class="src-inline src-cartera">horas_est</span></th>
+              <th>Riesgo <span class="src-inline src-cartera">risk</span></th>
+            </tr>
+          </thead>
+          <tbody id="proj-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <span class="src-badge src-calc"><span class="src-icon">🧮</span> RESUMEN CALCULADO: Agregación de los proyectos seleccionados</span>
+      <div class="grid-4" style="margin-top:8px">
+        <div><div class="summary-big" style="color:var(--acc-bl)" id="sum-inversion">0</div><div class="summary-label">Inversión total (k€)</div></div>
+        <div><div class="summary-big" style="color:var(--acc-gn)" id="sum-beneficio">0</div><div class="summary-label">Beneficio total (k€)</div></div>
+        <div><div class="summary-big" style="color:var(--acc-cy)" id="sum-roi">0</div><div class="summary-label">ROI medio</div></div>
+        <div><div class="summary-big" style="color:var(--acc-or)" id="sum-rrhh">0</div><div class="summary-label">RRHH total (h)</div></div>
+      </div>
+    </div>
+    <div class="nav-bar">
+      <button class="btn btn-sec" onclick="goStep(3)">← Pesos</button>
+      <button class="btn btn-pri" onclick="goStep(5)">Siguiente: Scoring K-T →</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════ STEP 5: SCORING KEPNER-TREGOE ═══════════════ -->
+  <div class="panel" id="panel-5">
+    <div class="flow-arrow">
+      <span class="arrow">→</span>
+      <span>El comité puntúa cada <span class="src-inline src-cartera">proyecto</span> en cada <span class="src-inline src-okr">criterio (KR)</span>. Escala Kepner-Tregoe: {0, 0.3, 0.5, 0.6, 1.0}. El <strong>Score</strong> = SUMPRODUCT(<span class="src-inline src-calc">peso_global</span> × <span class="src-inline src-manual">puntuación</span>). Replica la Hoja 5 del Excel.</span>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="icon">🎯</span> Scoring Kepner-Tregoe</div>
+      <span class="src-badge src-manual"><span class="src-icon">✏️</span> INPUT: Puntuaciones del comité (0, 0.3, 0.5, 0.6, 1.0)</span>
+      <span class="src-badge src-calc" style="margin-left:6px"><span class="src-icon">🧮</span> SCORE = Σ(peso_global_paso3 × puntuación)</span>
+      <div class="card-sub" style="margin-top:8px">
+        Columnas = criterios <span class="src-inline src-okr">del OKR</span> con su peso global <span class="src-inline src-calc">paso 3</span>. Filas = proyectos <span class="src-inline src-cartera">seleccionados en paso 4</span>.
+      </div>
+      <div style="max-height:500px;overflow:auto;border-radius:8px;border:1px solid var(--border)">
+        <table class="tbl" id="kt-table">
+          <thead id="kt-thead"></thead>
+          <tbody id="kt-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="icon">🏆</span> Ranking de Alineamiento Estratégico</div>
+      <span class="src-badge src-calc"><span class="src-icon">🧮</span> CALCULADO: Proyectos ordenados por score K-T descendente</span>
+      <span class="src-badge src-new" style="margin-left:6px"><span class="src-icon">💾</span> Este score se guarda como alignment_score en cartera_build</span>
+      <div id="kt-ranking" style="margin-top:8px"></div>
+    </div>
+    <div class="nav-bar">
+      <button class="btn btn-sec" onclick="goStep(4)">← Proyectos</button>
+      <button class="btn btn-pri" onclick="goStep(6)">Siguiente: Solver →</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════ STEP 6: SOLVER ═══════════════ -->
+  <div class="panel" id="panel-6">
+    <div class="flow-arrow">
+      <span class="arrow">→</span>
+      <span><strong>Knapsack binario</strong>: selecciona la combinación óptima de proyectos (1/0) que maximiza el <span class="src-inline src-calc">score K-T total</span> sujeto a restricciones de <span class="src-inline src-manual">presupuesto</span>, <span class="src-inline src-staff">RRHH disponibles</span> y <span class="src-inline src-manual">riesgo máximo</span>. Replica la Hoja 6 del Excel (Solver). Los resultados vuelven al <span class="src-inline src-okr">Pulso Estratégico</span> como decisión + hito.</span>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title"><span class="icon">⚙️</span> Restricciones del Solver</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div>
+            <label style="font-size:10px;color:var(--tx2);font-weight:600">Presupuesto máximo (k€) <span class="src-inline src-manual">input comité</span></label>
+            <input type="number" id="solver-budget" value="8000" style="width:140px;margin-top:4px">
+            <div style="font-size:9px;color:var(--tx3);margin-top:2px">Ref: BAC total cartera = 15.770 k€ <span class="src-inline src-kpi">bgPulseKPIs[cart].sub</span></div>
+          </div>
+          <div>
+            <label style="font-size:10px;color:var(--tx2);font-weight:600">RRHH máximo (horas disponibles) <span class="src-inline src-staff">SUM(200-carga_actual) FROM pmo_staff_skills</span></label>
+            <input type="number" id="solver-rrhh" value="25000" style="width:140px;margin-top:4px">
+            <div style="font-size:9px;color:var(--tx3);margin-top:2px">Ref: 175 técnicos × capacidad restante <span class="src-inline src-staff">pmo_staff_skills.carga_actual</span></div>
+          </div>
+          <div>
+            <label style="font-size:10px;color:var(--tx2);font-weight:600">Riesgo máximo por proyecto (1-4) <span class="src-inline src-manual">input comité</span></label>
+            <input type="number" id="solver-risk" value="4" min="1" max="4" style="width:80px;margin-top:4px">
+            <div style="font-size:9px;color:var(--tx3);margin-top:2px">Ref: escala riesgo de cartera BUILD <span class="src-inline src-cartera">bgPortfolio[9]</span></div>
+          </div>
+          <div>
+            <label style="font-size:10px;color:var(--tx2);font-weight:600">Proyectos obligatorios <span class="src-inline src-cartera">prioridad_estrategica = 'Crítica'</span></label>
+            <div style="margin-top:4px">
+              <label style="font-size:11px"><input type="checkbox" id="solver-force-critica" checked> Incluir siempre proyectos P4 (Crítica)</label>
+            </div>
+          </div>
+          <button class="btn btn-gn" onclick="runSolver()" style="margin-top:8px">▶ Ejecutar Solver (2<sup>n</sup> combinaciones)</button>
+          <div style="font-size:10px;color:var(--tx3)" id="solver-combos"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="icon">📊</span> Resultado de la Optimización</div>
+        <span class="src-badge src-calc"><span class="src-icon">🧮</span> CALCULADO: Mejor combinación binaria {0,1} que maximiza score bajo restricciones</span>
+        <div class="grid-4" style="margin-bottom:14px;margin-top:8px">
+          <div><div class="summary-big" style="color:var(--acc-gn)" id="sol-selected">—</div><div class="summary-label">Seleccionados</div></div>
+          <div><div class="summary-big" style="color:var(--acc-bl)" id="sol-value">—</div><div class="summary-label">Valor total</div></div>
+          <div><div class="summary-big" style="color:var(--acc-or)" id="sol-cost">—</div><div class="summary-label">Coste (k€)</div></div>
+          <div><div class="summary-big" style="color:var(--acc-cy)" id="sol-rrhh">—</div><div class="summary-label">RRHH (h)</div></div>
+        </div>
+        <div id="solver-results"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="icon">✅</span> Portafolio Óptimo Seleccionado</div>
+      <div style="max-height:320px;overflow-y:auto;border-radius:8px;border:1px solid var(--border)">
+        <table class="tbl" id="solver-table">
+          <thead>
+            <tr>
+              <th>Sel.</th><th>ID</th><th>Proyecto</th><th>Portfolio</th>
+              <th style="text-align:right">Score K-T <span class="src-inline src-calc">paso 5</span></th>
+              <th style="text-align:right">Inversión <span class="src-inline src-cartera">BAC</span></th>
+              <th style="text-align:right">RRHH <span class="src-inline src-cartera">horas_est</span></th>
+              <th>Riesgo</th>
+            </tr>
+          </thead>
+          <tbody id="solver-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- FLOW BACK TO PULSO -->
+    <div class="card" style="border-color:var(--acc-pk);border-style:dashed">
+      <div class="card-title" style="color:var(--acc-pk)"><span class="icon">🔄</span> Datos que vuelven al Pulso Estratégico</div>
+      <span class="src-badge src-new"><span class="src-icon">💾</span> ESCRITURA: Los resultados del wizard se persisten y retroalimentan al sistema</span>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+        <div style="background:var(--bg-el);border:1px solid var(--border);border-radius:6px;padding:10px">
+          <div style="font-size:10px;font-weight:700;color:var(--acc-pk);margin-bottom:4px">→ cartera_build.alignment_score</div>
+          <div style="font-size:10px;color:var(--tx2)">El score K-T de cada proyecto se guarda como campo en la tabla de cartera, visible en la pestaña Cartera BUILD.</div>
+        </div>
+        <div style="background:var(--bg-el);border:1px solid var(--border);border-radius:6px;padding:10px">
+          <div style="font-size:10px;font-weight:700;color:var(--acc-pk);margin-bottom:4px">→ p96_pulse_decisions (nueva entrada)</div>
+          <div style="font-size:10px;color:var(--tx2)">Se publica una decisión: "Portafolio Q3 aprobado: X proyectos, Y k€". Aparece en Pulso → Decisiones Pendientes.</div>
+        </div>
+        <div style="background:var(--bg-el);border:1px solid var(--border);border-radius:6px;padding:10px">
+          <div style="font-size:10px;font-weight:700;color:var(--acc-pk);margin-bottom:4px">→ p96_pulse_hitos (nueva entrada)</div>
+          <div style="font-size:10px;color:var(--tx2)">Se añade hito: "Aprobación portafolio Q3" con fecha. Aparece en Pulso → Hitos 4 semanas.</div>
+        </div>
+        <div style="background:var(--bg-el);border:1px solid var(--border);border-radius:6px;padding:10px">
+          <div style="font-size:10px;font-weight:700;color:var(--acc-pk);margin-bottom:4px">→ portfolio_evaluations (tabla nueva)</div>
+          <div style="font-size:10px;color:var(--tx2)">Todo el ejercicio (objetivos, votos AHP, pesos, scoring, solver) se persiste en JSONB para auditoría y reproductibilidad.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-bar">
+      <button class="btn btn-sec" onclick="goStep(5)">← Scoring K-T</button>
+      <button class="btn btn-gn" onclick="saveEvaluation()">💾 Guardar evaluación y publicar en Pulso</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════ SOURCE LEGEND (colapsado al pie) ═══════════════ -->
+  <div class="history-panel" id="src-legend-panel" style="margin-top:10px">
+    <div class="history-toggle" onclick="toggleSrcLegend()">
+      <span class="ht-arrow" id="sl-arrow">▶</span>
+      <span>📋 Trazabilidad de datos — leyenda de orígenes</span>
+    </div>
+    <div class="history-content" id="sl-content">
+      <div style="padding:10px 12px">
+        <div class="src-legend" style="margin-bottom:0">
+          <div class="src-legend-title">Cada campo del wizard indica su origen en el sistema para trazabilidad completa</div>
+          <span class="src-badge src-okr"><span class="src-icon">🎯</span> Pulso · OKR Q2 2026</span>
+          <span class="src-badge src-kpi"><span class="src-icon">📊</span> Pulso · KPIs RAG</span>
+          <span class="src-badge src-cartera"><span class="src-icon">🏗️</span> Cartera BUILD · 60 proyectos</span>
+          <span class="src-badge src-rbac"><span class="src-icon">🔐</span> RBAC · rbac_usuarios + rbac_roles</span>
+          <span class="src-badge src-staff"><span class="src-icon">👥</span> pmo_staff_skills · 175 técnicos</span>
+          <span class="src-badge src-calc"><span class="src-icon">🧮</span> Calculado por el wizard</span>
+          <span class="src-badge src-manual"><span class="src-icon">✏️</span> Input manual del comité</span>
+          <span class="src-badge src-new"><span class="src-icon">💾</span> Dato nuevo → portfolio_evaluations</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ JAVASCRIPT ═══════════════ -->
+<script>
+// ═══════════════ API LOADER ═══════════════
+// Loads real data from /api/portfolio-wizard/* endpoints
+// Falls back to demo data if API unavailable
+const API_BASE = '/api/portfolio-wizard';
+const SCENARIO_HEADER = {'X-Scenario': localStorage.getItem('pmo_scenario') || 'sc_iberico'};
+
+async function loadFromAPI() {
+  try {
+    const [objResp, comResp, projResp, rrhhResp, evalResp] = await Promise.all([
+      fetch(API_BASE + '/objectives', {headers: SCENARIO_HEADER}),
+      fetch(API_BASE + '/committee', {headers: SCENARIO_HEADER}),
+      fetch(API_BASE + '/projects', {headers: SCENARIO_HEADER}),
+      fetch(API_BASE + '/rrhh-capacity', {headers: SCENARIO_HEADER}),
+      fetch(API_BASE + '/evaluations', {headers: SCENARIO_HEADER}),
+    ]);
+    if (objResp.ok) {
+      const d = await objResp.json();
+      OKR_OBJECTIVES.length = 0;
+      d.objectives.forEach(o => OKR_OBJECTIVES.push(o));
+    }
+    if (comResp.ok) {
+      const d = await comResp.json();
+      COMMITTEE.length = 0;
+      d.committee.forEach(c => {
+        c.color = c.color ? `linear-gradient(135deg, ${c.color}, var(--acc-pu))` : 'linear-gradient(135deg,#bc8cff,#f778ba)';
+        c.kpi = '';
+        c.kpiSource = 'rbac_usuarios → compartido';
+        COMMITTEE.push(c);
+      });
+    }
+    if (projResp.ok) {
+      const d = await projResp.json();
+      PROJECTS.length = 0;
+      d.projects.forEach(p => {
+        p.portfolio = SILO_TO_PORTFOLIO[p.silo] || 'Transversal';
+        p.benefit = p.benefit || 0;
+        p.rrhh = p.rrhh || 0;
+        PROJECTS.push(p);
+        // Build PROJECT_DETAIL from inline data
+        if (p.gates || p.team || p.risks) {
+          PROJECT_DETAIL[p.id] = {
+            desc: p.name,
+            gates: p.gates || [],
+            team: p.team || [],
+            risks: p.risks || [],
+            kpis: {cpi: p.cpi, spi: p.spi, eac: Math.round(p.bac / (p.cpi || 1)), etc: Math.round(p.bac * (1 - p.prog/100) / (p.cpi || 1)), sv: Math.round(p.bac * (p.spi - 1) * (p.prog/100)), cv: Math.round(p.bac * (p.cpi - 1) * (p.prog/100))},
+            alerts: [],
+            blocks: [],
+          };
+        }
+      });
+    }
+    if (rrhhResp.ok) {
+      const d = await rrhhResp.json();
+      window._rrhhCapacity = d.available_hours;
+    }
+    if (evalResp.ok) {
+      const d = await evalResp.json();
+      savedEvaluations.length = 0;
+      d.evaluations.forEach(e => savedEvaluations.push(e));
+    }
+    console.log('[Portfolio Wizard] API data loaded:', PROJECTS.length, 'projects,', COMMITTEE.length, 'committee members');
+  } catch(e) {
+    console.warn('[Portfolio Wizard] API load failed, using demo data:', e.message);
+  }
+}
+
+// Override saveEvaluation to POST to API
+const _origSave = typeof saveEvaluation === 'function' ? saveEvaluation : null;
+window._saveToAPI = async function(state) {
+  try {
+    const alignment = {};
+    if (state.solverResult) state.solverResult.filter(p => p.solverSelected).forEach(p => {
+      if (state.ktScores && state.ktScores[p.id]) alignment[p.id] = calcKTScore(p);
+    });
+    const body = {
+      eval_name: state.name || 'Evaluación ' + new Date().toLocaleString('es-ES'),
+      objectives: state.objectives || [],
+      committee: state.committee || [],
+      ahp_votes: state.ahpVotes || {},
+      obj_weights: state.objWeights || [],
+      crit_weights: state.critWeights || {},
+      kt_scores: state.ktScores || {},
+      solver_config: state.solverConfig || {},
+      solver_result: state.solverResult || [],
+      project_count: state.projectCount || 0,
+      total_score: state.totalScore || 0,
+      total_cost: state.totalCost || 0,
+      alignment_scores: alignment,
+    };
+    const resp = await fetch(API_BASE + '/evaluations', {
+      method: 'POST',
+      headers: {...SCENARIO_HEADER, 'Content-Type': 'application/json'},
+      body: JSON.stringify(body),
+    });
+    if (resp.ok) {
+      const result = await resp.json();
+      console.log('[Portfolio Wizard] Evaluation saved to DB, id:', result.id);
+      return result;
+    }
+  } catch(e) {
+    console.warn('[Portfolio Wizard] API save failed:', e.message);
+  }
+  return null;
+};
+
+// ═══════════════ DATA: OKRs from Pulso Estratégico ═══════════════
+// Source: bgStratData.okr.objs[] — will be overwritten by API loader
+const OKR_OBJECTIVES = [
+  {
+    id:'O1', name:'Convertir Cognitive PMO en la fuente única de verdad económica IT del banco',
+    source:'bgStratData.okr.objs[0]', sourceTab:'Pulso Estratégico → Marco Estratégico → OKR Q2 2026',
+    krs:[
+      {id:'KR1.1', name:'Migrar 100% de los 60 proyectos BUILD al módulo P96', progress:78},
+      {id:'KR1.2', name:'Reducir gap cifras CFO↔PMO de 12% a <3%', progress:55},
+      {id:'KR1.3', name:'Adopción CEO Dashboard por los 6 C-level (uso semanal)', progress:66},
+    ]
+  },
+  {
+    id:'O2', name:'Estabilizar la operación RUN bajo objetivos DORA',
+    source:'bgStratData.okr.objs[1]', sourceTab:'Pulso Estratégico → Marco Estratégico → OKR Q2 2026',
+    krs:[
+      {id:'KR2.1', name:'Mantener uptime ≥99.85% en CIs C1 (core banking)', progress:88},
+      {id:'KR2.2', name:'Reducir MTTR de 4h12 a <3h en zonas calientes', progress:42},
+      {id:'KR2.3', name:'Pasar auditoría DORA 2026-05-04 sin hallazgos críticos', progress:70},
+    ]
+  },
+  {
+    id:'O3', name:'Hacer de la IA gobernanza una ventaja sostenible',
+    source:'bgStratData.okr.objs[2]', sourceTab:'Pulso Estratégico → Marco Estratégico → OKR Q2 2026',
+    krs:[
+      {id:'KR3.1', name:'Llevar adopción IA en cartera de 68% a 80%', progress:60},
+      {id:'KR3.2', name:'Lanzar 3 agentes IA nuevos en producción', progress:33},
+      {id:'KR3.3', name:'Publicar 2 papers MUDEP/Anthropic', progress:50},
+    ]
+  }
+];
+
+// Comité from rbac_usuarios + rbac_roles (nivel_jerarquico ≤ 2)
+// Cross-ref: bgPulseResps[] in mockup_p96_ceo_dashboard_v6.html lines 2953-2960
+const COMMITTEE = [
+  {id:'U-001',name:'Ricardo Valverde',role:'CEO',nivel:1,initials:'RV',color:'linear-gradient(135deg,#bc8cff,#f778ba)',selected:true,kpi:'CPI 0.93',kpiSource:'bgPulseResps → Pulso · Responsables'},
+  {id:'U-002',name:'Luis Navarro',role:'CFO',nivel:1,initials:'LN',color:'linear-gradient(135deg,#d29922,#eab308)',selected:true,kpi:'87% BAC',kpiSource:'bgPulseResps → Pulso · Responsables'},
+  {id:'U-003',name:'Carmen Delgado',role:'CTO',nivel:1,initials:'CD',color:'linear-gradient(135deg,#58a6ff,#39d2c0)',selected:true,kpi:'CPI 0.93',kpiSource:'bgPulseResps → Pulso · Responsables'},
+  {id:'U-004',name:'Carlos Mendoza',role:'CIO',nivel:1,initials:'CM',color:'linear-gradient(135deg,#3fb950,#39d2c0)',selected:true,kpi:'11/15 gov',kpiSource:'bgPulseResps → Pulso · Responsables'},
+  {id:'U-005',name:'Javier Soto',role:'CISO',nivel:1,initials:'JS',color:'linear-gradient(135deg,#f85149,#d29922)',selected:false,kpi:'94/100 cmp',kpiSource:'bgPulseResps → Pulso · Responsables'},
+  {id:'U-006',name:'Gonzalo Fernández-Vega',role:'VP_PMO',nivel:2,initials:'GF',color:'linear-gradient(135deg,#58a6ff,#bc8cff)',selected:true,kpi:'60 proys',kpiSource:'bgPulseResps → Pulso · Responsables'},
+  {id:'U-007',name:'David Ruiz',role:'VP_ENGINEERING',nivel:2,initials:'DR',color:'linear-gradient(135deg,#39d2c0,#3fb950)',selected:false,kpi:'68% IA',kpiSource:'bgPulseResps → Pulso · Responsables'},
+  {id:'U-008',name:'Laura Prieto',role:'VP_OPERATIONS',nivel:2,initials:'LP',color:'linear-gradient(135deg,#d29922,#f85149)',selected:false,kpi:'99.82%',kpiSource:'bgPulseResps → Pulso · Responsables'},
+];
+
+// Projects from cartera_build / bgPortfolio[]
+// Source: mockup_p96_ceo_dashboard_v6.html lines 2634-2703
+const SILO_TO_PORTFOLIO = {
+  'IT-INFRA':'Infraestructura','IT-RED':'Infraestructura','IT-CLOUD':'Infraestructura',
+  'IT-VIRTUAL':'Infraestructura','IT-STORAGE':'Infraestructura',
+  'IT-APPS':'Aplicaciones','IT-DATA':'Digital','IT-SEGURIDAD':'Seguridad',
+};
+const PROJECTS = [
+  {id:'PRJ-MSF',name:'Microsoft Fabric — analítico',silo:'IT-DATA',pm:'Pablo Rivas',bac:1178,gate:'G2',cpi:0.94,spi:0.87,prio:4,risk:3,prog:35,ai:true,benefit:1800,rrhh:4200,selected:true},
+  {id:'PRJ-BBN',name:'Renovación Backbone Core red',silo:'IT-RED',pm:'Javier Iglesias',bac:765,gate:'G3',cpi:1.07,spi:1.03,prio:4,risk:2,prog:70,ai:true,benefit:1200,rrhh:3100,selected:true},
+  {id:'PRJ-OSP',name:'OpenShift on-premise',silo:'IT-CLOUD',pm:'Sergio Mateos',bac:650,gate:'G2',cpi:0.65,spi:0.86,prio:4,risk:4,prog:30,ai:false,benefit:900,rrhh:2800,selected:true},
+  {id:'PRJ-SOC',name:'SOC unificado SIEM/SOAR',silo:'IT-SEGURIDAD',pm:'Elena Marín',bac:512,gate:'G3',cpi:1.05,spi:1.00,prio:4,risk:2,prog:70,ai:true,benefit:800,rrhh:2200,selected:true},
+  {id:'PRJ-T24',name:'T24 Temenos R24 upgrade',silo:'IT-APPS',pm:'Raúl Santos',bac:820,gate:'G2',cpi:0.89,spi:0.90,prio:4,risk:4,prog:35,ai:true,benefit:1500,rrhh:3800,selected:true},
+  {id:'PRJ-AZR',name:'Azure landing zone',silo:'IT-CLOUD',pm:'Sergio Mateos',bac:580,gate:'G3',cpi:0.91,spi:0.93,prio:4,risk:3,prog:55,ai:true,benefit:850,rrhh:2400,selected:true},
+  {id:'PRJ-PAM',name:'CyberArk PAM rollout',silo:'IT-SEGURIDAD',pm:'Elena Marín',bac:340,gate:'G2',cpi:0.94,spi:0.95,prio:4,risk:3,prog:40,ai:true,benefit:500,rrhh:1800,selected:true},
+  {id:'PRJ-CRM',name:'Salesforce FS Cloud',silo:'IT-APPS',pm:'Raúl Santos',bac:485,gate:'G2',cpi:0.92,spi:0.93,prio:4,risk:3,prog:40,ai:true,benefit:750,rrhh:2100,selected:false},
+  {id:'PRJ-VMW',name:'Broadcom vSphere migration',silo:'IT-VIRTUAL',pm:'Nuria Beltrán',bac:385,gate:'G2',cpi:0.92,spi:0.93,prio:4,risk:4,prog:30,ai:true,benefit:600,rrhh:1600,selected:false},
+  {id:'PRJ-SDW',name:'SD-WAN 38 oficinas',silo:'IT-RED',pm:'Javier Iglesias',bac:420,gate:'G2',cpi:0.93,spi:0.91,prio:3,risk:3,prog:40,ai:true,benefit:620,rrhh:1900,selected:false},
+  {id:'PRJ-HPE',name:'Renovación HPE ProLiant Gen11',silo:'IT-INFRA',pm:'Beatriz Lago',bac:485,gate:'G3',cpi:1.02,spi:0.99,prio:3,risk:2,prog:60,ai:true,benefit:350,rrhh:2000,selected:false},
+  {id:'PRJ-ZTN',name:'Zero Trust Network Access',silo:'IT-SEGURIDAD',pm:'Elena Marín',bac:265,gate:'G2',cpi:0.92,spi:0.93,prio:4,risk:3,prog:35,ai:true,benefit:420,rrhh:1400,selected:false},
+  {id:'PRJ-GOV',name:'Data governance program',silo:'IT-DATA',pm:'Tomás Aranda',bac:195,gate:'G2',cpi:0.93,spi:0.92,prio:4,risk:3,prog:35,ai:true,benefit:310,rrhh:1100,selected:false},
+  {id:'PRJ-CMP',name:'DORA compliance program',silo:'IT-SEGURIDAD',pm:'Elena Marín',bac:220,gate:'G3',cpi:0.96,spi:0.97,prio:4,risk:3,prog:55,ai:true,benefit:380,rrhh:1200,selected:false},
+  {id:'PRJ-EDR',name:'CrowdStrike Falcon EDR',silo:'IT-SEGURIDAD',pm:'Diego Soler',bac:285,gate:'G4',cpi:1.05,spi:1.03,prio:4,risk:2,prog:85,ai:true,benefit:450,rrhh:900,selected:false},
+];
+
+// ═══════════════ STATE ═══════════════
+let objectives = OKR_OBJECTIVES.map(o=>({...o, active:true}));
+let manualObjectives = [];
+let voters = COMMITTEE.filter(c=>c.selected);
+let ahpVotes = {};
+let objWeights = [];
+let critWeights = {};
+let ktScores = {};
+let solverResult = [];
+
+function getAllActiveObjectives(){
+  return [...objectives.filter(o=>o.active), ...manualObjectives];
+}
+function getAllCriteria(){
+  const all = [];
+  getAllActiveObjectives().forEach(o=>{
+    if(o.krs){
+      o.krs.forEach(kr=>all.push({id:kr.id, name:kr.name, objId:o.id, objName:o.name}));
+    } else if(o.criteria){
+      o.criteria.forEach(c=>all.push({id:c.id, name:c.name, objId:o.id, objName:o.name}));
+    }
+  });
+  return all;
+}
+
+// ═══════════════ STEP NAVIGATION ═══════════════
+function goStep(n){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+n).classList.add('active');
+  document.querySelectorAll('.step-btn').forEach(b=>{
+    const s=parseInt(b.dataset.step);
+    b.classList.remove('active','done');
+    if(s===n) b.classList.add('active');
+    else if(s<n) b.classList.add('done');
+  });
+  if(n===2){renderVoterSelect();renderAHPMatrix();}
+  if(n===3) renderWeights();
+  if(n===4) renderProjects();
+  if(n===5) renderKT();
+  if(n===6) renderSolver();
+  window.scrollTo(0,0);
+}
+
+// ═══════════════ STEP 1 ═══════════════
+function renderObjectives(){
+  const el=document.getElementById('obj-list');
+  el.innerHTML = objectives.map((o,i)=>`
+    <div class="okr-card ${o.active?'selected':''}" onclick="toggleOKR(${i})">
+      <div class="okr-check">${o.active?'✓':''}</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <span class="okr-code">${o.id}</span>
+        <span class="src-inline src-okr">bgStratData.okr.objs[${i}]</span>
+      </div>
+      <div class="okr-title">${o.name}</div>
+      <div style="font-size:9px;color:var(--tx3);margin-bottom:6px">📍 ${o.sourceTab}</div>
+      ${(o.krs||[]).map(kr=>`
+        <div class="okr-kr">
+          <span style="font-family:var(--mono);font-size:9px;font-weight:700;color:var(--acc-cy);width:40px">${kr.id}</span>
+          <span style="flex:1">${kr.name}</span>
+          <div class="okr-kr-bar"><div class="okr-kr-fill" style="width:${kr.progress}%;background:${kr.progress>=70?'var(--acc-gn)':kr.progress>=40?'var(--acc-or)':'var(--acc-rd)'}"></div></div>
+          <span style="font-family:var(--mono);font-size:9px;font-weight:700;width:28px;text-align:right">${kr.progress}%</span>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+
+  // Manual objectives
+  manualObjectives.forEach((o,i)=>{
+    el.innerHTML += `
+      <div class="okr-card selected" style="border-left-color:var(--tx3)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <span class="okr-code" style="color:var(--tx3)">${o.id}</span>
+          <span class="src-inline src-manual">input manual</span>
+          <button class="btn btn-rd btn-sm" onclick="removeManualObj(${i})" style="margin-left:auto;padding:2px 6px">✕</button>
+        </div>
+        <input type="text" value="${o.name}" onchange="manualObjectives[${i}].name=this.value" style="margin-bottom:6px">
+        ${(o.criteria||[]).map((c,ci)=>`
+          <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px;margin-left:8px">
+            <span style="font-family:var(--mono);font-size:9px;color:var(--tx3)">${c.id}</span>
+            <input type="text" value="${c.name}" onchange="manualObjectives[${i}].criteria[${ci}].name=this.value" style="flex:1">
+            <button class="btn btn-rd btn-sm" onclick="removeManualCrit(${i},${ci})" style="padding:1px 5px">✕</button>
+          </div>
+        `).join('')}
+        <button class="btn btn-sec btn-sm" onclick="addManualCrit(${i})" style="margin-left:8px;margin-top:4px">+ Criterio</button>
+      </div>
+    `;
+  });
+
+  renderCriteriaSummary();
+}
+
+function toggleOKR(i){ objectives[i].active=!objectives[i].active; renderObjectives(); }
+
+function addObjective(){
+  const n=manualObjectives.length+1;
+  manualObjectives.push({id:'M'+n, name:'Objetivo manual '+n, criteria:[{id:'MC'+n+'-1',name:'Criterio 1'}]});
+  renderObjectives();
+}
+function removeManualObj(i){ manualObjectives.splice(i,1); renderObjectives(); }
+function addManualCrit(i){
+  const n=manualObjectives[i].criteria.length+1;
+  manualObjectives[i].criteria.push({id:'MC'+(i+1)+'-'+n, name:'Criterio '+n});
+  renderObjectives();
+}
+function removeManualCrit(oi,ci){ manualObjectives[oi].criteria.splice(ci,1); renderObjectives(); }
+
+function renderCriteriaSummary(){
+  const el=document.getElementById('criteria-list');
+  const allObj = getAllActiveObjectives();
+  el.innerHTML = allObj.map(o=>{
+    const crits = o.krs || o.criteria || [];
+    const isOKR = !!o.krs;
+    return `<div style="margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+        <span style="font-family:var(--mono);font-size:10px;font-weight:800;color:${isOKR?'var(--acc-pk)':'var(--tx3)'}">${o.id}</span>
+        <span style="font-size:10px;font-weight:600">${o.name.substring(0,50)}${o.name.length>50?'...':''}</span>
+        <span class="src-inline ${isOKR?'src-okr':'src-manual'}">${isOKR?'OKR → KRs como criterios':'manual'}</span>
+      </div>
+      ${crits.map(c=>`
+        <div style="display:flex;align-items:center;gap:6px;margin-left:12px;margin-bottom:2px">
+          <span style="font-family:var(--mono);font-size:9px;color:var(--acc-cy);width:40px">${c.id}</span>
+          <span style="font-size:10px;flex:1">${c.name}</span>
+          ${c.progress!==undefined?`<span style="font-family:var(--mono);font-size:9px;color:var(--tx3)">${c.progress}%</span>`:''}
+        </div>
+      `).join('')}
+    </div>`;
+  }).join('');
+}
+
+function renderVoters(){
+  const el=document.getElementById('voter-grid');
+  el.innerHTML = COMMITTEE.map((c,i)=>`
+    <div class="voter-pill ${c.selected?'selected':''}" onclick="toggleVoter(${i})">
+      <div class="voter-avatar" style="background:${c.color}">${c.initials}</div>
+      <div style="flex:1">
+        <div class="voter-name">${c.name}</div>
+        <div class="voter-role">${c.role} · nivel ${c.nivel}</div>
+        <div style="font-size:9px;color:var(--acc-or);margin-top:1px">KPI: ${c.kpi}</div>
+        <div style="font-size:8px;color:var(--tx3)">${c.kpiSource}</div>
+      </div>
+    </div>
+  `).join('');
+}
+function toggleVoter(i){ COMMITTEE[i].selected=!COMMITTEE[i].selected; voters=COMMITTEE.filter(c=>c.selected); renderVoters(); }
+
+// ═══════════════ STEP 2 ═══════════════
+function renderVoterSelect(){
+  const sel=document.getElementById('voter-select');
+  sel.innerHTML=voters.map(v=>`<option value="${v.id}">${v.name} (${v.role})</option>`).join('');
+  document.getElementById('ahp-n-voters').textContent=voters.length;
+  document.getElementById('ahp-total-votes').textContent=voters.length;
+  const allObj=getAllActiveObjectives();
+  const nObj=allObj.length;
+  const pairs=(nObj*nObj-nObj)/2;
+  document.getElementById('ahp-total-pairs').textContent=pairs*voters.length;
+}
+
+function renderAHPMatrix(){
+  const N=voters.length;
+  const voterId=document.getElementById('voter-select').value;
+  if(!ahpVotes[voterId]) ahpVotes[voterId]={};
+  const votes=ahpVotes[voterId];
+  const allObj=getAllActiveObjectives();
+
+  let html='<table class="tbl"><thead><tr><th></th>';
+  allObj.forEach(o=>{html+=`<th style="font-size:8px;max-width:70px">${o.id}: ${o.name.substring(0,20)}</th>`;});
+  html+='<th style="color:var(--acc-cy)">Total</th><th style="color:var(--acc-cy)">%</th></tr></thead><tbody>';
+
+  allObj.forEach((oi,i)=>{
+    html+=`<tr><td style="font-weight:700;font-size:9px">${oi.id}: ${oi.name.substring(0,22)}</td>`;
+    let rowTotal=0;
+    allObj.forEach((oj,j)=>{
+      if(i===j){html+='<td class="diagonal">—</td>';}
+      else if(i<j){
+        const key=oi.id+'|'+oj.id;
+        const val=votes[key]!==undefined?votes[key]:Math.floor(N/2);
+        if(votes[key]===undefined) votes[key]=val;
+        html+=`<td><input type="number" min="0" max="${N}" value="${val}" onchange="updateAHPVote('${voterId}','${key}',this.value)" style="width:44px"></td>`;
+        rowTotal+=val;
+      } else {
+        const key=oj.id+'|'+oi.id;
+        const val=votes[key]!==undefined?votes[key]:Math.floor(N/2);
+        const comp=N-val;
+        html+=`<td class="complement">${comp}</td>`;
+        rowTotal+=comp;
+      }
+    });
+    const maxP=(allObj.length-1)*N;
+    const pct=maxP>0?(rowTotal/maxP*100).toFixed(1):0;
+    html+=`<td style="font-family:var(--mono);font-weight:700">${rowTotal}</td><td class="pct">${pct}%</td></tr>`;
+  });
+  html+='</tbody></table>';
+  document.getElementById('ahp-matrix').innerHTML=html;
+  renderAHPSummary();
+}
+
+function updateAHPVote(voterId,key,val){
+  const N=voters.length;
+  ahpVotes[voterId][key]=Math.min(N,Math.max(0,parseInt(val)||0));
+  renderAHPMatrix();
+}
+
+function renderAHPSummary(){
+  const N=voters.length;
+  const allObj=getAllActiveObjectives();
+  let totals={};
+  allObj.forEach(o=>{totals[o.id]=0;});
+  voters.forEach(v=>{
+    const votes=ahpVotes[v.id]||{};
+    allObj.forEach((oi,i)=>{
+      allObj.forEach((oj,j)=>{
+        if(i<j){const key=oi.id+'|'+oj.id; const val=votes[key]!==undefined?votes[key]:Math.floor(N/2); totals[oi.id]+=val; totals[oj.id]+=(N-val);}
+      });
+    });
+  });
+  const grand=Object.values(totals).reduce((a,b)=>a+b,0)||1;
+  let html='<div style="display:flex;gap:8px;flex-wrap:wrap">';
+  allObj.forEach(o=>{
+    const pct=(totals[o.id]/grand*100).toFixed(1);
+    const isOKR=!!o.krs;
+    html+=`<div style="background:var(--bg-el);border:1px solid var(--border);border-radius:6px;padding:8px 12px;flex:1;min-width:140px">
+      <div style="display:flex;align-items:center;gap:4px"><span style="font-size:9px;color:var(--tx3)">${o.id}</span><span class="src-inline ${isOKR?'src-okr':'src-manual'}">${isOKR?'OKR':'manual'}</span></div>
+      <div style="font-size:14px;font-weight:800;color:var(--acc-pu);font-family:var(--mono)">${pct}%</div>
+      <div style="font-size:10px;color:var(--tx2)">${o.name.substring(0,35)}</div>
+      <div class="result-bar"><div class="result-bar-fill" style="width:${pct}%;background:var(--acc-pu)"></div></div>
+    </div>`;
+  });
+  html+='</div>';
+  document.getElementById('ahp-summary').innerHTML=html;
+}
+
+// ═══════════════ STEP 3 ═══════════════
+function calculateAHP(){
+  const N=voters.length;
+  const allObj=getAllActiveObjectives();
+  let totals={};
+  allObj.forEach(o=>{totals[o.id]=0;});
+  voters.forEach(v=>{
+    const votes=ahpVotes[v.id]||{};
+    allObj.forEach((oi,i)=>{
+      allObj.forEach((oj,j)=>{
+        if(i<j){const key=oi.id+'|'+oj.id; const val=votes[key]!==undefined?votes[key]:Math.floor(N/2); totals[oi.id]+=val; totals[oj.id]+=(N-val);}
+      });
+    });
+  });
+  const grand=Object.values(totals).reduce((a,b)=>a+b,0)||1;
+  objWeights=allObj.map(o=>({id:o.id,name:o.name,weight:totals[o.id]/grand,isOKR:!!o.krs}));
+
+  critWeights={};
+  allObj.forEach(o=>{
+    const crits=o.krs||o.criteria||[];
+    const w=crits.length>0?1/crits.length:0;
+    const objW=objWeights.find(x=>x.id===o.id).weight;
+    critWeights[o.id]=crits.map(c=>({id:c.id,name:c.name,localWeight:w,globalWeight:w*objW}));
+  });
+}
+
+function renderWeights(){
+  let html='';
+  objWeights.forEach(o=>{
+    const pct=(o.weight*100).toFixed(1);
+    html+=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <span style="font-family:var(--mono);font-size:10px;font-weight:700;color:${o.isOKR?'var(--acc-pk)':'var(--tx3)'};width:28px">${o.id}</span>
+      <div style="flex:1">
+        <div style="display:flex;justify-content:space-between;margin-bottom:2px"><span style="font-size:11px">${o.name.substring(0,40)}</span><span style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--acc-cy)">${pct}%</span></div>
+        <div class="result-bar" style="height:8px"><div class="result-bar-fill" style="width:${pct}%;background:${o.isOKR?'var(--acc-pk)':'var(--tx3)'}"></div></div>
+      </div>
+    </div>`;
+  });
+  document.getElementById('obj-weights').innerHTML=html;
+
+  html='<table class="tbl"><thead><tr><th>Objetivo <span class="src-inline src-okr">OKR</span></th><th>Criterio <span class="src-inline src-okr">KR</span></th><th style="text-align:right">Peso local <span class="src-inline src-calc">1/n</span></th><th style="text-align:right">Peso obj <span class="src-inline src-calc">AHP</span></th><th style="text-align:right;color:var(--acc-cy)">Peso global <span class="src-inline src-calc">W×W</span></th></tr></thead><tbody>';
+  let totalG=0;
+  getAllActiveObjectives().forEach(o=>{
+    const crits=critWeights[o.id]||[];
+    const objW=objWeights.find(x=>x.id===o.id);
+    crits.forEach((c,ci)=>{
+      totalG+=c.globalWeight;
+      html+=`<tr>${ci===0?`<td rowspan="${crits.length}" style="font-weight:700;font-size:10px;border-right:2px solid var(--acc-pk)">${o.name.substring(0,25)}</td>`:''}
+        <td>${c.name}</td>
+        <td style="text-align:right;font-family:var(--mono)">${(c.localWeight*100).toFixed(1)}%</td>
+        <td style="text-align:right;font-family:var(--mono)">${(objW.weight*100).toFixed(1)}%</td>
+        <td style="text-align:right;font-family:var(--mono);font-weight:700;color:var(--acc-cy)">${(c.globalWeight*100).toFixed(1)}%</td></tr>`;
+    });
+  });
+  html+=`<tr style="background:var(--bg-l3)"><td colspan="4" style="text-align:right;font-weight:700">TOTAL</td><td style="text-align:right;font-family:var(--mono);font-weight:800;color:var(--acc-gn)">${(totalG*100).toFixed(1)}%</td></tr></tbody></table>`;
+  document.getElementById('global-weights').innerHTML=html;
+
+  // Chart
+  const allCrits=[];
+  getAllActiveObjectives().forEach(o=>{(critWeights[o.id]||[]).forEach(c=>allCrits.push({...c,objName:o.name}));});
+  allCrits.sort((a,b)=>b.globalWeight-a.globalWeight);
+  const maxW=allCrits[0]?.globalWeight||1;
+  let ch='<div style="display:flex;flex-direction:column;gap:4px">';
+  allCrits.forEach(c=>{
+    const pct=(c.globalWeight/maxW*100).toFixed(0);
+    ch+=`<div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:9px;color:var(--tx3);width:180px;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</span>
+      <div style="flex:1;height:16px;background:var(--bg-l3);border-radius:3px;overflow:hidden"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--acc-pk),var(--acc-cy));border-radius:3px"></div></div>
+      <span style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--acc-cy);width:40px">${(c.globalWeight*100).toFixed(1)}%</span>
+    </div>`;
+  });
+  ch+='</div>';
+  document.getElementById('weights-chart').innerHTML=ch;
+}
+
+// ═══════════════ STEP 4 ═══════════════
+function renderProjects(){
+  const fp=document.getElementById('filter-portfolio').value;
+  const fg=document.getElementById('filter-gate').value;
+  let filtered=PROJECTS;
+  if(fp) filtered=filtered.filter(p=>(SILO_TO_PORTFOLIO[p.silo]||'Transversal')===fp);
+  if(fg) filtered=filtered.filter(p=>p.gate===fg);
+  const tbody=document.getElementById('proj-tbody');
+  tbody.innerHTML=filtered.map(p=>{
+    const port=SILO_TO_PORTFOLIO[p.silo]||'Transversal';
+    const roi=p.benefit>0?((p.benefit-p.bac)/p.bac*100).toFixed(0)+'%':'—';
+    const riskTag=p.risk>=4?'tag-rd':p.risk>=3?'tag-or':'tag-gn';
+    const ri=PROJECTS.indexOf(p);
+    return `<tr>
+      <td><input type="checkbox" ${p.selected?'checked':''} onchange="PROJECTS[${ri}].selected=this.checked;updateProjectSummary()"></td>
+      <td style="font-family:var(--mono);font-size:10px;font-weight:700" class="proj-clickable" onclick="event.stopPropagation();showProjectDetail('${p.id}')">${p.id}</td>
+      <td style="font-weight:600" class="proj-clickable" onclick="event.stopPropagation();showProjectDetail('${p.id}')">${p.name}</td>
+      <td><span class="tag tag-pu">${port}</span></td>
+      <td style="font-size:10px;color:var(--tx2)">${p.pm}</td>
+      <td><span class="tag tag-bl">${p.gate}</span></td>
+      <td style="text-align:right;font-family:var(--mono)">${p.bac.toLocaleString()}</td>
+      <td style="text-align:right;font-family:var(--mono)">${p.benefit.toLocaleString()}</td>
+      <td style="text-align:right;font-family:var(--mono);font-weight:700;color:${parseInt(roi)>0?'var(--acc-gn)':'var(--acc-rd)'}">${roi}</td>
+      <td style="text-align:right;font-family:var(--mono)">${p.rrhh.toLocaleString()}</td>
+      <td><span class="tag ${riskTag}">R${p.risk}</span></td>
+    </tr>`;
+  }).join('');
+  updateProjectSummary();
+}
+
+function updateProjectSummary(){
+  const sel=PROJECTS.filter(p=>p.selected);
+  document.getElementById('proj-count').textContent=sel.length+' seleccionados';
+  document.getElementById('sum-inversion').textContent=sel.reduce((a,p)=>a+p.bac,0).toLocaleString();
+  document.getElementById('sum-beneficio').textContent=sel.reduce((a,p)=>a+p.benefit,0).toLocaleString();
+  const avg=sel.length>0?sel.reduce((a,p)=>a+((p.benefit-p.bac)/p.bac),0)/sel.length*100:0;
+  document.getElementById('sum-roi').textContent=avg.toFixed(0)+'%';
+  document.getElementById('sum-rrhh').textContent=sel.reduce((a,p)=>a+p.rrhh,0).toLocaleString();
+}
+
+// ═══════════════ STEP 5 ═══════════════
+const KT_SCALE=[0,0.3,0.5,0.6,1.0];
+
+function renderKT(){
+  const selP=PROJECTS.filter(p=>p.selected);
+  const allCrits=getAllCriteria();
+
+  let thead='<tr><th style="min-width:130px">Proyecto <span class="src-inline src-cartera">cartera</span></th>';
+  allCrits.forEach(c=>{thead+=`<th style="min-width:70px;font-size:8px;writing-mode:vertical-lr;height:90px">${c.name.substring(0,30)}<br><span style="color:var(--acc-cy)">${critWeights[c.objId]?.find(x=>x.id===c.id)?(critWeights[c.objId].find(x=>x.id===c.id).globalWeight*100).toFixed(1)+'%':'—'}</span></th>`;});
+  thead+='<th style="color:var(--acc-gn);min-width:70px">SCORE <span class="src-inline src-calc">Σ</span></th><th>Rank</th></tr>';
+  document.getElementById('kt-thead').innerHTML=thead;
+
+  let tbody='';
+  selP.forEach(p=>{
+    if(!ktScores[p.id]) ktScores[p.id]={};
+    tbody+=`<tr><td style="font-weight:700;font-size:10px">${p.id}<br><span style="font-weight:400;color:var(--tx2);font-size:9px">${p.name.substring(0,25)}</span></td>`;
+    let score=0;
+    allCrits.forEach(c=>{
+      const val=ktScores[p.id][c.id]!==undefined?ktScores[p.id][c.id]:0.5;
+      if(ktScores[p.id][c.id]===undefined) ktScores[p.id][c.id]=val;
+      const gw=critWeights[c.objId]?.find(x=>x.id===c.id)?.globalWeight||0;
+      score+=val*gw;
+      tbody+=`<td style="text-align:center"><div class="kt-scale">`;
+      KT_SCALE.forEach(s=>{tbody+=`<button class="${val===s?'sel':''}" onclick="setKT('${p.id}','${c.id}',${s})">${s}</button>`;});
+      tbody+=`</div></td>`;
+    });
+    tbody+=`<td style="text-align:center;font-family:var(--mono);font-size:14px;font-weight:800;color:var(--acc-gn)">${(score*100).toFixed(1)}</td>`;
+    tbody+=`<td style="text-align:center" id="kt-rank-${p.id}">—</td></tr>`;
+  });
+  document.getElementById('kt-tbody').innerHTML=tbody;
+  updateKTRanking();
+}
+
+function setKT(pid,cid,val){ktScores[pid][cid]=val;renderKT();}
+
+function calcKTScore(p){
+  let score=0;
+  getAllCriteria().forEach(c=>{
+    const val=ktScores[p.id]?.[c.id]||0.5;
+    const gw=critWeights[c.objId]?.find(x=>x.id===c.id)?.globalWeight||0;
+    score+=val*gw;
+  });
+  return score;
+}
+
+function updateKTRanking(){
+  const selP=PROJECTS.filter(p=>p.selected);
+  const scores=selP.map(p=>({id:p.id,name:p.name,score:calcKTScore(p),bac:p.bac,rrhh:p.rrhh,risk:p.risk})).sort((a,b)=>b.score-a.score);
+  scores.forEach((s,i)=>{const el=document.getElementById('kt-rank-'+s.id);if(el){el.innerHTML=`<span style="font-size:14px">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)}</span>`;}});
+  const maxS=scores[0]?.score||1;
+  let html='<div style="display:flex;flex-direction:column;gap:4px">';
+  scores.forEach((s,i)=>{
+    const pct=(s.score/maxS*100).toFixed(0);
+    html+=`<div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:12px;width:20px;text-align:center">${i<3?['🥇','🥈','🥉'][i]:'<span style=color:var(--tx3)>#'+(i+1)+'</span>'}</span>
+      <span style="font-family:var(--mono);font-size:10px;font-weight:700;width:60px;color:var(--acc-bl)">${s.id}</span>
+      <span style="font-size:10px;width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.name}</span>
+      <div style="flex:1;height:14px;background:var(--bg-l3);border-radius:3px;overflow:hidden"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--acc-gn),var(--acc-cy));border-radius:3px"></div></div>
+      <span style="font-family:var(--mono);font-size:11px;font-weight:800;color:var(--acc-gn);width:50px;text-align:right">${(s.score*100).toFixed(1)}</span>
+    </div>`;
+  });
+  html+='</div>';
+  document.getElementById('kt-ranking').innerHTML=html;
+}
+
+// ═══════════════ STEP 6 ═══════════════
+function runSolver(){
+  const budget=parseFloat(document.getElementById('solver-budget').value)||999999;
+  const rrhhMax=parseFloat(document.getElementById('solver-rrhh').value)||999999;
+  const maxRisk=parseInt(document.getElementById('solver-risk').value)||4;
+  const forceCrit=document.getElementById('solver-force-critica').checked;
+  const selP=PROJECTS.filter(p=>p.selected);
+  const items=selP.map(p=>({...p,ktScore:calcKTScore(p)}));
+  const eligible=items.filter(p=>p.risk<=maxRisk);
+  const forced=forceCrit?eligible.filter(p=>p.prio===4):[];
+  const optional=forceCrit?eligible.filter(p=>p.prio<4):eligible;
+  let usedB=forced.reduce((a,p)=>a+p.bac,0);
+  let usedR=forced.reduce((a,p)=>a+p.rrhh,0);
+  const remB=budget-usedB, remR=rrhhMax-usedR;
+  const n=optional.length;
+  const combos=Math.pow(2,n);
+  document.getElementById('solver-combos').textContent=`Explorando ${combos.toLocaleString()} combinaciones (2^${n})...`;
+  let bestVal=-1,bestMask=0;
+  for(let mask=0;mask<combos;mask++){
+    let cost=0,hrs=0,val=0;
+    for(let i=0;i<n;i++){if(mask&(1<<i)){cost+=optional[i].bac;hrs+=optional[i].rrhh;val+=optional[i].ktScore;}}
+    if(cost<=remB&&hrs<=remR&&val>bestVal){bestVal=val;bestMask=mask;}
+  }
+  solverResult=[];
+  forced.forEach(p=>solverResult.push({...p,solverSelected:true,forced:true}));
+  optional.forEach((p,i)=>solverResult.push({...p,solverSelected:!!(bestMask&(1<<i)),forced:false}));
+  items.filter(p=>p.risk>maxRisk).forEach(p=>solverResult.push({...p,solverSelected:false,forced:false,excluded:true}));
+  solverResult.sort((a,b)=>(b.solverSelected?1:0)-(a.solverSelected?1:0)||b.ktScore-a.ktScore);
+  renderSolverResults();
+}
+
+function renderSolver(){if(solverResult.length>0) renderSolverResults();}
+
+function renderSolverResults(){
+  const sel=solverResult.filter(s=>s.solverSelected);
+  const tc=sel.reduce((a,p)=>a+p.bac,0);
+  const tr=sel.reduce((a,p)=>a+p.rrhh,0);
+  const tv=sel.reduce((a,p)=>a+p.ktScore,0);
+  document.getElementById('sol-selected').textContent=sel.length;
+  document.getElementById('sol-value').textContent=(tv*100).toFixed(1);
+  document.getElementById('sol-cost').textContent=tc.toLocaleString();
+  document.getElementById('sol-rrhh').textContent=tr.toLocaleString();
+  const budget=parseFloat(document.getElementById('solver-budget').value)||1;
+  const rrhhMax=parseFloat(document.getElementById('solver-rrhh').value)||1;
+  const bp=(tc/budget*100).toFixed(0),rp=(tr/rrhhMax*100).toFixed(0);
+  document.getElementById('solver-results').innerHTML=`
+    <div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--tx2);margin-bottom:2px"><span>Presupuesto</span><span style="font-family:var(--mono);font-weight:700;color:var(--acc-bl)">${tc.toLocaleString()} / ${budget.toLocaleString()} k€ (${bp}%)</span></div>
+    <div class="result-bar" style="height:10px"><div class="result-bar-fill" style="width:${bp}%;background:${parseInt(bp)>90?'var(--acc-rd)':parseInt(bp)>70?'var(--acc-or)':'var(--acc-gn)'}"></div></div></div>
+    <div><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--tx2);margin-bottom:2px"><span>RRHH</span><span style="font-family:var(--mono);font-weight:700;color:var(--acc-or)">${tr.toLocaleString()} / ${rrhhMax.toLocaleString()} h (${rp}%)</span></div>
+    <div class="result-bar" style="height:10px"><div class="result-bar-fill" style="width:${rp}%;background:${parseInt(rp)>90?'var(--acc-rd)':parseInt(rp)>70?'var(--acc-or)':'var(--acc-cy)'}"></div></div></div>`;
+  const tbody=document.getElementById('solver-tbody');
+  tbody.innerHTML=solverResult.map(p=>{
+    const port=SILO_TO_PORTFOLIO[p.silo]||'Transversal';
+    const riskTag=p.risk>=4?'tag-rd':p.risk>=3?'tag-or':'tag-gn';
+    const selIcon=p.solverSelected?(p.forced?'🔒':'✅'):(p.excluded?'⛔':'❌');
+    return `<tr style="opacity:${p.solverSelected?'1':'0.4'}">
+      <td style="font-size:16px;text-align:center" title="${p.forced?'Obligatorio (P4 Crítica)':p.excluded?'Excluido por riesgo':'Decisión Solver'}">${selIcon}</td>
+      <td style="font-family:var(--mono);font-size:10px;font-weight:700">${p.id}</td>
+      <td style="font-weight:600">${p.name}</td>
+      <td><span class="tag tag-pu">${port}</span></td>
+      <td style="text-align:right;font-family:var(--mono);font-weight:700;color:var(--acc-gn)">${(p.ktScore*100).toFixed(1)}</td>
+      <td style="text-align:right;font-family:var(--mono)">${p.bac.toLocaleString()}</td>
+      <td style="text-align:right;font-family:var(--mono)">${p.rrhh.toLocaleString()}</td>
+      <td><span class="tag ${riskTag}">R${p.risk}</span></td></tr>`;
+  }).join('');
+}
+
+function saveEvaluation(){
+  const sel=solverResult.filter(s=>s.solverSelected);
+  const tc=sel.reduce((a,p)=>a+p.bac,0);
+  const tv=sel.reduce((a,p)=>a+p.ktScore,0);
+  const now=new Date();
+  const dateStr=now.toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'})+' '+now.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+  const currentState=captureCurrentState();
+
+  // Check if updating existing or creating new
+  let existingIdx=currentEvalId?savedEvaluations.findIndex(e=>e.id===currentEvalId):-1;
+  if(existingIdx>=0){
+    const existing=savedEvaluations[existingIdx];
+    const changelog=generateChangelog(existing,currentState);
+    existing.version+=1;
+    existing.modifiedAt=dateStr;
+    existing.state=currentState;
+    existing.projectCount=currentState.projectCount;
+    existing.voterCount=currentState.voterCount;
+    existing.objectiveCount=currentState.objectiveCount;
+    existing.totalScore=currentState.totalScore;
+    existing.totalCost=currentState.totalCost;
+    existing.solverProjects=currentState.solverProjects;
+    existing.changelog=changelog;
+    existing.history.push({version:existing.version,date:dateStr,changes:changelog});
+  } else {
+    const evalId='EVAL-'+(savedEvaluations.length+1).toString().padStart(3,'0');
+    const evalName='Priorización Q3 2026 — '+dateStr.split(' ')[0]+' '+dateStr.split(' ')[1]+' '+dateStr.split(' ')[2];
+    savedEvaluations.push({
+      id:evalId, name:evalName, version:1,
+      createdAt:dateStr, modifiedAt:dateStr,
+      state:currentState,
+      projectCount:currentState.projectCount,
+      voterCount:currentState.voterCount,
+      objectiveCount:currentState.objectiveCount,
+      totalScore:currentState.totalScore,
+      totalCost:currentState.totalCost,
+      solverProjects:currentState.solverProjects,
+      changelog:['Evaluación inicial'],
+      history:[{version:1,date:dateStr,changes:['Evaluación inicial']}]
+    });
+    currentEvalId=savedEvaluations[savedEvaluations.length-1].id;
+  }
+  // Persist to API
+  if(window._saveToAPI) window._saveToAPI(currentState).then(r=>{if(r)console.log('Saved to API:',r.id)});
+  renderHistoryPanel();
+
+  const vLabel=existingIdx>=0?'v'+savedEvaluations[existingIdx].version+' (actualizada)':'v1 (nueva)';
+  const modal=document.createElement('div');
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:999;padding:20px';
+  modal.innerHTML=`<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:24px;max-width:600px;width:100%">
+    <div style="font-size:16px;font-weight:800;margin-bottom:4px">✅ Evaluación guardada y publicada</div>
+    <div style="font-size:11px;color:var(--acc-pu);font-weight:700;margin-bottom:12px">${vLabel} · ${dateStr}</div>
+    <div style="font-size:12px;color:var(--tx2);margin-bottom:16px">Los resultados se persisten en <code>portfolio_evaluations</code> y retroalimentan al Pulso Estratégico:</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="background:var(--bg-el);border:1px solid var(--border);border-radius:6px;padding:10px">
+        <span class="src-badge src-new"><span class="src-icon">💾</span> → portfolio_evaluations (JSONB)</span>
+        <div style="font-size:10px;color:var(--tx2);margin-top:4px">Ejercicio completo: objetivos OKR, votos AHP, pesos, scoring K-T, resultado Solver. Reproducible y auditable.</div>
+      </div>
+      <div style="background:var(--bg-el);border:1px solid var(--border);border-radius:6px;padding:10px">
+        <span class="src-badge src-cartera"><span class="src-icon">🏗️</span> → cartera_build.alignment_score UPDATE</span>
+        <div style="font-size:10px;color:var(--tx2);margin-top:4px">${sel.length} proyectos actualizados con su score K-T. Visible en pestaña Cartera BUILD.</div>
+      </div>
+      <div style="background:var(--bg-el);border:1px solid var(--border);border-radius:6px;padding:10px">
+        <span class="src-badge src-okr"><span class="src-icon">🎯</span> → p96_pulse_decisions INSERT</span>
+        <div style="font-size:10px;color:var(--acc-cy);margin-top:4px">"Portafolio Q3 2026 aprobado: ${sel.length} proyectos, ${tc.toLocaleString()} k€, score ${(tv*100).toFixed(1)}"</div>
+      </div>
+      <div style="background:var(--bg-el);border:1px solid var(--border);border-radius:6px;padding:10px">
+        <span class="src-badge src-okr"><span class="src-icon">🎯</span> → p96_pulse_hitos INSERT</span>
+        <div style="font-size:10px;color:var(--tx2);margin-top:4px">Hito "Aprobación portafolio Q3" añadido al calendario de 4 semanas.</div>
+      </div>
+    </div>
+    <div style="text-align:right;margin-top:14px"><button class="btn btn-pri" onclick="this.closest('div[style*=fixed]').remove()">Cerrar</button></div>
+  </div>`;
+  document.body.appendChild(modal);
+}
+
+// ═══════════════ PROJECT DETAIL MODAL ═══════════════
+// Extended project data for CIO decision-making (from p96_build_project_detail JSONB)
+const PROJECT_DETAIL = {
+  'PRJ-MSF':{desc:'Migración de analítica legacy a Microsoft Fabric para consolidar data warehouse y reporting en un solo servicio.',gates:[{g:'G0',date:'2025-09',status:'passed'},{g:'G1',date:'2025-11',status:'passed'},{g:'G2',date:'2026-02',status:'current'},{g:'G3',date:'2026-06',status:'pending'},{g:'G4',date:'2026-09',status:'pending'},{g:'G5',date:'2026-12',status:'pending'}],team:['Pablo Rivas (PM)','Ana Beltrán','Carlos Nieto','Miguel Ortiz'],risks:[{r:'Dependencia licencias Microsoft',sev:3},{r:'Migración datos legacy >2TB',sev:4},{r:'Ventana de paralelismo costosa',sev:2}],kpis:{cpi:0.94,spi:0.87,eac:1253,etc:766,sv:-153,cv:-71},alerts:['Retraso 3 sem. en migración ETL','Coste licencias 12% sobre BAC'],blocks:[]},
+  'PRJ-BBN':{desc:'Renovación del backbone de red core para soportar incremento de tráfico post-migración cloud y requisitos DORA.',gates:[{g:'G0',date:'2025-06',status:'passed'},{g:'G1',date:'2025-08',status:'passed'},{g:'G2',date:'2025-11',status:'passed'},{g:'G3',date:'2026-03',status:'current'},{g:'G4',date:'2026-06',status:'pending'},{g:'G5',date:'2026-09',status:'pending'}],team:['Javier Iglesias (PM)','Laura Sanz','Diego Torres'],risks:[{r:'Corte de servicio en cutover',sev:3},{r:'Compatibilidad firmware switches',sev:2}],kpis:{cpi:1.07,spi:1.03,eac:715,etc:215,sv:23,cv:50},alerts:[],blocks:[]},
+  'PRJ-OSP':{desc:'Despliegue OpenShift on-premise para workloads que no pueden migrar a cloud pública por regulación bancaria.',gates:[{g:'G0',date:'2025-09',status:'passed'},{g:'G1',date:'2025-12',status:'passed'},{g:'G2',date:'2026-03',status:'current'},{g:'G3',date:'2026-07',status:'pending'},{g:'G4',date:'2026-10',status:'pending'},{g:'G5',date:'2027-01',status:'pending'}],team:['Sergio Mateos (PM)','Nuria Beltrán','Tomás Aranda','Pablo Herrera','Inés Vidal'],risks:[{r:'CPI 0.65 — sobrecoste severo',sev:4},{r:'Skills gap en Kubernetes',sev:3},{r:'Hardware delivery lead time',sev:3}],kpis:{cpi:0.65,spi:0.86,eac:1000,etc:455,sv:-91,cv:-228},alerts:['CPI crítico 0.65','Equipo insuficiente para timeline'],blocks:['Entrega hardware HPE retrasada 6 sem.']},
+  'PRJ-SOC':{desc:'Unificación del SOC con plataforma SIEM/SOAR integrada para cumplimiento DORA y reducción MTTR.',gates:[{g:'G0',date:'2025-06',status:'passed'},{g:'G1',date:'2025-08',status:'passed'},{g:'G2',date:'2025-11',status:'passed'},{g:'G3',date:'2026-02',status:'current'},{g:'G4',date:'2026-05',status:'pending'},{g:'G5',date:'2026-07',status:'pending'}],team:['Elena Marín (PM)','Javier Soto (sponsor)','Diego Soler'],risks:[{r:'Integración con legacy SIEM',sev:2},{r:'Formación equipo SOC 24/7',sev:2}],kpis:{cpi:1.05,spi:1.00,eac:488,etc:146,sv:0,cv:24},alerts:[],blocks:[]},
+  'PRJ-T24':{desc:'Upgrade de core banking Temenos T24 a release R24 con mejoras regulatorias y de rendimiento.',gates:[{g:'G0',date:'2025-08',status:'passed'},{g:'G1',date:'2025-11',status:'passed'},{g:'G2',date:'2026-02',status:'current'},{g:'G3',date:'2026-07',status:'pending'},{g:'G4',date:'2026-10',status:'pending'},{g:'G5',date:'2027-01',status:'pending'}],team:['Raúl Santos (PM)','Carmen Delgado (sponsor)','Equipo Temenos (4)','QA (3)'],risks:[{r:'Regresión en módulos core',sev:4},{r:'Downtime en migración BD',sev:4},{r:'Dependencia proveedor Temenos',sev:3}],kpis:{cpi:0.89,spi:0.90,eac:921,etc:533,sv:-82,cv:-90},alerts:['Riesgo regresión alto en R24','Timeline apretado para Go-live'],blocks:[]},
+  'PRJ-AZR':{desc:'Construcción de la Azure Landing Zone corporativa para migración ordenada de workloads a cloud pública.',gates:[{g:'G0',date:'2025-07',status:'passed'},{g:'G1',date:'2025-09',status:'passed'},{g:'G2',date:'2025-12',status:'passed'},{g:'G3',date:'2026-03',status:'current'},{g:'G4',date:'2026-06',status:'pending'},{g:'G5',date:'2026-09',status:'pending'}],team:['Sergio Mateos (PM)','Cloud team (3)'],risks:[{r:'Coste Azure mayor al estimado',sev:3},{r:'Compliance datos sensibles',sev:3}],kpis:{cpi:0.91,spi:0.93,eac:637,etc:287,sv:-41,cv:-52},alerts:[],blocks:[]},
+  'PRJ-PAM':{desc:'Despliegue CyberArk Privileged Access Management para accesos privilegiados a sistemas críticos.',gates:[{g:'G0',date:'2025-09',status:'passed'},{g:'G1',date:'2025-12',status:'passed'},{g:'G2',date:'2026-03',status:'current'},{g:'G3',date:'2026-06',status:'pending'},{g:'G4',date:'2026-08',status:'pending'},{g:'G5',date:'2026-10',status:'pending'}],team:['Elena Marín (PM)','Seguridad (2)'],risks:[{r:'Resistencia usuarios legacy',sev:3},{r:'Integración con AD/LDAP',sev:2}],kpis:{cpi:0.94,spi:0.95,eac:362,etc:217,sv:-17,cv:-20},alerts:[],blocks:[]},
+  'PRJ-CRM':{desc:'Implementación Salesforce Financial Services Cloud para la gestión de relaciones con clientes corporativos.',gates:[{g:'G0',date:'2025-10',status:'passed'},{g:'G1',date:'2026-01',status:'passed'},{g:'G2',date:'2026-03',status:'current'},{g:'G3',date:'2026-07',status:'pending'},{g:'G4',date:'2026-10',status:'pending'},{g:'G5',date:'2027-01',status:'pending'}],team:['Raúl Santos (PM)','Equipo CRM (3)'],risks:[{r:'Customización excesiva',sev:3},{r:'Migración datos clientes',sev:3}],kpis:{cpi:0.92,spi:0.93,eac:527,etc:317,sv:-34,cv:-39},alerts:[],blocks:[]},
+  'PRJ-VMW':{desc:'Migración de virtualización Broadcom vSphere a alternativa viable tras cambio de licenciamiento.',gates:[{g:'G0',date:'2025-11',status:'passed'},{g:'G1',date:'2026-02',status:'passed'},{g:'G2',date:'2026-04',status:'current'},{g:'G3',date:'2026-07',status:'pending'},{g:'G4',date:'2026-09',status:'pending'},{g:'G5',date:'2026-11',status:'pending'}],team:['Nuria Beltrán (PM)','Infra (3)'],risks:[{r:'Incompatibilidad VMs legacy',sev:4},{r:'Riesgo sobrecoste licencias',sev:3}],kpis:{cpi:0.92,spi:0.93,eac:418,etc:293,sv:-27,cv:-31},alerts:['Riesgo alto R4 por incompatibilidad'],blocks:[]},
+  'PRJ-SDW':{desc:'Despliegue SD-WAN en las 38 oficinas del banco para mejorar rendimiento y reducir costes WAN.',gates:[{g:'G0',date:'2025-10',status:'passed'},{g:'G1',date:'2026-01',status:'passed'},{g:'G2',date:'2026-03',status:'current'},{g:'G3',date:'2026-06',status:'pending'},{g:'G4',date:'2026-09',status:'pending'},{g:'G5',date:'2026-11',status:'pending'}],team:['Javier Iglesias (PM)','Red (2)'],risks:[{r:'Disrución servicio oficinas',sev:3},{r:'Proveedor único',sev:2}],kpis:{cpi:0.93,spi:0.91,eac:452,etc:271,sv:-38,cv:-29},alerts:[],blocks:[]},
+  'PRJ-HPE':{desc:'Renovación de servidores HPE ProLiant a generación Gen11 para los datacenters principales.',gates:[{g:'G0',date:'2025-07',status:'passed'},{g:'G1',date:'2025-09',status:'passed'},{g:'G2',date:'2025-11',status:'passed'},{g:'G3',date:'2026-02',status:'current'},{g:'G4',date:'2026-05',status:'pending'},{g:'G5',date:'2026-07',status:'pending'}],team:['Beatriz Lago (PM)','Infra (2)','Proveedor HPE'],risks:[{r:'Lead time proveedor',sev:2},{r:'Ventana mantenimiento limitada',sev:2}],kpis:{cpi:1.02,spi:0.99,eac:475,etc:190,sv:-5,cv:10},alerts:[],blocks:[]},
+  'PRJ-ZTN':{desc:'Implementación Zero Trust Network Access para acceso remoto seguro, sustituyendo VPN legacy.',gates:[{g:'G0',date:'2025-11',status:'passed'},{g:'G1',date:'2026-02',status:'passed'},{g:'G2',date:'2026-04',status:'current'},{g:'G3',date:'2026-07',status:'pending'},{g:'G4',date:'2026-09',status:'pending'},{g:'G5',date:'2026-11',status:'pending'}],team:['Elena Marín (PM)','Seguridad (2)'],risks:[{r:'Resistencia usuarios',sev:3},{r:'Integración apps legacy',sev:3}],kpis:{cpi:0.92,spi:0.93,eac:288,etc:188,sv:-19,cv:-21},alerts:[],blocks:[]},
+  'PRJ-GOV':{desc:'Programa de Data Governance para clasificación, linaje y calidad de datos transversales.',gates:[{g:'G0',date:'2025-10',status:'passed'},{g:'G1',date:'2026-01',status:'passed'},{g:'G2',date:'2026-03',status:'current'},{g:'G3',date:'2026-06',status:'pending'},{g:'G4',date:'2026-08',status:'pending'},{g:'G5',date:'2026-10',status:'pending'}],team:['Tomás Aranda (PM)','Data (2)'],risks:[{r:'Falta ownership datos',sev:3},{r:'Herramienta catalogue TBD',sev:2}],kpis:{cpi:0.93,spi:0.92,eac:210,etc:136,sv:-16,cv:-14},alerts:[],blocks:[]},
+  'PRJ-CMP':{desc:'Programa de compliance DORA para asegurar que la entidad cumple con la regulación europea antes de la fecha límite.',gates:[{g:'G0',date:'2025-08',status:'passed'},{g:'G1',date:'2025-10',status:'passed'},{g:'G2',date:'2025-12',status:'passed'},{g:'G3',date:'2026-03',status:'current'},{g:'G4',date:'2026-05',status:'pending'},{g:'G5',date:'2026-05',status:'pending'}],team:['Elena Marín (PM)','Compliance (2)','Legal (1)'],risks:[{r:'Deadline regulatorio inamovible',sev:3},{r:'Gaps en terceros proveedores',sev:3}],kpis:{cpi:0.96,spi:0.97,eac:229,etc:103,sv:-7,cv:-9},alerts:[],blocks:[]},
+  'PRJ-EDR':{desc:'Despliegue CrowdStrike Falcon EDR en todos los endpoints para detección avanzada de amenazas.',gates:[{g:'G0',date:'2025-04',status:'passed'},{g:'G1',date:'2025-06',status:'passed'},{g:'G2',date:'2025-09',status:'passed'},{g:'G3',date:'2025-12',status:'passed'},{g:'G4',date:'2026-03',status:'current'},{g:'G5',date:'2026-05',status:'pending'}],team:['Diego Soler (PM)','Seguridad (1)'],risks:[{r:'Falsos positivos en producción',sev:2},{r:'Impacto rendimiento endpoints',sev:2}],kpis:{cpi:1.05,spi:1.03,eac:271,etc:41,sv:9,cv:14},alerts:[],blocks:[]},
+};
+
+// Pulso alerts/blocks cross-referenced to projects
+const PULSE_ALERTS_MAP={'PRJ-MSF':['Retraso 3 sem. en migración ETL'],'PRJ-OSP':['CPI crítico: 0.65','Equipo insuficiente'],'PRJ-T24':['Riesgo regresión alto en R24'],'PRJ-VMW':['Riesgo R4 por incompatibilidad VMs']};
+const PULSE_BLOCKS_MAP={'PRJ-OSP':['Hardware HPE delivery retrasado 6 semanas']};
+
+function showProjectDetail(projId){
+  const p=PROJECTS.find(x=>x.id===projId); if(!p) return;
+  const d=PROJECT_DETAIL[projId]||{desc:'Sin detalle extendido disponible.',gates:[],team:[],risks:[],kpis:{cpi:p.cpi,spi:p.spi,eac:0,etc:0,sv:0,cv:0},alerts:[],blocks:[]};
+  const port=SILO_TO_PORTFOLIO[p.silo]||'Transversal';
+  const roi=p.benefit>0?((p.benefit-p.bac)/p.bac*100).toFixed(1):'—';
+  const ktScore=ktScores[p.id]?calcKTScore(p):null;
+
+  const overlay=document.createElement('div');
+  overlay.className='proj-modal-overlay';
+  overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
+
+  overlay.innerHTML=`<div class="proj-modal">
+    <div class="proj-modal-head">
+      <span class="pm-id">${p.id}</span>
+      <span class="pm-name">${p.name}</span>
+      <span class="tag tag-pu">${port}</span>
+      <span class="tag tag-bl">${p.gate}</span>
+      ${p.ai?'<span class="tag tag-pk">🤖 IA</span>':''}
+      <button class="proj-modal-close" onclick="this.closest('.proj-modal-overlay').remove()">✕</button>
+    </div>
+    <div class="proj-modal-body">
+      <!-- Description -->
+      <div class="pm-section">
+        <div style="font-size:11px;color:var(--tx2);line-height:1.6">${d.desc}</div>
+        <div style="margin-top:6px"><span class="src-inline src-cartera">p96_build_project_detail.descripcion</span></div>
+      </div>
+
+      <!-- Financial Overview -->
+      <div class="pm-section">
+        <div class="pm-section-title">💰 Datos financieros <span class="src-inline src-cartera">cartera_build + bgPortfolio[]</span></div>
+        <div class="pm-grid">
+          <div class="pm-metric"><div class="pm-metric-val" style="color:var(--acc-bl)">${p.bac.toLocaleString()}<span style="font-size:10px"> k€</span></div><div class="pm-metric-lbl">BAC (Presupuesto)</div></div>
+          <div class="pm-metric"><div class="pm-metric-val" style="color:var(--acc-gn)">${p.benefit.toLocaleString()}<span style="font-size:10px"> k€</span></div><div class="pm-metric-lbl">Beneficio esperado</div></div>
+          <div class="pm-metric"><div class="pm-metric-val" style="color:${parseFloat(roi)>0?'var(--acc-gn)':'var(--acc-rd)'}">${roi}<span style="font-size:10px">%</span></div><div class="pm-metric-lbl">ROI <span class="src-inline src-calc">calc</span></div></div>
+          <div class="pm-metric"><div class="pm-metric-val" style="color:${d.kpis.cpi>=1?'var(--acc-gn)':'var(--acc-rd)'}">${d.kpis.cpi.toFixed(2)}</div><div class="pm-metric-lbl">CPI <span class="src-inline src-cartera">bgPortfolio[6]</span></div></div>
+          <div class="pm-metric"><div class="pm-metric-val" style="color:${d.kpis.spi>=1?'var(--acc-gn)':'var(--acc-rd)'}">${d.kpis.spi.toFixed(2)}</div><div class="pm-metric-lbl">SPI <span class="src-inline src-cartera">bgPortfolio[7]</span></div></div>
+          <div class="pm-metric"><div class="pm-metric-val" style="color:var(--acc-or)">${d.kpis.eac.toLocaleString()}<span style="font-size:10px"> k€</span></div><div class="pm-metric-lbl">EAC (Coste final est.)</div></div>
+          <div class="pm-metric"><div class="pm-metric-val">${d.kpis.etc.toLocaleString()}<span style="font-size:10px"> k€</span></div><div class="pm-metric-lbl">ETC (Coste restante)</div></div>
+          <div class="pm-metric"><div class="pm-metric-val" style="color:${d.kpis.sv>=0?'var(--acc-gn)':'var(--acc-rd)'}">${d.kpis.sv>=0?'+':''}${d.kpis.sv}<span style="font-size:10px"> k€</span></div><div class="pm-metric-lbl">SV (Schedule Variance)</div></div>
+          <div class="pm-metric"><div class="pm-metric-val" style="color:${d.kpis.cv>=0?'var(--acc-gn)':'var(--acc-rd)'}">${d.kpis.cv>=0?'+':''}${d.kpis.cv}<span style="font-size:10px"> k€</span></div><div class="pm-metric-lbl">CV (Cost Variance)</div></div>
+        </div>
+      </div>
+
+      <!-- RRHH & Team -->
+      <div class="pm-section">
+        <div class="pm-section-title">👥 Equipo y RRHH <span class="src-inline src-staff">pmo_staff_skills + cartera_build</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="pm-metric"><div class="pm-metric-val" style="color:var(--acc-cy)">${p.rrhh.toLocaleString()}<span style="font-size:10px"> h</span></div><div class="pm-metric-lbl">Horas estimadas</div></div>
+          <div class="pm-metric"><div class="pm-metric-val">${p.pm}</div><div class="pm-metric-lbl">PM responsable <span class="src-inline src-cartera">responsable_asignado</span></div></div>
+        </div>
+        <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">
+          ${d.team.map(t=>`<span style="background:var(--bg-el);border:1px solid var(--border);border-radius:4px;padding:2px 8px;font-size:10px">${t}</span>`).join('')}
+        </div>
+      </div>
+
+      <!-- Gate Timeline -->
+      <div class="pm-section">
+        <div class="pm-section-title">🚧 Gate Timeline PMI <span class="src-inline src-cartera">p96_build_project_detail.gates</span></div>
+        <div class="pm-gate-timeline">
+          ${d.gates.map((g,i)=>`${i>0?`<div class="pm-gate-line ${g.status==='passed'||d.gates[i-1].status==='passed'?'passed':''}"></div>`:''}
+          <div class="pm-gate-dot ${g.status}" title="${g.g} — ${g.date}"><span>${g.g.replace('G','')}</span></div>`).join('')}
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:8px;color:var(--tx3)">
+          ${d.gates.map(g=>`<span>${g.date}</span>`).join('')}
+        </div>
+      </div>
+
+      <!-- Risk Assessment -->
+      <div class="pm-section">
+        <div class="pm-section-title">⚠️ Riesgos <span class="src-inline src-cartera">p96_build_project_detail.risks</span></div>
+        ${d.risks.length>0?d.risks.map(r=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <span class="tag ${r.sev>=4?'tag-rd':r.sev>=3?'tag-or':'tag-gn'}">S${r.sev}</span>
+          <span style="font-size:10px">${r.r}</span>
+        </div>`).join(''):'<div style="font-size:10px;color:var(--tx3)">Sin riesgos relevantes registrados.</div>'}
+        <div style="margin-top:6px;display:flex;align-items:center;gap:8px">
+          <span style="font-size:10px;color:var(--tx2)">Nivel riesgo global:</span>
+          <span class="tag ${p.risk>=4?'tag-rd':p.risk>=3?'tag-or':'tag-gn'}" style="font-size:11px">R${p.risk}</span>
+        </div>
+      </div>
+
+      <!-- Alerts & Blocks from Pulso -->
+      ${(PULSE_ALERTS_MAP[p.id]||[]).length>0||(PULSE_BLOCKS_MAP[p.id]||[]).length>0?`
+      <div class="pm-section">
+        <div class="pm-section-title">🚨 Alertas y bloqueos del Pulso <span class="src-inline src-pulse">bgPulseAlerts + bgPulseBlocks</span></div>
+        ${(PULSE_ALERTS_MAP[p.id]||[]).map(a=>`<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px"><span style="color:var(--acc-or)">⚠️</span><span style="font-size:10px">${a}</span></div>`).join('')}
+        ${(PULSE_BLOCKS_MAP[p.id]||[]).map(b=>`<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px"><span style="color:var(--acc-rd)">🛑</span><span style="font-size:10px;color:var(--acc-rd)">${b}</span></div>`).join('')}
+      </div>`:''}
+
+      <!-- Silo & Portfolio -->
+      <div class="pm-section">
+        <div class="pm-section-title">🏢 Silo CMDB → Portfolio <span class="src-inline src-cartera">SILO_TO_PORTFOLIO mapping</span></div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-family:var(--mono);font-size:11px;background:var(--bg-el);border:1px solid var(--border);padding:3px 8px;border-radius:4px">${p.silo}</span>
+          <span style="color:var(--acc-cy);font-size:14px">→</span>
+          <span class="tag tag-pu" style="font-size:11px">${port}</span>
+        </div>
+      </div>
+
+      <!-- Progress & Alignment -->
+      <div class="pm-section">
+        <div class="pm-section-title">📊 Progreso y alineamiento</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr ${ktScore!==null?'1fr':''};gap:8px">
+          <div class="pm-metric">
+            <div class="pm-metric-val" style="color:var(--acc-cy)">${p.prog}%</div>
+            <div class="pm-metric-lbl">Progreso <span class="src-inline src-cartera">bgPortfolio[10]</span></div>
+            <div class="result-bar" style="margin-top:4px;height:6px"><div class="result-bar-fill" style="width:${p.prog}%;background:var(--acc-cy)"></div></div>
+          </div>
+          <div class="pm-metric">
+            <div class="pm-metric-val" style="color:var(--acc-pu)">P${p.prio}</div>
+            <div class="pm-metric-lbl">Prioridad estratégica <span class="src-inline src-cartera">prioridad_estrategica</span></div>
+          </div>
+          ${ktScore!==null?`<div class="pm-metric">
+            <div class="pm-metric-val" style="color:var(--acc-gn)">${(ktScore*100).toFixed(1)}</div>
+            <div class="pm-metric-lbl">Score K-T <span class="src-inline src-calc">alignment_score</span></div>
+          </div>`:''}
+        </div>
+      </div>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
+// ═══════════════ HISTORY PANEL & VERSION TRACKING ═══════════════
+let savedEvaluations = [];
+let currentEvalId = null;
+
+function toggleHistory(){
+  const content=document.getElementById('history-content');
+  const arrow=document.getElementById('ht-arrow');
+  content.classList.toggle('open');
+  arrow.classList.toggle('open');
+}
+
+function toggleSrcLegend(){
+  const content=document.getElementById('sl-content');
+  const arrow=document.getElementById('sl-arrow');
+  content.classList.toggle('open');
+  arrow.classList.toggle('open');
+}
+
+function renderHistoryPanel(){
+  const list=document.getElementById('history-list');
+  const count=document.getElementById('history-count');
+  count.textContent=savedEvaluations.length+' evaluaciones guardadas';
+  if(savedEvaluations.length===0){
+    list.innerHTML='<div class="history-empty">No hay evaluaciones guardadas. Completa el wizard y pulsa "Guardar evaluación" en el paso 6.</div>';
+    return;
+  }
+  list.innerHTML=savedEvaluations.map((ev,i)=>`
+    <div class="history-item" onclick="loadEvaluation(${i})">
+      <div class="hi-version">v${ev.version}</div>
+      <div class="hi-body">
+        <div class="hi-name">${ev.name}</div>
+        <div class="hi-meta">
+          <span>📅 Creado: ${ev.createdAt}</span>
+          ${ev.modifiedAt!==ev.createdAt?`<span>✏️ Modificado: ${ev.modifiedAt}</span>`:''}
+          <span>📊 ${ev.projectCount} proyectos</span>
+          <span>👥 ${ev.voterCount} votantes</span>
+        </div>
+        ${ev.changelog.length>0?`<div class="hi-changelog">Cambios v${ev.version}: ${ev.changelog.join(' · ')}</div>`:''}
+      </div>
+      <div class="hi-score">${ev.totalScore}</div>
+    </div>
+  `).join('');
+}
+
+function generateChangelog(oldEval, newState){
+  const changes=[];
+  if(!oldEval) return ['Evaluación inicial'];
+  if(oldEval.voterCount!==newState.voterCount) changes.push('Votantes: '+oldEval.voterCount+'→'+newState.voterCount);
+  if(oldEval.projectCount!==newState.projectCount) changes.push('Proyectos: '+oldEval.projectCount+'→'+newState.projectCount);
+  if(oldEval.objectiveCount!==newState.objectiveCount) changes.push('Objetivos: '+oldEval.objectiveCount+'→'+newState.objectiveCount);
+  if(oldEval.totalScore!==newState.totalScore) changes.push('Score: '+oldEval.totalScore+'→'+newState.totalScore);
+  const oldIds=new Set((oldEval.solverProjects||[]).map(p=>p.id));
+  const newIds=new Set((newState.solverProjects||[]).map(p=>p.id));
+  const added=[...newIds].filter(id=>!oldIds.has(id));
+  const removed=[...oldIds].filter(id=>!newIds.has(id));
+  if(added.length>0) changes.push('+'+added.join(',')+' añadidos');
+  if(removed.length>0) changes.push('-'+removed.join(',')+' eliminados');
+  if(changes.length===0) changes.push('Ajustes en votos/puntuaciones');
+  return changes;
+}
+
+function captureCurrentState(){
+  const sel=solverResult.filter(s=>s.solverSelected);
+  const tv=sel.reduce((a,p)=>a+p.ktScore,0);
+  const tc=sel.reduce((a,p)=>a+p.bac,0);
+  return {
+    objectives: JSON.parse(JSON.stringify(objectives)),
+    manualObjectives: JSON.parse(JSON.stringify(manualObjectives)),
+    voterIds: voters.map(v=>v.id),
+    ahpVotes: JSON.parse(JSON.stringify(ahpVotes)),
+    objWeights: JSON.parse(JSON.stringify(objWeights)),
+    critWeights: JSON.parse(JSON.stringify(critWeights)),
+    ktScores: JSON.parse(JSON.stringify(ktScores)),
+    solverResult: JSON.parse(JSON.stringify(solverResult)),
+    solverBudget: document.getElementById('solver-budget').value,
+    solverRrhh: document.getElementById('solver-rrhh').value,
+    solverRisk: document.getElementById('solver-risk').value,
+    solverForceCrit: document.getElementById('solver-force-critica').checked,
+    projectSelections: PROJECTS.map(p=>({id:p.id,selected:p.selected})),
+    voterCount: voters.length,
+    projectCount: sel.length,
+    objectiveCount: getAllActiveObjectives().length,
+    totalScore: (tv*100).toFixed(1),
+    totalCost: tc,
+    solverProjects: sel.map(p=>({id:p.id,name:p.name}))
+  };
+}
+
+function restoreState(state){
+  objectives=JSON.parse(JSON.stringify(state.objectives));
+  manualObjectives=JSON.parse(JSON.stringify(state.manualObjectives));
+  COMMITTEE.forEach(c=>{c.selected=state.voterIds.includes(c.id);});
+  voters=COMMITTEE.filter(c=>c.selected);
+  ahpVotes=JSON.parse(JSON.stringify(state.ahpVotes));
+  objWeights=JSON.parse(JSON.stringify(state.objWeights));
+  critWeights=JSON.parse(JSON.stringify(state.critWeights));
+  ktScores=JSON.parse(JSON.stringify(state.ktScores));
+  solverResult=JSON.parse(JSON.stringify(state.solverResult));
+  state.projectSelections.forEach(ps=>{const proj=PROJECTS.find(p=>p.id===ps.id);if(proj)proj.selected=ps.selected;});
+  document.getElementById('solver-budget').value=state.solverBudget||8000;
+  document.getElementById('solver-rrhh').value=state.solverRrhh||25000;
+  document.getElementById('solver-risk').value=state.solverRisk||4;
+  document.getElementById('solver-force-critica').checked=state.solverForceCrit!==false;
+  renderObjectives();
+  renderVoters();
+}
+
+function loadEvaluation(index){
+  const ev=savedEvaluations[index];
+  currentEvalId=ev.id;
+  restoreState(ev.state);
+  goStep(1);
+  // Flash confirmation
+  const toast=document.createElement('div');
+  toast.style.cssText='position:fixed;top:16px;right:16px;background:var(--acc-pu);color:#0d1117;padding:10px 18px;border-radius:8px;font-size:12px;font-weight:700;z-index:1001;animation:fadeIn .2s';
+  toast.textContent='📂 Evaluación "'+ev.name+'" v'+ev.version+' cargada';
+  document.body.appendChild(toast);
+  setTimeout(()=>toast.remove(),2500);
+}
+
+// ═══════════════ INIT ═══════════════
+async function init(){
+  await loadFromAPI();
+  renderObjectives();
+  renderVoters();
+  renderHistory();
+}
+init();
+</script>
+</body>
+</html>
