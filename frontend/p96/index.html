@@ -984,7 +984,7 @@ body{background:var(--bg);color:var(--tx);font-family:var(--font);font-size:12px
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 6-6"/></svg>
     Pulso Estratégico
   </button>
-  <button class="tab-btn" data-tab="wizard" style="border-left:1px solid var(--border)">
+  <button class="tab-btn" data-tab="wizard">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
     Portfolio Wizard
   </button>
@@ -1900,6 +1900,12 @@ document.querySelectorAll('.tab-btn').forEach(t=>{
     document.querySelectorAll('.tab-panel').forEach(x=>x.classList.remove('active'));
     t.classList.add('active');
     document.getElementById(t.dataset.tab).classList.add('active');
+    // Hide scope banner and exec-dash when wizard is active
+    var isWizard = t.dataset.tab === 'wizard';
+    var scopeBanner = document.querySelector('.bg-scope-banner');
+    var execDash = document.getElementById('exec-dash');
+    if (scopeBanner) scopeBanner.style.display = isWizard ? 'none' : '';
+    if (execDash) execDash.style.display = isWizard ? 'none' : '';
   });
 });
 

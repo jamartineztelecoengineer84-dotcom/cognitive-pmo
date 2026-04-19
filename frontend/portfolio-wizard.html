@@ -232,6 +232,10 @@ body.in-iframe .topbar{display:none}
 body.in-iframe .main{margin-top:0}
 body.in-iframe{background:var(--bg)}
 </style>
+<script>
+// Detect iframe BEFORE body renders to prevent flash
+if(window.self!==window.top)document.write('<style>.topbar{display:none!important}.main{margin-top:0!important}</style>');
+</script>
 </head>
 <body>
 
