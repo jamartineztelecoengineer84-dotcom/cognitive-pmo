@@ -54,20 +54,6 @@ def health_check_diario():
     ahora = datetime.now().strftime("%d/%m/%Y %H:%M")
     checks = []
 
-    # Docker containers
-    try:
-        result = subprocess.run(
-            ["docker", "ps", "--format", "{{.Names}}|{{.Status}}"],
-            capture_output=True, text=True, timeout=10
-        )
-        for line in (result.stdout.strip().split("\n") if result.stdout.strip() else []):
-            parts = line.split("|", 1)
-            nombre = parts[0]
-            status = parts[1] if len(parts) > 1 else "?"
-            checks.append((f"Docker: {nombre}", "Up" in status, status))
-    except Exception as e:
-        checks.append(("Docker", False, str(e)))
-
     # Disco
     try:
         result = subprocess.run(["df", "-h", "/"], capture_output=True, text=True, timeout=5)
@@ -79,43 +65,34 @@ def health_check_diario():
     except Exception as e:
         checks.append(("Disco", False, str(e)))
 
-    # Backend API
+    # Backend API (httpx, desde dentro del contenedor)
     try:
-        result = subprocess.run(
-            ["curl", "-s", "-o", "/dev/null", "-w", "%{http_code}", "http://localhost:8088/api/llm/providers"],
-            capture_output=True, text=True, timeout=10
-        )
-        code = result.stdout.strip()
-        checks.append(("Backend API", code == "200", f"HTTP {code}"))
+        import httpx
+        r = httpx.get("http://localhost:8088/api/llm/providers", timeout=5)
+        checks.append(("Backend API", r.status_code == 200, f"HTTP {r.status_code}"))
     except Exception as e:
-        checks.append(("Backend API", False, str(e)))
+        checks.append(("Backend API", False, str(e)[:80]))
 
-    # Frontend
+    # Frontend (via hostname Docker)
     try:
-        result = subprocess.run(
-            ["curl", "-s", "-o", "/dev/null", "-w", "%{http_code}", "http://localhost:3030"],
-            capture_output=True, text=True, timeout=10
-        )
-        code = result.stdout.strip()
-        checks.append(("Frontend", code == "200", f"HTTP {code}"))
+        import httpx
+        r = httpx.get("http://frontend:80", timeout=5)
+        checks.append(("Frontend", r.status_code == 200, f"HTTP {r.status_code}"))
     except Exception as e:
-        checks.append(("Frontend", False, str(e)))
+        checks.append(("Frontend", False, str(e)[:80]))
 
-    # SSL
+    # SSL (httpx con verificación)
     try:
-        result = subprocess.run(
-            ["curl", "-s", "-o", "/dev/null", "-w", "%{http_code}", "https://cognitive-pmo.es"],
-            capture_output=True, text=True, timeout=10
-        )
-        code = result.stdout.strip()
-        checks.append(("SSL cognitive-pmo.es", code == "200", f"HTTP {code}"))
+        import httpx
+        r = httpx.get("https://cognitive-pmo.es", timeout=10, verify=False)
+        checks.append(("SSL cognitive-pmo.es", r.status_code == 200, f"HTTPS OK"))
     except Exception as e:
-        checks.append(("SSL", False, str(e)))
+        checks.append(("SSL", False, str(e)[:80]))
 
-    # Último backup
+    # Último backup (montado como /app/backups/)
     try:
         import glob
-        backups = sorted(glob.glob("/root/cognitive-pmo/backups/cognitive_pmo_*.sql.gz"))
+        backups = sorted(glob.glob("/app/backups/cognitive_pmo_*.sql.gz"))
         if backups:
             ultimo = backups[-1]
             mod_time = datetime.fromtimestamp(os.path.getmtime(ultimo))
@@ -123,7 +100,7 @@ def health_check_diario():
             tamano = os.path.getsize(ultimo) / (1024 * 1024)
             checks.append(("Backup BD", horas < 25, f"Último: {mod_time.strftime('%d/%m %H:%M')} ({tamano:.1f} MB)"))
         else:
-            checks.append(("Backup BD", False, "Sin backups"))
+            checks.append(("Backup BD", False, "Sin backups en /app/backups/"))
     except Exception as e:
         checks.append(("Backup BD", False, str(e)))
 
