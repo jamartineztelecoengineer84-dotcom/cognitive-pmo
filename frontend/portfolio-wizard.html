@@ -227,6 +227,10 @@ select{cursor:pointer;-webkit-appearance:none;appearance:none;background-image:u
 .flow-arrow{display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;margin-bottom:14px;font-size:10px;color:var(--tx2)}
 .flow-arrow .arrow{color:var(--acc-cy);font-size:14px;font-weight:800}
 .flow-arrow strong{color:var(--tx)}
+/* Hide topbar when in iframe */
+body.in-iframe .topbar{display:none}
+body.in-iframe .main{margin-top:0}
+body.in-iframe{background:var(--bg)}
 </style>
 </head>
 <body>
@@ -263,6 +267,7 @@ select{cursor:pointer;-webkit-appearance:none;appearance:none;background-image:u
       <span class="ht-arrow" id="ht-arrow">▶</span>
       <span>📂 Histórico de evaluaciones de priorización</span>
       <span style="font-size:9px;color:var(--tx3);margin-left:auto" id="history-count">0 evaluaciones guardadas</span>
+      <button onclick="event.stopPropagation();newEvaluation()" style="margin-left:8px;background:var(--acc-pu);color:#0d1117;border:none;padding:4px 12px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer">+ Nueva evaluación</button>
     </div>
     <div class="history-content" id="history-content">
       <div class="history-list" id="history-list">
@@ -600,6 +605,9 @@ select{cursor:pointer;-webkit-appearance:none;appearance:none;background-image:u
 
 <!-- ═══════════════ JAVASCRIPT ═══════════════ -->
 <script>
+// ═══════════════ IFRAME DETECTION ═══════════════
+if (window.self !== window.top) document.body.classList.add('in-iframe');
+
 // ═══════════════ API LOADER ═══════════════
 // Loads real data from /api/portfolio-wizard/* endpoints
 // Falls back to demo data if API unavailable
@@ -1594,6 +1602,29 @@ function loadEvaluation(index){
   toast.textContent='📂 Evaluación "'+ev.name+'" v'+ev.version+' cargada';
   document.body.appendChild(toast);
   setTimeout(()=>toast.remove(),2500);
+}
+
+// ═══════════════ NEW EVALUATION ═══════════════
+async function newEvaluation(){
+  currentEvalId = null;
+  objectives = OKR_OBJECTIVES.map((o,i) => ({...o, active: true}));
+  manualObjectives = [];
+  voters = COMMITTEE.filter(c => c.selected);
+  ahpVotes = {};
+  objWeights = [];
+  critWeights = {};
+  ktScores = {};
+  solverResult = [];
+  PROJECTS.forEach(p => { p.selected = true; p.benefit = 0; });
+  await loadFromAPI();
+  renderObjectives();
+  renderVoters();
+  goStep(1);
+  var toast = document.createElement('div');
+  toast.style.cssText = 'position:fixed;top:16px;right:16px;background:var(--acc-gn);color:#0d1117;padding:10px 18px;border-radius:8px;font-size:12px;font-weight:700;z-index:1001';
+  toast.textContent = '🆕 Nueva evaluación iniciada';
+  document.body.appendChild(toast);
+  setTimeout(function(){toast.remove()}, 2500);
 }
 
 // ═══════════════ INIT ═══════════════
