@@ -1285,8 +1285,17 @@ DECOMPOSE_SUBTASKS_SCHEMA = {
 
 
 @register_tool("decompose_subtasks")
-async def decompose_subtasks(db, id_proyecto: str, edt_tasks: list):
+async def decompose_subtasks(db, id_proyecto: str, edt_tasks: list = None):
     """Graba subtareas técnicas en build_subtasks"""
+    if not edt_tasks:
+        return {
+            "error": "Parámetro edt_tasks es obligatorio. Debe ser una lista de objetos con id_tarea y subtareas. "
+                     "Primero consulta las tareas EDT del proyecto con get_edt_status y luego vuelve a llamar a decompose_subtasks con la lista completa.",
+            "required_format": {
+                "id_proyecto": "PRY-XXX",
+                "edt_tasks": [{"id_tarea": "EDT-XXX", "subtareas": [{"titulo": "...", "descripcion_tecnica": "...", "tecnologia": "...", "skill_requerido": "...", "horas_estimadas": 8, "story_points": 3}]}]
+            }
+        }
     total = 0
     result = {}
     for task in edt_tasks:

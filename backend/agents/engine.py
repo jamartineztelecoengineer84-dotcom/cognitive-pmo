@@ -83,12 +83,12 @@ class AgentEngine:
                     try:
                         result = await fn(self.db, **tc.input)
                     except Exception as e:
-                        result = {"error": str(e)}
-                        log.error(f"Tool {tc.name} failed: {e}")
+                        result = {"error": str(e), "tool": tc.name, "input_received": tc.input}
+                        log.error(f"Tool {tc.name} failed: {e} | input: {tc.input}")
                         try:
                             from monitor import notificar_error
                             notificar_error("agente_ia", "tool_error",
-                                f"Agent {self.config.agent_id} tool {tc.name} failed: {e}",
+                                f"Agent {self.config.agent_id} tool {tc.name} failed: {e}\nInput: {str(tc.input)[:200]}",
                                 endpoint=f"agents/{self.config.agent_id}/invoke")
                         except Exception:
                             pass
