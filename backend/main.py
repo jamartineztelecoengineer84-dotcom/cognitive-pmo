@@ -38,6 +38,7 @@ from cmdb_api import router as cmdb_router
 from p96_router import router as p96_router, me_router as p96_me_router
 from pm_router import pm_router
 from portfolio_wizard_router import router as portfolio_wizard_router
+from doc_routes import router as doc_router
 from scenario_engine import seed_scenario, reset_scenario
 from db_loader import router as db_loader_router
 from tech_routes import router as tech_router
@@ -217,6 +218,7 @@ app.include_router(tech_copiloto_router)
 app.include_router(p96_router)
 app.include_router(p96_me_router)
 app.include_router(portfolio_wizard_router)
+app.include_router(doc_router)
 app.include_router(pm_router)
 
 

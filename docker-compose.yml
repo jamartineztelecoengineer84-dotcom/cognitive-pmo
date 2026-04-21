@@ -27,6 +27,7 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - ./backups:/app/backups:ro
+      - ./data/documentos:/app/data/documentos
     restart: unless-stopped
     depends_on:
       postgres:
