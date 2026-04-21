@@ -84,6 +84,14 @@ async def upload_documento(
 
     sha256 = hashlib.sha256(content).hexdigest()
     mime = file.content_type or "application/octet-stream"
+    # Fix MIME from extension when browser sends octet-stream
+    if mime == "application/octet-stream" and file.filename:
+        ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
+        ext_mime = {"pdf": "application/pdf", "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "csv": "text/csv", "txt": "text/plain", "md": "text/markdown",
+                    "png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg", "html": "text/html"}
+        mime = ext_mime.get(ext, mime)
     titulo_final = titulo or file.filename
 
     pool = get_pool()
@@ -355,6 +363,123 @@ async def actividad_documento(doc_id: int):
 
 
 # ─── 12. VERSIONES ───
+
+# ���── EXCEL ANALYSIS ───
+
+def _analizar_excel(content: bytes) -> dict:
+    """Análisis técnico de un Excel sin IA."""
+    from openpyxl import load_workbook
+    from io import BytesIO
+    wb = load_workbook(BytesIO(content), data_only=False)
+    wb_data = load_workbook(BytesIO(content), data_only=True)
+
+    resultado = {"hojas": len(wb.sheetnames), "hojas_detalle": [], "formulas_detectadas": 0, "posibles_problemas": []}
+
+    for name in wb.sheetnames:
+        ws = wb[name]
+        ws_data = wb_data[name]
+        rows = ws.max_row or 0
+        cols = ws.max_column or 0
+        formulas = 0
+        tipos_col = {}
+        preview_rows = []
+
+        for r in range(1, min(rows + 1, 101)):
+            row_vals = []
+            for c in range(1, min(cols + 1, 21)):
+                cell = ws.cell(row=r, column=c)
+                cell_data = ws_data.cell(row=r, column=c)
+                val = cell.value
+                if isinstance(val, str) and val.startswith("="):
+                    formulas += 1
+                    data_val = cell_data.value
+                    if data_val is None:
+                        resultado["posibles_problemas"].append(f"Hoja '{name}' celda {cell.coordinate}: fórmula sin resultado ({val[:40]})")
+                row_vals.append(str(cell_data.value) if cell_data.value is not None else "")
+                # Track column types
+                if r > 1 and cell_data.value is not None:
+                    col_key = f"{name}:{c}"
+                    t = type(cell_data.value).__name__
+                    if col_key not in tipos_col:
+                        tipos_col[col_key] = set()
+                    tipos_col[col_key].add(t)
+            if r <= 6:
+                preview_rows.append(row_vals)
+
+        resultado["formulas_detectadas"] += formulas
+
+        # Detect mixed types
+        for col_key, types in tipos_col.items():
+            if len(types) > 1:
+                resultado["posibles_problemas"].append(f"Columna {col_key}: tipos mixtos ({', '.join(types)})")
+
+        resultado["hojas_detalle"].append({
+            "nombre": name, "filas": rows, "columnas": cols,
+            "formulas": formulas, "preview": preview_rows,
+        })
+
+    # Detect empty sheets
+    for h in resultado["hojas_detalle"]:
+        if h["filas"] == 0:
+            resultado["posibles_problemas"].append(f"Hoja '{h['nombre']}' está vacía")
+
+    return resultado
+
+
+@router.post("/excel-analisis")
+async def excel_analisis(body: dict):
+    """Analiza un Excel/CSV ya subido con openpyxl + Ollama."""
+    doc_id = body.get("doc_id")
+    pregunta = body.get("pregunta", "")
+    if not doc_id:
+        raise HTTPException(400, "doc_id es obligatorio")
+
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT ruta_fisica, mime_type, titulo FROM primitiva.documentacion_repositorio WHERE id=$1 AND eliminado=false", doc_id
+        )
+    if not row or not row["ruta_fisica"]:
+        raise HTTPException(404, "Documento no encontrado")
+
+    full_path = os.path.join(STORAGE_ROOT, row["ruta_fisica"])
+    if not os.path.exists(full_path):
+        raise HTTPException(404, "Archivo físico no encontrado")
+
+    with open(full_path, "rb") as f:
+        content = f.read()
+
+    # Technical analysis
+    mime = row["mime_type"] or ""
+    filename = (row["titulo"] or "").lower()
+    is_excel = "spreadsheet" in mime or "csv" in mime or "excel" in mime or filename.endswith(".xlsx") or filename.endswith(".xls") or filename.endswith(".csv")
+    if not is_excel:
+        raise HTTPException(400, "El documento no es un Excel/CSV")
+
+    analisis = _analizar_excel(content)
+
+    # If question provided, ask Ollama
+    respuesta_ia = None
+    if pregunta:
+        from ollama_client import ollama_generate
+        prompt = f"""Analiza este resumen técnico de un archivo Excel y responde la pregunta del usuario.
+
+DATOS TÉCNICOS:
+{json.dumps(analisis, ensure_ascii=False, indent=2)[:3000]}
+
+PREGUNTA: {pregunta}
+
+Responde en español, máximo 150 palabras. Si la pregunta es sobre fórmulas rotas, revisa la lista de posibles_problemas."""
+        import time
+        t0 = time.time()
+        respuesta_ia = await ollama_generate(prompt, max_tokens=300)
+        analisis["tiempo_ia_ms"] = int((time.time() - t0) * 1000)
+
+    analisis["titulo"] = row["titulo"]
+    analisis["respuesta_ia"] = respuesta_ia
+    await _log_actividad(pool, doc_id, "excel-analisis", detalle={"pregunta": pregunta})
+    return analisis
+
 
 # ─── Q&A IA ───
 
