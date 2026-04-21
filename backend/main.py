@@ -123,6 +123,14 @@ async def lifespan(app: FastAPI):
         logger.info("Monitor scheduler: health 08:00, resumen 21:00 (Europe/Madrid)")
     except Exception as e:
         logger.warning(f"Monitor scheduler no iniciado: {e}")
+    # AG-DOC: Worker de clasificación documental con Ollama
+    _doc_worker = None
+    try:
+        from agent_doc import doc_worker_loop
+        _doc_worker = _asyncio.create_task(doc_worker_loop())
+        logger.info("AG-DOC worker iniciado (poll cada 10s)")
+    except Exception as e:
+        logger.warning(f"AG-DOC worker no iniciado: {e}")
     yield
     if _scheduler:
         _scheduler.shutdown(wait=False)

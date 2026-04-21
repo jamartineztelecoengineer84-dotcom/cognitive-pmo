@@ -356,6 +356,30 @@ async def actividad_documento(doc_id: int):
 
 # ─── 12. VERSIONES ───
 
+# ─── Q&A IA ───
+
+@router.post("/pregunta")
+async def pregunta_ia(body: dict):
+    from agent_doc import responder_pregunta
+    query = body.get("query") or body.get("mensaje", "")
+    scope = body.get("scope", "all")
+    if not query:
+        raise HTTPException(400, "query es obligatorio")
+    return await responder_pregunta(query, scope)
+
+
+# ─── CHAT IA ───
+
+@router.post("/chat")
+async def chat_ia(body: dict):
+    from agent_doc import responder_pregunta
+    mensaje = body.get("mensaje", "")
+    scope = body.get("scope", "all")
+    if not mensaje:
+        raise HTTPException(400, "mensaje es obligatorio")
+    return await responder_pregunta(mensaje, scope)
+
+
 @router.get("/{doc_id}/versiones")
 async def versiones_documento(doc_id: int):
     pool = get_pool()
