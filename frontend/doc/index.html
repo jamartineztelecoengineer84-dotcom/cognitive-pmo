@@ -506,29 +506,29 @@ body { font-family: var(--font); background: var(--bg0); color: var(--text1); ov
     <div class="sidebar-section">
       <div class="sidebar-section-title">Categorías</div>
       <nav class="sidebar-nav">
-        <div class="sidebar-nav-item active">
+        <div class="sidebar-nav-item active" onclick="gdocFilter('')">
           <div class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18M9 9v12" stroke="currentColor" stroke-width="1.8"/></svg></div>
-          Todos <span class="nav-count">1,247</span>
+          Todos <span class="nav-count" id="gdoc-cat-all">—</span>
         </div>
-        <div class="sidebar-nav-item">
+        <div class="sidebar-nav-item" onclick="gdocFilter('categoria=organizacion')">
           <div class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 6v12a2 2 0 002 2h12a2 2 0 002-2V6M9 6V4a2 2 0 012-2h2a2 2 0 012 2v2" stroke="#0ea5e9" stroke-width="1.8"/><path d="M8 11h8M8 15h5" stroke="#0ea5e9" stroke-width="1.8" stroke-linecap="round"/></svg></div>
-          Proyectos <span class="nav-count">423</span>
+          Proyectos <span class="nav-count" id="gdoc-cat-org">—</span>
         </div>
-        <div class="sidebar-nav-item">
+        <div class="sidebar-nav-item" onclick="gdocFilter('tipo=pdf')">
           <div class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 9v4M12 17h.01" stroke="#f0883e" stroke-width="2" stroke-linecap="round"/><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="#f0883e" stroke-width="1.8"/></svg></div>
-          Incidencias <span class="nav-count">198</span>
+          PDFs <span class="nav-count" id="gdoc-cat-pdf">—</span>
         </div>
-        <div class="sidebar-nav-item">
-          <div class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" stroke="#a78bfa" stroke-width="1.8"/><circle cx="12" cy="12" r="3" stroke="#a78bfa" stroke-width="1.8"/><path d="M12 9V4M12 20v-5M9 12H2M22 12h-7" stroke="#a78bfa" stroke-width="1.2" stroke-dasharray="2 2"/></svg></div>
-          CMDB <span class="nav-count">287</span>
+        <div class="sidebar-nav-item" onclick="gdocFilter('tipo=texto')">
+          <div class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" stroke="#a78bfa" stroke-width="1.8"/><circle cx="12" cy="12" r="3" stroke="#a78bfa" stroke-width="1.8"/></svg></div>
+          Textos <span class="nav-count" id="gdoc-cat-txt">—</span>
         </div>
-        <div class="sidebar-nav-item">
-          <div class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2" stroke="#3fb950" stroke-width="1.8"/><circle cx="10" cy="7" r="4" stroke="#3fb950" stroke-width="1.8"/><path d="M19 8v6M22 11h-6" stroke="#3fb950" stroke-width="1.8" stroke-linecap="round"/></svg></div>
-          Organización <span class="nav-count">214</span>
+        <div class="sidebar-nav-item" onclick="gdocFilter('tipo=xlsx')">
+          <div class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2" stroke="#3fb950" stroke-width="1.8"/><circle cx="10" cy="7" r="4" stroke="#3fb950" stroke-width="1.8"/></svg></div>
+          Excel/CSV <span class="nav-count" id="gdoc-cat-xlsx">—</span>
         </div>
-        <div class="sidebar-nav-item">
+        <div class="sidebar-nav-item" onclick="gdocFilter('confidencialidad=confidencial')">
           <div class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" stroke="#f85149" stroke-width="1.8"/><path d="M7 11V7a5 5 0 0110 0v4" stroke="#f85149" stroke-width="1.8"/><circle cx="12" cy="16" r="1.5" fill="#f85149"/></svg></div>
-          Confidenciales <span class="nav-count">125</span>
+          Confidenciales <span class="nav-count" id="gdoc-cat-conf">—</span>
         </div>
       </nav>
     </div>
@@ -536,9 +536,11 @@ body { font-family: var(--font); background: var(--bg0); color: var(--text1); ov
     <div class="sidebar-section">
       <div class="sidebar-section-title">Silo</div>
       <nav class="sidebar-nav">
-        <div class="sidebar-nav-item"><div class="nav-icon"><span class="doc-silo silo-build" style="font-size:10px;padding:2px 6px;border-radius:4px;">B</span></div>BUILD<span class="nav-count">487</span></div>
-        <div class="sidebar-nav-item"><div class="nav-icon"><span class="doc-silo silo-run" style="font-size:10px;padding:2px 6px;border-radius:4px;">R</span></div>RUN<span class="nav-count">612</span></div>
-        <div class="sidebar-nav-item"><div class="nav-icon"><span class="doc-silo silo-transversal" style="font-size:10px;padding:2px 6px;border-radius:4px;">T</span></div>TRANSVERSAL<span class="nav-count">148</span></div>
+        <div class="sidebar-nav-item" onclick="gdocFilter('silo=build')"><div class="nav-icon"><span class="doc-silo silo-build" style="font-size:10px;padding:2px 6px;border-radius:4px;">B</span></div>BUILD<span class="nav-count" id="gdoc-silo-build">—</span></div>
+        <div class="sidebar-nav-item" onclick="gdocFilter('silo=run')"><div class="nav-icon"><span class="doc-silo silo-run" style="font-size:10px;padding:2px 6px;border-radius:4px;">R</span></div>RUN<span class="nav-count" id="gdoc-silo-run">—</span></div>
+        <div class="sidebar-nav-item" onclick="gdocFilter('silo=transversal')"><div class="nav-icon"><span class="doc-silo silo-transversal" style="font-size:10px;padding:2px 6px;border-radius:4px;">T</span></div>TRANSVERSAL<span class="nav-count" id="gdoc-silo-transv">—</span></div>
+        <div class="sidebar-nav-item" onclick="gdocFilter('silo=cmdb')"><div class="nav-icon"><span class="doc-silo" style="font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(167,139,250,.15);color:#a78bfa;">C</span></div>CMDB<span class="nav-count" id="gdoc-silo-cmdb">—</span></div>
+        <div class="sidebar-nav-item" onclick="gdocFilter('silo=confidencial')"><div class="nav-icon"><span class="doc-silo" style="font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(248,81,73,.15);color:#f85149;">🔒</span></div>CONFIDENCIAL<span class="nav-count" id="gdoc-silo-conf">—</span></div>
       </nav>
     </div>
 
@@ -891,12 +893,15 @@ body { font-family: var(--font); background: var(--bg0); color: var(--text1); ov
 </div>
 
 <script>
-// ═══ MOCKUP UI FUNCTIONS (preserved) ═══
+// ═══ UI FUNCTIONS ═══
 function switchMainTab(btn, panelId) {
   document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.getElementById(panelId).classList.add('active');
+  if (panelId === 'panel-analytics') gdocLoadAnalisisIA();
+  if (panelId === 'panel-papelera') gdocLoadPapelera();
+  if (panelId === 'panel-actividad') gdocLoadActividad();
 }
 function toggleSection(el) {
   el.classList.toggle('collapsed');
@@ -917,210 +922,266 @@ function closeExcelAgent() { document.getElementById('excelAgent').classList.rem
 document.querySelectorAll('.modal-overlay,.global-chat-overlay,.excel-agent-overlay').forEach(el => {
   el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
 });
-document.querySelectorAll('.gc-scope-chip').forEach(c => c.addEventListener('click', function() {
-  this.parentElement.querySelectorAll('.gc-scope-chip').forEach(x => x.classList.remove('active'));
-  this.classList.add('active');
-}));
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeGlobalChat(); closeExcelAgent(); }});
 
-// ═══ API CONNECTION ═══
+// ═══ IFRAME DETECTION ═══
+if (window.self !== window.top) document.body.classList.add('in-iframe');
+
+// ═══ API ═══
 const GDOC_API = '/api/documentos';
+var gdocCurrentFilter = '';
+var gdocCurrentDocId = null;
 
-async function gdocFetch(url, opts = {}) {
-  const r = await fetch(url, opts);
-  return r.json();
-}
-
-function gdocFormatSize(bytes) {
+function gdocFmt(bytes) {
   if (!bytes) return '0 B';
   if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
-  if (bytes < 1073741824) return (bytes / 1048576).toFixed(1) + ' MB';
-  return (bytes / 1073741824).toFixed(1) + ' GB';
+  if (bytes < 1048576) return (bytes/1024).toFixed(1) + ' KB';
+  if (bytes < 1073741824) return (bytes/1048576).toFixed(1) + ' MB';
+  return (bytes/1073741824).toFixed(1) + ' GB';
 }
-
-function gdocTimeAgo(dateStr) {
-  if (!dateStr) return '';
-  var d = new Date(dateStr);
-  var now = new Date();
-  var diff = Math.floor((now - d) / 1000);
+function gdocAgo(d) {
+  if (!d) return '';
+  var diff = Math.floor((new Date() - new Date(d)) / 1000);
   if (diff < 60) return 'hace ' + diff + 's';
   if (diff < 3600) return 'hace ' + Math.floor(diff/60) + 'min';
   if (diff < 86400) return 'hace ' + Math.floor(diff/3600) + 'h';
-  return d.toLocaleDateString('es-ES', {day: '2-digit', month: 'short'});
+  return new Date(d).toLocaleDateString('es-ES', {day:'2-digit',month:'short'});
 }
 
-var gdocSiloColors = {build:'silo-build', run:'silo-run', transversal:'silo-transversal', confidencial:'silo-confidencial'};
-var gdocTypeColors = {pdf:'var(--red-bg)', docx:'var(--cyan-bg)', xlsx:'var(--yellow-bg)', csv:'var(--green-bg)', texto:'var(--green-bg)', imagen:'var(--purple-bg)', otro:'var(--text3-bg)'};
-var gdocTypeStrokes = {pdf:'var(--red)', docx:'var(--cyan)', xlsx:'var(--yellow)', csv:'var(--green)', texto:'var(--green)', imagen:'var(--purple)', otro:'var(--text3)'};
+// ═══ BUG 1: SIDEBAR FILTERS ═══
+function gdocFilter(q) {
+  gdocCurrentFilter = q;
+  document.querySelectorAll('.sidebar-nav-item').forEach(el => el.classList.remove('active'));
+  if (event && event.target) event.target.closest('.sidebar-nav-item').classList.add('active');
+  gdocLoadDocumentos(q);
+}
 
-// ═══ LOAD STATS ═══
+// ═══ LOAD STATS + SIDEBAR COUNTS ═══
 async function gdocLoadStats() {
   try {
-    var d = await gdocFetch(GDOC_API + '/stats');
+    var d = await (await fetch(GDOC_API + '/stats')).json();
     document.getElementById('gdoc-stat-total').textContent = d.total || 0;
-    document.getElementById('gdoc-stat-size').textContent = gdocFormatSize(d.tamanio_total_bytes);
+    document.getElementById('gdoc-stat-size').textContent = gdocFmt(d.tamanio_total_bytes);
     document.getElementById('gdoc-stat-pending').textContent = (d.por_estado_ia || {}).pendiente || 0;
     document.getElementById('gdoc-stat-papelera').textContent = d.papelera || 0;
+    // Sidebar counts
+    var el;
+    el = document.getElementById('gdoc-cat-all'); if (el) el.textContent = d.total;
+    var silos = d.por_silo || {};
+    el = document.getElementById('gdoc-silo-build'); if (el) el.textContent = silos.build || 0;
+    el = document.getElementById('gdoc-silo-run'); if (el) el.textContent = silos.run || 0;
+    el = document.getElementById('gdoc-silo-transv'); if (el) el.textContent = silos.transversal || 0;
+    el = document.getElementById('gdoc-silo-cmdb'); if (el) el.textContent = silos.cmdb || 0;
+    el = document.getElementById('gdoc-silo-conf'); if (el) el.textContent = silos.confidencial || 0;
+    var tipos = d.por_tipo || {};
+    el = document.getElementById('gdoc-cat-pdf'); if (el) el.textContent = tipos.pdf || 0;
+    el = document.getElementById('gdoc-cat-txt'); if (el) el.textContent = tipos.texto || 0;
+    el = document.getElementById('gdoc-cat-xlsx'); if (el) el.textContent = (tipos.xlsx||0) + (tipos.csv||0);
+    el = document.getElementById('gdoc-cat-org'); if (el) el.textContent = tipos.otro || 0;
+    el = document.getElementById('gdoc-cat-conf'); if (el) el.textContent = silos.confidencial || 0;
   } catch(e) { console.warn('Stats error:', e); }
 }
 
 // ═══ LOAD DOCUMENTS ═══
-async function gdocLoadDocumentos(silo, q) {
+async function gdocLoadDocumentos(filter) {
   try {
     var url = GDOC_API + '?size=50';
-    if (silo) url += '&silo=' + silo;
-    if (q) url += '&q=' + encodeURIComponent(q);
-    var d = await gdocFetch(url);
-    gdocRenderDocRows(d.items || []);
-  } catch(e) { console.warn('Load docs error:', e); }
+    if (filter) url += '&' + filter;
+    var d = await (await fetch(url)).json();
+    gdocRenderRows(d.items || []);
+  } catch(e) { console.warn('Load docs:', e); }
 }
 
-function gdocRenderDocRows(items) {
-  // Find all doc-table containers and replace their content (keep headers)
+function gdocRenderRows(items) {
   var tables = document.querySelectorAll('.doc-table');
-  if (tables.length === 0) return;
-  // Use the first doc-table in the Proyectos section
+  if (!tables.length) return;
   var table = tables[0];
-  // Remove all existing doc-row elements
-  table.querySelectorAll('.doc-row').forEach(function(r) { r.remove(); });
-  // Also clear other section tables
-  for (var i = 1; i < tables.length; i++) tables[i].querySelectorAll('.doc-row').forEach(function(r) { r.remove(); });
+  table.querySelectorAll('.doc-row').forEach(r => r.remove());
+  for (var i = 1; i < tables.length; i++) tables[i].querySelectorAll('.doc-row').forEach(r => r.remove());
+
+  var colors = {pdf:'var(--red)',docx:'var(--cyan)',xlsx:'var(--yellow)',csv:'var(--green)',texto:'var(--green)',imagen:'var(--purple)',otro:'var(--text3)'};
+  var bgs = {pdf:'var(--red-bg)',docx:'var(--cyan-bg)',xlsx:'var(--yellow-bg)',csv:'var(--green-bg)',texto:'var(--green-bg)',imagen:'var(--purple-bg)',otro:'rgba(100,100,100,.1)'};
 
   items.forEach(function(doc) {
-    var silo = doc.silo || 'transversal';
     var tipo = doc.tipo || 'otro';
-    var stroke = gdocTypeStrokes[tipo] || 'var(--text3)';
-    var bg = gdocTypeColors[tipo] || 'var(--text3-bg)';
+    var stroke = colors[tipo] || 'var(--text3)';
+    var bg = bgs[tipo] || 'rgba(100,100,100,.1)';
     var clasif = '';
     if (doc.clasificacion_ia) {
-      try {
-        var c = typeof doc.clasificacion_ia === 'string' ? JSON.parse(doc.clasificacion_ia) : doc.clasificacion_ia;
-        clasif = c.tipo || c.subtipo || tipo;
-      } catch(e) { clasif = tipo; }
+      try { var c = typeof doc.clasificacion_ia === 'string' ? JSON.parse(doc.clasificacion_ia) : doc.clasificacion_ia; clasif = c.tipo || tipo; } catch(e) { clasif = tipo; }
     } else { clasif = doc.estado_procesamiento === 'pendiente' ? '⏳ Pendiente' : tipo; }
 
     var row = document.createElement('div');
     row.className = 'doc-row';
-    row.onclick = function() { gdocOpenDetalle(doc.id); };
-    row.innerHTML = '<div class="doc-type-icon" style="background:' + bg + '"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="' + stroke + '" stroke-width="1.6"/><path d="M14 2v6h6" stroke="' + stroke + '" stroke-width="1.6"/></svg></div>'
-      + '<div class="doc-info"><div class="doc-name">' + (doc.nombre_archivo || doc.titulo) + '</div><div class="doc-meta">' + gdocFormatSize(doc.tamanio_bytes) + ' · v' + (doc.version || 1) + ' · ' + (doc.autor || '') + ' · ' + gdocTimeAgo(doc.fecha_creacion) + '</div></div>'
-      + '<div class="doc-classification">' + (doc.estado_procesamiento === 'completado' ? '<span class="ai-dot"></span>' : '') + clasif + '</div>'
-      + '<div><span class="doc-silo ' + (gdocSiloColors[silo] || '') + '">' + silo.toUpperCase() + '</span></div>'
-      + '<div class="doc-date">' + gdocTimeAgo(doc.fecha_creacion) + '</div>'
-      + '<div class="doc-access-col">' + (doc.confidencialidad || 'interna') + '</div>'
+    row.onclick = function() { gdocShowPreview(doc.id); };
+    row.innerHTML = '<div class="doc-type-icon" style="background:'+bg+'"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="'+stroke+'" stroke-width="1.6"/><path d="M14 2v6h6" stroke="'+stroke+'" stroke-width="1.6"/></svg></div>'
+      + '<div class="doc-info"><div class="doc-name">'+(doc.nombre_archivo||doc.titulo)+'</div><div class="doc-meta">'+gdocFmt(doc.tamanio_bytes)+' · v'+(doc.version||1)+' · '+(doc.autor||'')+' · '+gdocAgo(doc.fecha_creacion)+'</div></div>'
+      + '<div class="doc-classification">'+(doc.estado_procesamiento==='completado'?'<span class="ai-dot"></span>':'')+clasif+'</div>'
+      + '<div><span class="doc-silo silo-'+(doc.silo||'transversal')+'">'+(doc.silo||'').toUpperCase()+'</span></div>'
+      + '<div class="doc-date">'+gdocAgo(doc.fecha_creacion)+'</div>'
+      + '<div class="doc-access-col">'+(doc.confidencialidad||'interna')+'</div>'
       + '<div class="doc-views">—</div>';
     table.appendChild(row);
   });
 }
 
-// ═══ DETAIL MODAL ═══
-async function gdocOpenDetalle(id) {
+// ═══ BUG 3: PREVIEW — DYNAMIC, NOT STATIC ═══
+async function gdocShowPreview(id) {
+  gdocCurrentDocId = id;
   try {
-    var d = await gdocFetch(GDOC_API + '/' + id);
-    // Populate modal with real data
-    var modal = document.getElementById('docModal');
-    var title = modal.querySelector('.modal-doc-title');
-    if (title) title.textContent = d.titulo || d.nombre_archivo;
-    var summary = modal.querySelector('.modal-body p, .modal-body .doc-summary');
-    if (summary) summary.textContent = d.resumen_ia || d.descripcion || 'Sin resumen disponible';
-    openModal();
-  } catch(e) { console.warn('Detail error:', e); openModal(); }
+    var d = await (await fetch(GDOC_API + '/' + id)).json();
+    var preview = document.querySelector('.preview-container');
+    if (!preview) return;
+
+    var resumen = d.resumen_ia || '';
+    var texto = (d.texto_extraido || '').substring(0, 3000);
+    var clasif = '';
+    if (d.clasificacion_ia) {
+      try { clasif = JSON.stringify(typeof d.clasificacion_ia === 'string' ? JSON.parse(d.clasificacion_ia) : d.clasificacion_ia, null, 2); } catch(e) {}
+    }
+
+    preview.innerHTML = '<div style="padding:20px;height:100%;overflow-y:auto;">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
+      + '<div><div style="font-size:15px;font-weight:700;color:var(--text1);">'+d.titulo+'</div>'
+      + '<div style="font-size:11px;color:var(--text3);margin-top:4px;">'+d.id+' · v'+(d.version||1)+' · '+gdocFmt(d.tamanio_bytes)+' · '+(d.silo||'').toUpperCase()+'</div></div>'
+      + '<div style="display:flex;gap:6px;">'
+      + '<button onclick="window.open(\'/api/documentos/'+id+'/descargar\',\'_blank\')" style="background:var(--accent);color:#fff;border:none;padding:4px 12px;border-radius:4px;font-size:11px;cursor:pointer;">⬇ Descargar</button>'
+      + '</div></div>'
+      + (resumen ? '<div style="background:rgba(79,195,247,.08);border:1px solid rgba(79,195,247,.2);border-radius:8px;padding:12px;margin-bottom:12px;"><div style="font-size:10px;color:var(--accent);font-weight:700;margin-bottom:4px;">🤖 RESUMEN IA (gemma3:1b)</div><div style="font-size:12px;color:var(--text2);line-height:1.5;">'+resumen+'</div></div>' : '')
+      + (clasif ? '<div style="background:rgba(63,185,80,.08);border:1px solid rgba(63,185,80,.2);border-radius:8px;padding:12px;margin-bottom:12px;"><div style="font-size:10px;color:var(--green);font-weight:700;margin-bottom:4px;">📋 CLASIFICACIÓN IA</div><pre style="font-size:11px;color:var(--text2);margin:0;white-space:pre-wrap;">'+clasif+'</pre></div>' : '')
+      + '<div style="background:var(--bg1);border:1px solid var(--border);border-radius:8px;padding:16px;"><div style="font-size:10px;color:var(--text3);font-weight:700;margin-bottom:8px;">CONTENIDO EXTRAÍDO</div><pre style="font-size:12px;color:var(--text2);margin:0;white-space:pre-wrap;line-height:1.5;max-height:400px;overflow-y:auto;">'+(texto||'Sin texto extraído')+'</pre></div>'
+      + '</div>';
+  } catch(e) { console.warn('Preview:', e); }
 }
 
-// ═══ UPLOAD ═══
+// ═══ BUG 2: UPLOAD ═══
 function gdocSetupUpload() {
-  var dropzones = document.querySelectorAll('.dropzone');
-  dropzones.forEach(function(dz) {
+  document.querySelectorAll('.dropzone').forEach(function(dz) {
     dz.addEventListener('dragover', function(e) { e.preventDefault(); dz.classList.add('dragover'); });
     dz.addEventListener('dragleave', function() { dz.classList.remove('dragover'); });
-    dz.addEventListener('drop', function(e) {
-      e.preventDefault(); dz.classList.remove('dragover');
-      for (var i = 0; i < e.dataTransfer.files.length; i++) gdocUploadFile(e.dataTransfer.files[i]);
-    });
+    dz.addEventListener('drop', function(e) { e.preventDefault(); dz.classList.remove('dragover'); for (var i=0;i<e.dataTransfer.files.length;i++) gdocUploadFile(e.dataTransfer.files[i]); });
     dz.addEventListener('click', function() {
-      var inp = document.createElement('input');
-      inp.type = 'file'; inp.multiple = true;
-      inp.accept = '.pdf,.docx,.xlsx,.csv,.txt,.md,.png,.jpg,.jpeg';
-      inp.onchange = function() { for (var i = 0; i < inp.files.length; i++) gdocUploadFile(inp.files[i]); };
-      inp.click();
+      var inp = document.createElement('input'); inp.type='file'; inp.multiple=true;
+      inp.accept='.pdf,.docx,.xlsx,.csv,.txt,.md,.png,.jpg'; inp.onchange=function(){for(var i=0;i<inp.files.length;i++)gdocUploadFile(inp.files[i]);}; inp.click();
     });
   });
 }
-
 async function gdocUploadFile(file) {
-  var fd = new FormData();
-  fd.append('file', file);
-  fd.append('titulo', file.name);
-  fd.append('usuario', 'admin');
-  fd.append('silo', 'transversal');
+  var fd = new FormData(); fd.append('file',file); fd.append('titulo',file.name); fd.append('usuario','admin'); fd.append('silo','transversal');
   try {
-    var r = await fetch(GDOC_API + '/upload', {method: 'POST', body: fd});
+    var r = await fetch(GDOC_API+'/upload',{method:'POST',body:fd});
     var d = await r.json();
-    if (d.error) { alert('Duplicado: el archivo ya existe (id=' + d.existing_id + ')'); return; }
-    // Refresh
-    gdocLoadStats();
-    gdocLoadDocumentos();
-    // Toast
-    var t = document.createElement('div');
-    t.style.cssText = 'position:fixed;top:16px;right:16px;background:var(--accent);color:#fff;padding:10px 18px;border-radius:8px;font-size:12px;font-weight:700;z-index:9999';
-    t.textContent = '✅ ' + file.name + ' subido correctamente';
-    document.body.appendChild(t);
-    setTimeout(function() { t.remove(); }, 3000);
-  } catch(e) { alert('Error subiendo: ' + e.message); }
+    if (d.error) { alert('Duplicado: '+d.message); return; }
+    gdocLoadStats(); gdocLoadDocumentos(gdocCurrentFilter);
+    var t=document.createElement('div'); t.style.cssText='position:fixed;top:16px;right:16px;background:var(--accent);color:#fff;padding:10px 18px;border-radius:8px;font-size:12px;font-weight:700;z-index:9999';
+    t.textContent='✅ '+file.name+' subido'; document.body.appendChild(t); setTimeout(function(){t.remove();},3000);
+  } catch(e) { alert('Error: '+e.message); }
 }
+
+// ═══ BUG 5: ANALISIS IA — REAL DATA ═══
+async function gdocLoadAnalisisIA() {
+  try {
+    var d = await (await fetch(GDOC_API+'/stats/ia')).json();
+    var panel = document.getElementById('panel-analytics');
+    if (!panel) return;
+    var cards = panel.querySelectorAll('.stat-card .stat-value');
+    if (cards[0]) cards[0].textContent = d.procesados.toLocaleString();
+    if (cards[1]) cards[1].textContent = d.confianza_media + '%';
+    if (cards[2]) cards[2].textContent = d.modelo;
+    if (cards[3]) cards[3].textContent = d.porcentaje + '%';
+    // Update subtitle
+    var subs = panel.querySelectorAll('.stat-card .stat-label');
+    if (subs[0]) subs[0].textContent = 'de ' + d.total + ' totales';
+  } catch(e) { console.warn('IA stats:', e); }
+}
+
+// ═══ BUG 6: PAPELERA ═══
+async function gdocLoadPapelera() {
+  try {
+    var d = await (await fetch(GDOC_API+'/papelera')).json();
+    var panel = document.getElementById('panel-papelera');
+    if (!panel) return;
+    var list = panel.querySelector('.doc-table') || panel;
+    list.querySelectorAll('.doc-row').forEach(r => r.remove());
+    if (!d.items || d.items.length === 0) {
+      list.innerHTML += '<div class="doc-row" style="justify-content:center;color:var(--text3);padding:20px;">Papelera vacía</div>';
+      return;
+    }
+    d.items.forEach(function(doc) {
+      var row = document.createElement('div'); row.className = 'doc-row';
+      row.innerHTML = '<div class="doc-info"><div class="doc-name">'+doc.titulo+'</div><div class="doc-meta">Eliminado por '+(doc.eliminado_por||'?')+' · '+gdocAgo(doc.fecha_eliminacion)+'</div></div>'
+        + '<button onclick="gdocRestore('+doc.id+')" style="background:var(--green);color:#fff;border:none;padding:4px 12px;border-radius:4px;font-size:11px;cursor:pointer;">Restaurar</button>';
+      list.appendChild(row);
+    });
+  } catch(e) { console.warn('Papelera:', e); }
+}
+async function gdocRestore(id) {
+  await fetch(GDOC_API+'/'+id+'/restaurar',{method:'POST'}); gdocLoadPapelera(); gdocLoadStats();
+}
+
+// ═══ BUG 4 + ACTIVIDAD ═══
+async function gdocLoadActividad() {
+  try {
+    var d = await (await fetch(GDOC_API+'/actividad-global')).json();
+    var panel = document.getElementById('panel-actividad');
+    if (!panel) return;
+    var feed = panel.querySelector('.act-feed') || panel;
+    feed.querySelectorAll('.act-item,.doc-row').forEach(r => r.remove());
+    (d.items || []).forEach(function(a) {
+      var item = document.createElement('div'); item.className = 'doc-row';
+      item.innerHTML = '<div class="doc-info"><div class="doc-name">'+(a.doc_titulo||'Doc #'+a.doc_id)+'</div><div class="doc-meta">'+a.accion+' · '+(a.usuario||'system')+' · '+gdocAgo(a.created_at)+'</div></div>';
+      feed.appendChild(item);
+    });
+  } catch(e) { console.warn('Actividad:', e); }
+}
+
+// ═══ BUG 2: SEARCH ═══
+var gdocSearchTimer;
+document.addEventListener('DOMContentLoaded', function() {
+  var search = document.querySelector('.toolbar-search input, .search-bar, input[placeholder*="Buscar"]');
+  if (search) search.addEventListener('input', function(e) {
+    clearTimeout(gdocSearchTimer);
+    gdocSearchTimer = setTimeout(function() {
+      var q = e.target.value.trim();
+      if (q.length >= 2) gdocLoadDocumentos('q='+encodeURIComponent(q));
+      else if (q.length === 0) gdocLoadDocumentos(gdocCurrentFilter);
+    }, 300);
+  });
+  // Global chat enter
+  var gcInput = document.querySelector('.gc-input');
+  if (gcInput) gcInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') gdocChatSend(); });
+});
 
 // ═══ GLOBAL CHAT ═══
 async function gdocChatSend() {
   var input = document.querySelector('.gc-input');
   if (!input || !input.value.trim()) return;
-  var msg = input.value.trim();
-  input.value = '';
-  var scope = 'all';
-  var activeChip = document.querySelector('.gc-scope-chip.active');
-  if (activeChip) scope = activeChip.textContent.trim().toLowerCase();
-  if (scope === 'todos') scope = 'all';
-
-  // Show user message
+  var msg = input.value.trim(); input.value = '';
   var feed = document.querySelector('.gc-messages');
   if (feed) {
-    feed.innerHTML += '<div class="gc-msg gc-user"><div class="gc-msg-text">' + msg + '</div></div>';
-    feed.innerHTML += '<div class="gc-msg gc-assistant" id="gc-typing"><div class="gc-msg-text" style="color:var(--text3)">Buscando documentos...</div></div>';
+    feed.innerHTML += '<div class="gc-msg gc-user"><div class="gc-msg-text">'+msg+'</div></div>';
+    feed.innerHTML += '<div class="gc-msg gc-assistant" id="gc-typing"><div class="gc-msg-text" style="color:var(--text3)">Buscando...</div></div>';
     feed.scrollTop = feed.scrollHeight;
   }
-
   try {
-    var d = await gdocFetch(GDOC_API + '/chat', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({mensaje: msg, scope: scope})
-    });
+    var d = await (await fetch(GDOC_API+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mensaje:msg,scope:'all'})})).json();
     var typing = document.getElementById('gc-typing');
-    if (typing) {
-      typing.innerHTML = '<div class="gc-msg-text">' + (d.respuesta || 'Sin respuesta') + '</div>'
-        + (d.fuentes && d.fuentes.length ? '<div style="margin-top:6px;font-size:10px;color:var(--text3)">Fuentes: ' + d.fuentes.map(function(f) { return '[' + f.titulo + ']'; }).join(', ') + '</div>' : '')
-        + (d.tiempo_ms ? '<div style="font-size:9px;color:var(--text4);margin-top:2px">' + d.tiempo_ms + 'ms</div>' : '');
-      typing.id = '';
-    }
+    if (typing) { typing.innerHTML = '<div class="gc-msg-text">'+(d.respuesta||'Sin respuesta')+'</div>'+(d.fuentes&&d.fuentes.length?'<div style="margin-top:6px;font-size:10px;color:var(--text3)">Fuentes: '+d.fuentes.map(function(f){return '['+f.titulo+']';}).join(', ')+'</div>':''); typing.id=''; }
     if (feed) feed.scrollTop = feed.scrollHeight;
-  } catch(e) {
-    var typing = document.getElementById('gc-typing');
-    if (typing) { typing.innerHTML = '<div class="gc-msg-text" style="color:var(--red)">Error: ' + e.message + '</div>'; typing.id = ''; }
-  }
+  } catch(e) { var t=document.getElementById('gc-typing'); if(t){t.innerHTML='<div class="gc-msg-text" style="color:var(--red)">Error: '+e.message+'</div>';t.id='';} }
 }
 
-// Bind chat enter key
-document.addEventListener('DOMContentLoaded', function() {
-  var gcInput = document.querySelector('.gc-input');
-  if (gcInput) gcInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') gdocChatSend(); });
-  var gcBtn = document.querySelector('.gc-send-btn');
-  if (gcBtn) gcBtn.addEventListener('click', gdocChatSend);
-});
+// ═══ BUG 8: THEME SYNC ═══
+function gdocSyncTheme() {
+  try { var t = window.parent?.document?.documentElement?.getAttribute('data-theme'); if (t) document.documentElement.setAttribute('data-theme', t); } catch(e) {}
+}
+gdocSyncTheme();
 
 // ═══ INIT ═══
 gdocLoadStats();
 gdocLoadDocumentos();
 gdocSetupUpload();
+
 </script>
 </body>
 </html>

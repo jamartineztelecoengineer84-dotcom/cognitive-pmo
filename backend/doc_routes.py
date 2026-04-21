@@ -229,6 +229,77 @@ async def stats_documentos():
     }
 
 
+@router.get("/stats/ia")
+async def stats_ia():
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(503)
+    async with pool.acquire() as conn:
+        r = await conn.fetchrow("""
+            SELECT COUNT(*) FILTER (WHERE estado_procesamiento='completado') as completados,
+                   COUNT(*) as total,
+                   AVG(confianza_ia) FILTER (WHERE confianza_ia IS NOT NULL) as conf_media
+            FROM primitiva.documentacion_repositorio WHERE eliminado=false
+        """)
+        por_tipo = await conn.fetch("""
+            SELECT COALESCE(tipo, 'otro') as tipo_doc, COUNT(*) as c
+            FROM primitiva.documentacion_repositorio WHERE eliminado=false AND estado_procesamiento='completado'
+            GROUP BY tipo_doc ORDER BY c DESC LIMIT 10
+        """)
+    total = r["total"] or 0
+    completados = r["completados"] or 0
+    return {
+        "procesados": completados, "total": total,
+        "porcentaje": round(completados / max(total, 1) * 100, 1),
+        "confianza_media": round(float(r["conf_media"] or 0) * 100, 1),
+        "modelo": "ollama:gemma3:1b",
+        "por_tipo": [{"tipo": row["tipo_doc"], "cantidad": row["c"]} for row in por_tipo],
+    }
+
+
+@router.get("/arbol")
+async def arbol_documentos():
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(503)
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT silo, tipo, COUNT(*) as docs, COALESCE(SUM(tamanio_bytes),0) as bytes_total
+            FROM primitiva.documentacion_repositorio WHERE eliminado=false
+            GROUP BY silo, tipo ORDER BY silo, tipo
+        """)
+    tree = {}
+    for r in rows:
+        silo = r["silo"] or "transversal"
+        if silo not in tree:
+            tree[silo] = {"docs": 0, "bytes": 0, "children": {}}
+        tree[silo]["docs"] += r["docs"]
+        tree[silo]["bytes"] += int(r["bytes_total"])
+        tree[silo]["children"][r["tipo"] or "otro"] = {"docs": r["docs"], "bytes": int(r["bytes_total"])}
+    return tree
+
+
+@router.get("/export")
+async def exportar_documentos(silo: Optional[str] = None):
+    from fastapi.responses import Response
+    import csv as _csv
+    from io import StringIO
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(503)
+    where, params = "eliminado=false", []
+    if silo:
+        where += " AND silo=$1"; params.append(silo)
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(f"SELECT id,titulo,silo,tipo,mime_type,tamanio_bytes,estado_procesamiento,fecha_creacion FROM primitiva.documentacion_repositorio WHERE {where} ORDER BY fecha_creacion DESC", *params)
+    out = StringIO()
+    w = _csv.writer(out)
+    w.writerow(["ID","Título","Silo","Tipo","MIME","Tamaño","Estado IA","Fecha"])
+    for r in rows:
+        w.writerow([r["id"],r["titulo"],r["silo"],r["tipo"],r["mime_type"],r["tamanio_bytes"],r["estado_procesamiento"],r["fecha_creacion"]])
+    return Response(content=out.getvalue(), media_type="text/csv", headers={"Content-Disposition":"attachment; filename=documentos_export.csv"})
+
+
 @router.get("/papelera")
 async def listar_papelera():
     pool = get_pool()
