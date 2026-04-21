@@ -3524,7 +3524,11 @@ footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;disp
 </div>
 
 <!-- ══════════════════ PAGE: DOCUMENTACIÓN ══════════════════ -->
-<div class="page" id="page-docs">
+<div class="page" id="page-docs" style="padding:0;overflow:hidden;">
+  <iframe id="gdoc-iframe" src="/doc/" style="width:100%;height:calc(100vh - 50px);border:none;display:block;" loading="lazy"></iframe>
+</div>
+<!-- OLD DOCS PAGE (replaced by iframe to /doc/) -->
+<div style="display:none">
   <div class="gov-page">
     <div class="team-header" style="padding:10px 20px 8px;">
       <div class="team-header-top" style="margin-bottom:8px;">
@@ -3623,6 +3627,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;disp
     </div>
   </div>
 </div>
+</div><!-- /OLD DOCS PAGE hidden wrapper -->
 <!-- ══════════════════ PAGE: DEV TOOLS ══════════════════ -->
 <!-- ══════════════════ CMDB PAGE ══════════════════ -->
 <div class="page" id="page-cmdb">
