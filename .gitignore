@@ -1,6 +1,68 @@
-__pycache__/
-*.pyc
+# --- Secrets / config ---
 .env
+.env.local
+.env.*.local
+*.pem
+*.key
+credentials*.json
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+venv/
+.venv/
+
+# --- JS / Node ---
 node_modules/
+dist/
+build/
 *.log
+npm-debug.log*
+
+# --- Editor / OS ---
 .DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# --- Project-specific ---
+# Heavy data and dumps
+data/
+backups/
+_dumps/
+*.sql.gz
+*.tar.gz
+*.tar
+*.zip
+
+# Local mocks (perms 600 — keep out of repo)
+mockup_*.html
+
+# Backups of source files (legacy iterations)
+*.bak
+*.bak[0-9]*
+*.bak_*
+*.bak-*
+*.backup
+*.backup_*
+*.orig
+
+# Ad-hoc patch scripts (legacy)
+p99_*
+cab_*
+
+# Build / runtime
+.coverage
+htmlcov/
+*.db
+*.sqlite3
+
+# Claude Code workspace
+.claude/settings.local.json
