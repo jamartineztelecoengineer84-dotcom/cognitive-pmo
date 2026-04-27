@@ -1,57 +1,57 @@
 # Changelog
 
-Registro de hitos del proyecto (formato basado en [Keep a Changelog](https://keepachangelog.com/)).
+Project milestone log (format inspired by [Keep a Changelog](https://keepachangelog.com/)).
 
 ## [Unreleased]
 
-- Migración del frontend vanilla a SvelteKit
-- OpenTelemetry tracing end-to-end
-- Vector DB (pgvector) para embeddings persistentes en RAG
-- Integración bidireccional con Plane (issues sync)
+- Migrate vanilla frontend to SvelteKit
+- End-to-end OpenTelemetry tracing
+- Vector DB (pgvector) for persistent RAG embeddings
+- Bidirectional Plane integration (issue sync)
 
 ## [v6.0] — 2026-04
 
-### Added — Gestor documental con RAG
-- API REST con 14 endpoints (`/api/doc/*`)
-- Agente AG-DOC integrado con Ollama (gemma3:1b) para Q&A sobre 750+ documentos
-- Frontend `/doc/` con búsqueda + chat + preview
-- Agente Excel/CSV con openpyxl + LLM local
-- Seed de 752 documentos sintéticos en `primitiva.documentacion_repositorio`
+### Added — Document manager with RAG
+- REST API with 14 endpoints (`/api/doc/*`)
+- AG-DOC agent integrated with Ollama (gemma3:1b) for Q&A over 750+ documents
+- `/doc/` frontend with search + chat + preview
+- Excel/CSV agent with openpyxl + local LLM
+- Seed of 752 synthetic documents into `primitiva.documentacion_repositorio`
 
 ## [v5.3] — 2026-04
 
 ### Added — CEO Dashboard v6 (P97)
-- 12 tablas `p96_*` + 3 vistas materializadas (60 proyectos)
-- Endpoints `/api/p96/*` con RBAC económico (23 roles)
-- Login + hydrate + routing por rol (15 ejecutivos → CEO, TECH_* → tech dashboard)
-- 16 tests pytest verdes (smoke + RBAC)
+- 12 `p96_*` tables + 3 materialized views (60 projects)
+- `/api/p96/*` endpoints with economic RBAC (23 roles)
+- Login + hydrate + role-based routing (15 executives → CEO, TECH_* → tech dashboard)
+- 16 green pytest tests (smoke + RBAC)
 
 ## [v5.2] — 2026-03
 
 ### Added — Portfolio Prioritization Wizard
-- Wizard de 4 fases para priorización ponderada de portfolio
-- Integración como pestaña del CEO Dashboard
-- Decomposición automática de subtareas vía LLM (Anthropic Claude)
+- 4-phase wizard for weighted portfolio prioritization
+- Integrated as a CEO Dashboard tab
+- Automatic subtask decomposition via LLM (Anthropic Claude)
 
 ## [v5.1] — 2026-03
 
-### Added — Producción readiness
-- Sistema de monitorización (4 pilares: Resend + audit log + alertas + status page)
-- Backups automáticos diarios con retención
-- Rate limiting por endpoint (slowapi)
-- Health checks Docker
+### Added — Production readiness
+- Monitoring system (4 pillars: Resend + audit log + alerts + status page)
+- Automated daily backups with retention
+- Per-endpoint rate limiting (slowapi)
+- Docker health checks
 
 ## [v5.0] — 2026-02
 
-### Added — Arquitectura multi-schema
-- Refactor a multi-schema PostgreSQL (RBAC + tenancy lógica)
-- CMDB completa con costes y cobertura de monitorización
-- Forecasting con Prophet sobre series históricas
+### Added — Multi-schema architecture
+- Refactor to multi-schema PostgreSQL (RBAC + logical tenancy)
+- Full CMDB with cost analysis and monitoring coverage
+- Forecasting with Prophet over historical series
 
 ## [v4.x] — 2026-01
 
 ### Added — Foundation
 - FastAPI + asyncpg + multi-agent system
-- Frontend vanilla con tema oscuro/claro
-- 60+ endpoints REST iniciales
-- Datos sintéticos de organización demo (~600 empleados, ~150 aplicaciones)
+- Vanilla frontend with dark/light theme
+- 60+ initial REST endpoints
+- Synthetic data for the demo organization (~600 employees, ~150 applications)
