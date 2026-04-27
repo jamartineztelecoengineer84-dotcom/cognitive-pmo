@@ -96,7 +96,7 @@ TU PERSONALIDAD:
 
 CONOCIMIENTO TÉCNICO (solo esto):
 - Stack: FastAPI + asyncpg, SPA vanilla JS, PostgreSQL 15, Docker Compose
-- Servidor: local postgres (API:8088, Frontend:3030, Flowise:3000, PostgreSQL:5432)
+- Servidor:  <production-server> (API:8088, Frontend:3030, Flowise:3000, PostgreSQL:5432)
 - Frontend es un index.html monolítico (~6500 líneas) con CSS variables para tema claro/oscuro
 - Backend: main.py (~1300 líneas) + war_room_api.py (~800 líneas) + agent_prompts.py
 - Docker Compose con 2 servicios (api, frontend nginx:alpine)

@@ -2159,7 +2159,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;disp
     <span class="status-badge online">Online</span>
   </div>
   <div class="server-info">
-    local Server
+     Server
     <span class="server-ip">postgres</span>
   </div>
 </div>
@@ -16180,7 +16180,7 @@ async function loadDevContext() {
     const ctx = await authFetch(API_BASE+'/dev/context').then(r=>r.json());
     let md = `# Cognitive PMO — Contexto Técnico Completo\n`;
     md += `**Generado:** ${new Date().toLocaleString('es-ES')} | **Versión:** ${ctx.version} | **Autor:** ${ctx.author}\n\n`;
-    md += `## ESTADO ACTUAL\n- **Frontend:** SPA vanilla JS (${ctx.total_endpoints} endpoints)\n- **Backend:** FastAPI + asyncpg\n- **Base de datos:** PostgreSQL con ${ctx.total_tables} tablas\n- **Agentes IA:** 7 en Flowise + 4 War Room (Claude Sonnet 4)\n- **Infraestructura:** Docker Compose en local postgres\n\n`;
+    md += `## ESTADO ACTUAL\n- **Frontend:** SPA vanilla JS (${ctx.total_endpoints} endpoints)\n- **Backend:** FastAPI + asyncpg\n- **Base de datos:** PostgreSQL con ${ctx.total_tables} tablas\n- **Agentes IA:** 7 en Flowise + 4 War Room (Claude Sonnet 4)\n- **Infraestructura:** Docker Compose en  postgres\n\n`;
     md += `## ARQUITECTURA\n### Servicios\n`;
     ctx.services.forEach(s => { md += `- **${s.name}**: Puerto ${s.port} (${s.tech})\n`; });
     md += `\n## ESQUEMA DE BASE DE DATOS\n`;
@@ -16237,7 +16237,7 @@ async function devSendChat() {
   // Build TECHNICAL-ONLY context (no business data)
   let contextStr = '[CONTEXTO TÉCNICO - Solo estructura, NO datos de negocio]\n';
   contextStr += 'Stack: FastAPI+asyncpg, SPA vanilla JS, PostgreSQL 15, Docker Compose\n';
-  contextStr += 'Servidor: local postgres | API:8088 | Frontend:3030 | Flowise:3000 | PG:5432\n';
+  contextStr += 'Servidor:  postgres | API:8088 | Frontend:3030 | Flowise:3000 | PG:5432\n';
   contextStr += 'Frontend: index.html ~6500 líneas | Backend: main.py ~1300 líneas + war_room_api.py ~800 líneas\n';
   try {
     const ctx = await authFetch(API_BASE+'/dev/context').then(r=>r.json());

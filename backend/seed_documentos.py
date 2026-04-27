@@ -8,7 +8,13 @@ import asyncio
 import asyncpg
 
 STORAGE_ROOT = "/app/data/documentos"
-DB_DSN = "postgresql://jose_admin:REDACTED-old-password@postgres:5432/cognitive_pmo"
+DB_DSN = (
+    f"postgresql://{os.getenv('DB_USER', 'pmo_admin')}"
+    f":{os.getenv('DB_PASSWORD', '')}"
+    f"@{os.getenv('DB_HOST', 'postgres')}"
+    f":{os.getenv('DB_PORT', '5432')}"
+    f"/{os.getenv('DB_NAME', 'cognitive_pmo')}"
+)
 
 MIME_MAP = {
     "pdf": "application/pdf",

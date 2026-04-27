@@ -2923,7 +2923,7 @@ async def dev_technical_context():
         "project": "Cognitive PMO",
         "version": "2.0",
         "author": "Jose Antonio Martinez Victoria",
-        "stack": {"backend":"FastAPI + asyncpg","frontend":"Vanilla JS SPA","db":"PostgreSQL","agents":"Flowise + Claude Sonnet 4","infra":"Docker Compose on local postgres"},
+        "stack": {"backend":"FastAPI + asyncpg","frontend":"Vanilla JS SPA","db":"PostgreSQL","agents":"Flowise + Claude Sonnet 4","infra":"Docker Compose"},
         "tables": tables_info,
         "endpoints": endpoints,
         "total_endpoints": len(endpoints),

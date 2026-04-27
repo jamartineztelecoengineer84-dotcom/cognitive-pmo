@@ -347,7 +347,7 @@ INSERT INTO cartera_build (id_proyecto,nombre,prioridad,prioridad_num,estado,hor
 ('PRJ0041','Actualización plataforma videoconferencia','Baja',4,'Backlog',25,'Windows:Teams','2025-07-01','2025-08-31'),
 ('PRJ0042','Migración repositorios SVN a GitLab','Media',3,'En Progreso',40,'DevOps:Git','2025-02-15','2025-04-30'),
 ('PRJ0043','Implementar Zero Trust Network Access','Critica',1,'Planificado',170,'Seguridad:ZTNA','2025-05-01','2025-11-30'),
-('PRJ0044','Actualización plataforma ITSM local','Alta',2,'En Progreso',80,'ITSM:local','2025-02-01','2025-05-31'),
+('PRJ0044','Actualización plataforma ITSM ','Alta',2,'En Progreso',80,'ITSM:','2025-02-01','2025-05-31'),
 ('PRJ0045','Renovación balanceadores F5','Alta',2,'Backlog',65,'Redes:Load Balancer','2025-06-01','2025-08-31'),
 ('PRJ0046','Implantación observabilidad con Grafana','Media',3,'Planificado',55,'DevOps:Grafana','2025-04-15','2025-07-31')
 ON CONFLICT (id_proyecto) DO NOTHING;
@@ -376,5 +376,5 @@ INSERT INTO kanban_tareas (id,tipo,prioridad,titulo,columna,usuario_asignado,id_
 ('TSK-018','RUN','Baja','Limpieza logs servidores producción','Backlog','Fabiola García',NULL,0,NULL),
 ('TSK-019','BUILD','Alta','Migración correo Exchange - Lote 3','Despliegue','Esperanza López',NULL,6,NULL),
 ('TSK-020','RUN','Media','Revisar alertas Zabbix sin resolver','En Progreso','Celestino López',NULL,3,NULL),
-('TSK-021','BUILD','Media','Actualización ITSM local v2.1','Completado','Ildefonso Rodríguez',NULL,8,NULL)
+('TSK-021','BUILD','Media','Actualización ITSM  v2.1','Completado','Ildefonso Rodríguez',NULL,8,NULL)
 ON CONFLICT (id) DO NOTHING;

@@ -21,8 +21,11 @@ async def main():
     print("=" * 60)
 
     conn = await asyncpg.connect(
-        host="postgres", port=5432, database="cognitive_pmo",
-        user="jose_admin", password="REDACTED-old-password"
+        host=os.getenv("DB_HOST", "postgres"),
+        port=int(os.getenv("DB_PORT", "5432")),
+        database=os.getenv("DB_NAME", "cognitive_pmo"),
+        user=os.getenv("DB_USER", "pmo_admin"),
+        password=os.getenv("DB_PASSWORD", ""),
     )
     row = await conn.fetchrow(
         "SELECT config_json FROM primitiva.llm_provider_config WHERE provider_name = 'openai'"
