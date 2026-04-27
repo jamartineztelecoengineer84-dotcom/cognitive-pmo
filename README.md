@@ -175,6 +175,16 @@ cognitive-pmo/
 
 ---
 
+## Engineering practices
+
+- **Database-first migrations.** Cada fase de arquitectura tiene SQL DDL idempotente versionado bajo `database/` y `backend/migrations/`. Re-ejecutables con `IF NOT EXISTS` y triggers de validación.
+- **Async I/O end-to-end.** FastAPI + `asyncpg` con pool, sin bloqueos en endpoints críticos.
+- **RBAC con audit log.** Toda mutación atraviesa `authz.py`, decoradores `require_permission(...)`, y queda registrada en `audit_log` con usuario + IP + timestamp.
+- **Rate limiting + circuit breakers.** `slowapi` con políticas por endpoint, especialmente en endpoints LLM-backed para controlar coste.
+- **Datos sintéticos reproducibles.** Seeds determinísticos en `seeds/seed_sc_*.sql` permiten levantar la demo desde cero en <5 min.
+- **Tests pytest** sobre la deuda técnica conocida del proyecto (carpeta `backend/tests/test_arq02_*` y `test_deuda*`) — 30+ tests cubriendo migraciones críticas e idempotencia.
+- **CI-friendly.** Sin estado oculto: `docker compose down -v && docker compose up -d` + un `docker compose exec api python seed_documentos.py` y la demo está al 100%.
+
 ## Roadmap
 
 - [ ] Migración del frontend vanilla a SvelteKit
